@@ -89,3 +89,22 @@
     @apply font-sans;
   }
 }
+
+@layer base {
+  body {
+    background-color: #f8fafc; /* slate-50 */
+    color: #1e293b; /* slate-800 */
+  }
+  
+  /* Force light mode everywhere */
+  html {
+    color-scheme: light;
+  }
+}
+
+@layer components {
+  .govt-header {
+    background-color: #1a4d2e;
+    color: white;
+  }
+}

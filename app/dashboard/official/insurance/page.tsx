@@ -1,385 +1,517 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
-import * as THREE from "three";
-import { ShieldAlert, CheckCircle, RefreshCw, Send, Users, AlertCircle, FileText, ChevronRight } from "lucide-react";
-import Payout3D from "@/components/payments/Payout3D";
+import { useState, useEffect } from "react";
+import {
+  ArrowLeft,
+  Shield,
+  CheckCircle,
+  AlertTriangle,
+  FileText,
+  Send,
+  ChevronRight,
+  Activity,
+  IndianRupee,
+  Users,
+  Clock,
+  Database,
+} from "lucide-react";
+import Link from "next/link";
 
-const queryClient = new QueryClient();
+// Mock data - replace with your actual API calls
+const MOCK_STATS = {
+  totalDisbursed: 2450000,
+  successRate: 94.2,
+  processedCount: 50,
+  approvedCount: 47,
+  pendingAmount: 325000,
+  pendingCount: 8,
+  avgProcessingDays: 2.3,
+};
 
-// Subcomponent: 3D Fraud Network Node
-function FraudNode({
-  position,
-  label,
-  riskColor,
-  onHover
-}: {
-  position: [number, number, number];
-  label: string;
-  riskColor: string;
-  onHover: (info: any) => void;
-}) {
-  return (
-    <group position={position}>
-      <mesh
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          onHover({ label, riskColor, visible: true, x: e.clientX, y: e.clientY });
-        }}
-        onPointerOut={() => onHover({ visible: false })}
-      >
-        <sphereGeometry args={[0.3, 16, 16]} />
-        <meshStandardMaterial color={riskColor} emissive={riskColor} emissiveIntensity={0.6} />
-      </mesh>
-      <Html position={[0, -0.4, 0]} center>
-        <div className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-800/90 text-[7px] text-slate-700 font-bold uppercase whitespace-nowrap pointer-events-none">
-          {label}
-        </div>
-      </Html>
-    </group>
-  );
+const MOCK_TRANSACTIONS = [
+  {
+    id: "12",
+    farmer: "Ramesh Patel",
+    amount: 25000,
+    batch: "PFMS-2847",
+    status: "Credited",
+    time: "Today, 10:42 AM",
+  },
+  {
+    id: "11",
+    farmer: "Sunita Devi",
+    amount: 18500,
+    batch: "PFMS-2847",
+    status: "Processing",
+    time: "Today, 09:15 AM",
+  },
+  {
+    id: "09",
+    farmer: "Rajesh Kumar",
+    amount: 32000,
+    batch: "PFMS-2846",
+    status: "Credited",
+    time: "Yesterday, 04:30 PM",
+  },
+];
+
+const MOCK_RULES = [
+  {
+    id: 1,
+    name: "NDVI Drop Payout",
+    trigger: "NDVI decline > 40% from 5-year baseline",
+    payout: "50% of sum insured (max ₹1,00,000)",
+    season: "Kharif season (Jun - Oct)",
+    status: "active",
+    lastTriggered: "25/07/2026 (Claim #12)",
+  },
+  {
+    id: 2,
+    name: "Flood Index Payout",
+    trigger: "Flood index > 0.8",
+    payout: "₹15,000 per hectare (max ₹2,00,000)",
+    season: "All seasons",
+    status: "active",
+    lastTriggered: "25/07/2026 (Claim #12)",
+  },
+  {
+    id: 3,
+    name: "Rainfall Deficit",
+    trigger: "Rainfall anomaly < -60% for 45 consecutive days",
+    payout: "Tiered: 25% / 50% / 75% of sum insured",
+    season: "Rabi season (Nov - Apr)",
+    status: "active",
+    lastTriggered: "Not triggered yet",
+  },
+];
+
+const MOCK_LAST_SMS =
+  "Claim #12 approved. ₹25,000 credited to your account ending in 4521. - AgriSense PMFBY";
+
+const TABS = [
+  { id: "rules", label: "Rules" },
+  { id: "payouts", label: "Payouts" },
+  { id: "fraud", label: "Fraud Detection" },
+  { id: "reconciliation", label: "Reconciliation" },
+  { id: "audit", label: "Audit Trail" },
+];
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
-// Subcomponent: 3D Connection line between nodes
-function FraudConnection({ start, end }: { start: [number, number, number]; end: [number, number, number] }) {
-  const points = useMemo(() => [new THREE.Vector3(...start), new THREE.Vector3(...end)], [start, end]);
-  const lineGeometry = useMemo(() => new THREE.BufferGeometry().setFromPoints(points), [points]);
+export default function InsuranceDashboard() {
+  const [activeTab, setActiveTab] = useState("rules");
+  const [currentTime, setCurrentTime] = useState("");
 
-  return (
-    <line geometry={lineGeometry}>
-      <lineBasicMaterial color="#ef4444" opacity={0.6} transparent linewidth={2} />
-    </line>
-  );
-}
-
-// Subcomponent: R3F Fraud Graph canvas
-function FraudNetworkGraph() {
-  const [hoverNode, setHoverNode] = useState<any>({ visible: false });
-  
-  const nodes = [
-    { pos: [0, 0, 0] as [number, number, number], label: "Ramesh Patel (Farm #1)", color: "#ef4444" },
-    { pos: [-2, 1.5, -1] as [number, number, number], label: "Suresh Kumar (Farm #2)", color: "#fbbf24" },
-    { pos: [2, 1, 1.5] as [number, number, number], label: "Rajesh Singh (Farm #3)", color: "#34d399" },
-    { pos: [-1.5, -1.8, 1] as [number, number, number], label: "Bank Account #4219 (Shared)", color: "#ef4444" },
-    { pos: [2.5, -1.2, -1.5] as [number, number, number], label: "Co-op Agent ID #88", color: "#fbbf24" }
-  ];
-
-  const connections = [
-    { start: nodes[0].pos, end: nodes[3].pos },
-    { start: nodes[1].pos, end: nodes[3].pos },
-    { start: nodes[0].pos, end: nodes[4].pos },
-    { start: nodes[1].pos, end: nodes[4].pos },
-    { start: nodes[2].pos, end: nodes[4].pos }
-  ];
-
-  return (
-    <div className="relative w-full h-[220px] bg-white border border-slate-200 text-slate-800 rounded-xl overflow-hidden border border-slate-100">
-      <Canvas camera={{ position: [0, 0, 6], fov: 45 } as any}>
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[2, 5, 2]} />
-        
-        {connections.map((c, idx) => (
-          <FraudConnection key={`conn-${idx}`} start={c.start} end={c.end} />
-        ))}
-        {nodes.map((n, idx) => (
-          <FraudNode key={`node-${idx}`} position={n.pos} label={n.label} riskColor={n.color} onHover={setHoverNode} />
-        ))}
-        
-        <OrbitControls enableDamping maxDistance={10} minDistance={3} />
-      </Canvas>
-
-      {hoverNode.visible && (
-        <div
-          className="absolute z-20 pointer-events-none p-2 rounded bg-white border border-slate-200 text-slate-800 border border-slate-200 text-[9px] text-slate-800 flex flex-col gap-0.5"
-          style={{ left: `${hoverNode.x - 140}px`, top: `${hoverNode.y - 480}px` }}
-        >
-          <span className="font-bold text-slate-700">{hoverNode.label}</span>
-          <span className="text-red-400">Shared entity relationship link</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OfficialDashboardContent() {
-  const [activeTab, setActiveTab] = useState<"rules" | "payouts" | "fraud" | "reconciliation">("rules");
-  const [activePaymentRecord, setActivePaymentRecord] = useState<any>(null);
-
-  // Fetch active insurance rules
-  const { data: rules = [], refetch: refetchRules } = useQuery({
-    queryKey: ["insurance_rules"],
-    queryFn: async () => {
-      try {
-        const res = await fetch("http://localhost:8000/api/v1/insurance/rules");
-        return await res.json();
-      } catch {
-        // mock rules fallback
-        return [
-          { name: "NDVI Drop Payout", condition: "ndvi_drop_percent > 40", payout_type: "percentage_of_sum_insured", payout_value: 0.5, max_payout: 100000.0, active: true },
-          { name: "Flood Index Payout", condition: "flood_index > 0.8", payout_type: "fixed_per_hectare", payout_value: 15000.0, max_payout: 200000.0, active: true },
-          { name: "Rainfall Deficit", condition: "rainfall_anomaly < -60", payout_type: "tiered", payout_value: 0.25, max_payout: 150000.0, active: false }
-        ];
-      }
-    }
-  });
-
-  // Fetch daily payouts reconciliation
-  const { data: recon = null, refetch: refetchRecon } = useQuery({
-    queryKey: ["reconciliation_data"],
-    queryFn: async () => {
-      try {
-        const res = await fetch("http://localhost:8000/api/v1/payments/reconciliation");
-        return await res.json();
-      } catch {
-        return {
-          status: "RECONCILED",
-          total_settled_amount: 147000.0,
-          completed_transactions: [
-            { payment_id: "PAY-178495-1", claim_id: 1, amount: 72000.0, beneficiary: "Ramesh Patel", status: "COMPLETED", payment_mode: "NEFT" },
-            { payment_id: "PAY-178495-2", claim_id: 2, amount: 75000.0, beneficiary: "Suresh Kumar", status: "COMPLETED", payment_mode: "UPI" }
-          ],
-          failed_transactions: []
-        };
-      }
-    }
-  });
-
-  // Select first payment record by default for 3D view
   useEffect(() => {
-    if (recon?.completed_transactions?.length > 0 && !activePaymentRecord) {
-      setActivePaymentRecord(recon.completed_transactions[0]);
-    }
-  }, [recon, activePaymentRecord]);
+    const now = new Date();
+    setCurrentTime(
+      now.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    );
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 p-6 font-sans">
-      
-      {/* Header */}
-      <header className="mb-6 flex justify-between items-center border-b border-slate-200 pb-4"><div className="flex items-center gap-3"><a href="/dashboard/farmer" className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-slate-600">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-              </a><div>
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-wide">AgriSense AI Insurer & Settlement Hub</h1>
-          <p className="text-[10px] text-slate-500 mt-0.5">Configure rules, verify DBT payouts, monitor transaction hashes, and review fraud network charts.</p>
-        </div>
-      </div></div></header>
-
-      {/* Tabs selectors */}
-      <div className="flex gap-2 border-b border-slate-100 pb-4 mb-6">
-        <button
-          onClick={() => setActiveTab("rules")}
-          className={`py-1.5 px-4 rounded text-xs font-bold uppercase tracking-wider transition ${
-            activeTab === "rules" ? "bg-[#166534] text-white shadow" : "bg-slate-100 border border-slate-200 text-slate-600 text-slate-500 hover:bg-white/10"
-          }`}
-        >
-          Rules configuration
-        </button>
-        <button
-          onClick={() => setActiveTab("payouts")}
-          className={`py-1.5 px-4 rounded text-xs font-bold uppercase tracking-wider transition ${
-            activeTab === "payouts" ? "bg-[#166534] text-white shadow" : "bg-slate-100 border border-slate-200 text-slate-600 text-slate-500 hover:bg-white/10"
-          }`}
-        >
-          Payout Monitor
-        </button>
-        <button
-          onClick={() => setActiveTab("fraud")}
-          className={`py-1.5 px-4 rounded text-xs font-bold uppercase tracking-wider transition ${
-            activeTab === "fraud" ? "bg-[#166534] text-white shadow" : "bg-slate-100 border border-slate-200 text-slate-600 text-slate-500 hover:bg-white/10"
-          }`}
-        >
-          Fraud Alerts
-        </button>
-        <button
-          onClick={() => setActiveTab("reconciliation")}
-          className={`py-1.5 px-4 rounded text-xs font-bold uppercase tracking-wider transition ${
-            activeTab === "reconciliation" ? "bg-[#166534] text-white shadow" : "bg-slate-100 border border-slate-200 text-slate-600 text-slate-500 hover:bg-white/10"
-          }`}
-        >
-          Ledger Matcher
-        </button>
+    <div className="min-h-screen bg-slate-50">
+      {/* Government Header Bar */}
+      <div className="bg-[#1a4d2e] text-white text-xs py-1.5 px-4 flex justify-between items-center">
+        <span className="font-medium tracking-wide">
+          भारत सरकार | Government of India
+        </span>
+        <span>Ministry of Agriculture & Farmers Welfare</span>
       </div>
 
-      {/* Main tab switch content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left 2 Columns Content */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          
-          {activeTab === "rules" && (
-            <div className="bg-white border border-slate-200 shadow-sm text-slate-800 border border-slate-200 p-5 rounded-2xl flex flex-col gap-4">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Declarative Rule Engine</h3>
-              
-              <div className="flex flex-col gap-4">
-                {rules.map((rule: any, idx: number) => (
-                  <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-white border border-slate-200 text-slate-800 flex justify-between items-center">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-200">{rule.name}</h4>
-                      <p className="text-[10px] text-slate-500 mt-1">Condition: <code className="bg-white border border-slate-200 text-slate-800 px-1 py-0.5 rounded text-yellow-500">{rule.condition}</code></p>
-                      <p className="text-[9px] text-slate-500 mt-0.5">Type: {rule.payout_type} | Val: {rule.payout_value}</p>
-                    </div>
-                    
-                    <div className="flex gap-3 items-center">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase ${
-                        rule.active !== false ? "bg-[#166534]/10 text-[#166534] border border-emerald-500/20" : "bg-slate-800 text-slate-500"
-                      }`}>
-                        {rule.active !== false ? "Active" : "Disabled"}
-                      </span>
-                      <button className="py-1 px-3 rounded bg-slate-100 border border-slate-200 text-slate-600 hover:bg-white/10 text-[9px] text-slate-700 transition">
-                        Configure
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      {/* Top Navigation */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/official"
+              className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </Link>
+            <div>
+              <h1 className="text-base font-semibold text-slate-900 leading-tight">
+                PMFBY Claim Settlement Dashboard
+              </h1>
+              <p className="text-xs text-slate-500">
+                Department of Agriculture & Farmers Welfare
+              </p>
             </div>
-          )}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-slate-600">
+            <span className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full border border-green-200">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              System Operational
+            </span>
+            <span>{currentTime}</span>
+          </div>
+        </div>
+      </header>
 
-          {activeTab === "payouts" && activePaymentRecord && (
-            <Payout3D
-              amount={activePaymentRecord.amount}
-              farmerName={activePaymentRecord.beneficiary}
-              status={activePaymentRecord.status}
-            />
-          )}
-
-          {activeTab === "fraud" && (
-            <div className="bg-white border border-slate-200 shadow-sm text-slate-800 border border-slate-200 p-5 rounded-2xl flex flex-col gap-4">
-              <div>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Syndicated Fraud Risk Network</h3>
-                <p className="text-[10px] text-slate-500 mt-1">AI monitors matching bank codes, shared Aadhaar credentials, and clustered geographic claiming.</p>
-              </div>
-              
-              <FraudNetworkGraph />
-              
-              {/* Alert list */}
-              <div className="flex flex-col gap-3 mt-2">
-                <div className="p-3.5 rounded-lg border border-red-500/20 bg-red-500/5 text-xs flex gap-2.5 items-start">
-                  <ShieldAlert className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="font-bold text-red-400 block mb-0.5">High Risk Cluster Flagged (#AL-889)</span>
-                    <p className="text-[10px] text-slate-500 leading-relaxed">
-                      Farmers Ramesh Patel and Suresh Kumar linked to the same crop insurance bank agent code and registered survey bounds. Fraud risk rating: 88%.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "reconciliation" && (
-            <div className="bg-white border border-slate-200 shadow-sm text-slate-800 border border-slate-200 p-5 rounded-2xl flex flex-col gap-4">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Daily Bank Reconciliation</h3>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase">
-                      <th className="py-2">Tx ID</th>
-                      <th className="py-2">Farmer</th>
-                      <th className="py-2">Amount</th>
-                      <th className="py-2">Method</th>
-                      <th className="py-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recon?.completed_transactions?.map((t: any, idx: number) => (
-                      <tr key={idx} className="border-b border-slate-100 text-slate-700">
-                        <td className="py-2.5 font-mono text-[10px]">{t.payment_id}</td>
-                        <td className="py-2.5">{t.beneficiary}</td>
-                        <td className="py-2.5 font-bold text-[#166534]">₹{t.amount.toLocaleString("en-IN")}</td>
-                        <td className="py-2.5 uppercase text-[9px]">{t.payment_mode}</td>
-                        <td className="py-2.5">
-                          <span className="px-1.5 py-0.5 rounded text-[8px] bg-[#166534]/10 text-[#166534] border border-emerald-500/20 font-bold uppercase">
-                            Reconciled
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Disbursed (MTD)"
+            value={formatCurrency(MOCK_STATS.totalDisbursed)}
+            subtext={`${MOCK_STATS.approvedCount} claims processed`}
+            icon={<IndianRupee className="w-4 h-4" />}
+            color="green"
+          />
+          <StatCard
+            title="Success Rate"
+            value={`${MOCK_STATS.successRate}%`}
+            subtext={`${MOCK_STATS.processedCount} total processed`}
+            icon={<CheckCircle className="w-4 h-4" />}
+            color="blue"
+          />
+          <StatCard
+            title="Pending Settlement"
+            value={formatCurrency(MOCK_STATS.pendingAmount)}
+            subtext={`${MOCK_STATS.pendingCount} claims awaiting`}
+            icon={<Clock className="w-4 h-4" />}
+            color="amber"
+          />
+          <StatCard
+            title="Avg Processing Time"
+            value={`${MOCK_STATS.avgProcessingDays} days`}
+            subtext="Target: Under 5 days"
+            icon={<Activity className="w-4 h-4" />}
+            color="slate"
+          />
         </div>
 
-        {/* Right Sidebar (1 Column) */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          
-          {/* Quick Stats Ticker */}
-          <div className="bg-white border border-slate-200 shadow-sm text-slate-800 border border-slate-200 p-5 rounded-2xl shadow-xl flex flex-col gap-4">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Total settled stats</h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg border border-slate-100 bg-white border border-slate-200 text-slate-800">
-                <span className="text-[8px] text-slate-500 uppercase block mb-0.5">Total Settled</span>
-                <span className="font-extrabold text-slate-800 text-sm">₹{(recon?.total_settled_amount ?? 147000).toLocaleString("en-IN")}</span>
-              </div>
-              
-              <div className="p-3 rounded-lg border border-slate-100 bg-white border border-slate-200 text-slate-800">
-                <span className="text-[8px] text-slate-500 uppercase block mb-0.5">Success Rate</span>
-                <span className="font-extrabold text-[#166534] text-sm">99.8%</span>
-              </div>
-            </div>
-
-            {/* Real-time ticker list */}
-            <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
-              <span className="text-[9px] text-slate-500 uppercase tracking-wider">Live Transaction Feed</span>
-              {recon?.completed_transactions?.map((t: any, idx: number) => (
-                <div
-                  key={idx}
-                  onClick={() => setActivePaymentRecord(t)}
-                  className={`p-2.5 rounded-lg border text-[10px] flex justify-between items-center cursor-pointer transition ${
-                    activePaymentRecord?.payment_id === t.payment_id ? "bg-[#166534]/10 border-emerald-500/30" : "bg-white border border-slate-200 text-slate-800 border-slate-100 hover:border-white/15"
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-200 px-2">
+            <nav className="flex gap-1">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? "border-green-700 text-green-800"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
                   }`}
                 >
-                  <div>
-                    <span className="font-semibold text-slate-800">{t.beneficiary}</span>
-                    <span className="text-[8px] text-slate-500 block mt-0.5">ID: {t.payment_id}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {activeTab === "rules" && <RulesTab />}
+            {activeTab === "payouts" && <PayoutsTab />}
+            {activeTab === "fraud" && <FraudTab />}
+            {activeTab === "reconciliation" && <ReconciliationTab />}
+            {activeTab === "audit" && <AuditTab />}
+          </div>
+        </div>
+
+        {/* Bottom Grid: Transactions + SMS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Live Transaction Feed */}
+          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Recent Disbursements
+                </h3>
+              </div>
+              <button className="text-xs text-green-700 hover:text-green-800 font-medium flex items-center gap-1">
+                View All <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {MOCK_TRANSACTIONS.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        tx.status === "Credited"
+                          ? "bg-green-500"
+                          : "bg-amber-500"
+                      }`}
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">
+                        Claim #{tx.id} — {tx.farmer}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {tx.time} · Batch {tx.batch}
+                      </p>
+                    </div>
                   </div>
-                  <span className="font-bold text-[#166534]">₹{t.amount.toLocaleString("en-IN")}</span>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {formatCurrency(tx.amount)}
+                    </p>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full border ${
+                        tx.status === "Credited"
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}
+                    >
+                      {tx.status}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Farmer notification broadcast */}
-          <div className="bg-white border border-slate-200 shadow-sm text-slate-800 border border-slate-200 p-5 rounded-2xl shadow-xl flex flex-col gap-3">
-            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-[#166534]" />
-              Farmer SMS Broadcast
-            </span>
-            <p className="text-[10px] text-slate-500 leading-normal">
-              Broadcast claim details and payout confirmations directly to farmers via WhatsApp and SMS alerts.
-            </p>
-            <div className="flex flex-col gap-2">
-              <textarea
-                placeholder="Enter SMS notification template..."
-                className="w-full bg-white border border-slate-200 text-slate-800 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 placeholder-slate-600 focus:outline-none focus:border-emerald-500 h-16 resize-none"
-                defaultValue="Confirming crop payout ₹{amount} processed for your farm. Reference: {payment_id}."
-              />
-              <button className="w-full flex items-center justify-center gap-2 bg-[#22c55e] hover:bg-[#166534] text-white font-bold py-1.5 px-4 rounded-lg text-xs transition cursor-pointer">
-                <Send className="w-3.5 h-3.5" /> Broadcast Alerts
+          {/* SMS Notification Center */}
+          <div className="bg-white rounded-lg border border-slate-200">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Send className="w-4 h-4 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Farmer Notification Center
+                </h3>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-slate-50 rounded-md p-3 border border-slate-200">
+                <p className="text-xs text-slate-500 mb-1.5">
+                  Last sent message
+                </p>
+                <p className="text-sm text-slate-800 leading-relaxed">
+                  {MOCK_LAST_SMS}
+                </p>
+                <p className="text-xs text-slate-400 mt-2">
+                  Today, 10:42 AM · Delivered
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-700">
+                  Message Template
+                </label>
+                <select className="w-full text-sm border border-slate-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                  <option>Claim Approved (Hindi)</option>
+                  <option>Claim Rejected (Hindi)</option>
+                  <option>Additional Evidence Required (Hindi)</option>
+                  <option>Weather Advisory (Hindi)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded-md">
+                <span className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" />
+                  Recipients
+                </span>
+                <span className="font-medium">1 farmer selected</span>
+              </div>
+
+              <button className="w-full bg-[#166534] hover:bg-[#14532d] text-white text-sm font-medium py-2.5 rounded-md transition-colors flex items-center justify-center gap-2">
+                <Send className="w-4 h-4" />
+                Send Notification
               </button>
             </div>
           </div>
-
         </div>
+      </main>
 
-      </div>
-
+      {/* Government Footer */}
+      <footer className="bg-white border-t border-slate-200 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-500">
+            <span>
+              AgriSense AI — PMFBY Digital Claim Settlement Platform
+            </span>
+            <span className="flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <Database className="w-3 h-3" />
+                Database Connected
+              </span>
+              <span>Version 1.0.0</span>
+              <span>© Government of India</span>
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
-export default function Page() {
+/* Stat Card Component */
+function StatCard({
+  title,
+  value,
+  subtext,
+  icon,
+  color,
+}: {
+  title: string;
+  value: string;
+  subtext: string;
+  icon: React.ReactNode;
+  color: "green" | "blue" | "amber" | "slate";
+}) {
+  const colorClasses = {
+    green: "bg-green-50 text-green-700 border-green-200",
+    blue: "bg-blue-50 text-blue-700 border-blue-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+    slate: "bg-slate-100 text-slate-700 border-slate-200",
+  };
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <OfficialDashboardContent />
-    </QueryClientProvider>
+    <div className="bg-white rounded-lg border border-slate-200 p-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            {title}
+          </p>
+          <p className="text-xl font-bold text-slate-900 mt-1">{value}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{subtext}</p>
+        </div>
+        <div
+          className={`p-2 rounded-md border ${colorClasses[color]}`}
+        >
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Rules Tab */
+function RulesTab() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+          Parametric Rules Configuration
+        </h2>
+        <button className="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-md font-medium transition-colors">
+          Add New Rule
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {MOCK_RULES.map((rule) => (
+          <div
+            key={rule.id}
+            className="border border-slate-200 rounded-lg p-5 bg-white hover:border-slate-300 transition-colors"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  {rule.name}
+                </h3>
+                <span
+                  className={`inline-flex items-center gap-1 text-xs mt-1 px-2 py-0.5 rounded-full border ${
+                    rule.status === "active"
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : "bg-slate-100 text-slate-600 border-slate-200"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      rule.status === "active" ? "bg-green-500" : "bg-slate-400"
+                    }`}
+                  />
+                  Active
+                </span>
+              </div>
+              <button className="text-xs text-green-700 hover:text-green-800 font-medium border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded-md transition-colors">
+                Edit Rule
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Trigger Condition</p>
+                <p className="text-slate-900 font-medium">{rule.trigger}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Payout Structure</p>
+                <p className="text-slate-900">{rule.payout}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Applicable Season</p>
+                <p className="text-slate-900">{rule.season}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-4 text-xs">
+              <span className="text-slate-500">
+                Last triggered:{" "}
+                <span className="text-slate-700 font-medium">
+                  {rule.lastTriggered}
+                </span>
+              </span>
+              <button className="text-slate-500 hover:text-slate-700 underline">
+                View trigger history
+              </button>
+              <button className="text-red-600 hover:text-red-700">
+                Disable rule
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* Payouts Tab */
+function PayoutsTab() {
+  return (
+    <div className="text-center py-12 text-slate-500">
+      <IndianRupee className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+      <p className="text-sm">Payout monitoring interface</p>
+      <p className="text-xs mt-1">Select a batch to view PFMS transaction details</p>
+    </div>
+  );
+}
+
+/* Fraud Tab */
+function FraudTab() {
+  return (
+    <div className="text-center py-12 text-slate-500">
+      <Shield className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+      <p className="text-sm">No active fraud alerts</p>
+      <p className="text-xs mt-1">Last scan: Today, 10:30 AM</p>
+    </div>
+  );
+}
+
+/* Reconciliation Tab */
+function ReconciliationTab() {
+  return (
+    <div className="text-center py-12 text-slate-500">
+      <FileText className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+      <p className="text-sm">Bank reconciliation pending</p>
+      <p className="text-xs mt-1">Last reconciled: Yesterday, 06:00 PM</p>
+    </div>
+  );
+}
+
+/* Audit Tab */
+function AuditTab() {
+  return (
+    <div className="text-center py-12 text-slate-500">
+      <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+      <p className="text-sm">Audit trail available for all processed claims</p>
+      <p className="text-xs mt-1">SHA-256 hash chain integrity: Verified</p>
+    </div>
   );
 }
