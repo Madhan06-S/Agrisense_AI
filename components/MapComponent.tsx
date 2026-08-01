@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { MapContainer, TileLayer, Polygon, Marker, useMapEvents } from "react-leaflet";
+import { useState, useEffect } from "react";
+import { MapContainer, TileLayer, Polygon, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Search, Loader2 } from "lucide-react";
 
 // Configure default Leaflet marker icons
 const iconUrl = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png";
@@ -39,10 +40,37 @@ interface MapComponentProps {
   points: [number, number][];
   setPoints: (points: [number, number][]) => void;
   existingFarms: Farm[];
+  onLocationSelect?: (location: { state: string; district: string; taluka: string; village: string }) => void;
 }
 
-export default function MapComponent({ points, setPoints, existingFarms }: MapComponentProps) {
+const reverseGeocode = async (lat: number, lon: number, callback?: MapComponentProps["onLocationSelect"]) => {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+      { headers: { "User-Agent": "AgriSense-AI-App/1.0" } }
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.address && callback) {
+      const addr = data.address;
+      callback({
+        state: addr.state || "",
+        district: addr.district || addr.state_district || addr.county || "",
+        taluka: addr.subdistrict || addr.tehsil || addr.taluk || "",
+        village: addr.village || addr.town || addr.city || addr.neighbourhood || addr.suburb || "",
+      });
+    }
+  } catch (err) {
+    console.error("Reverse geocoding error:", err);
+  }
+};
+
+export default function MapComponent({ points, setPoints, existingFarms, onLocationSelect }: MapComponentProps) {
   const [mapCenter] = useState<[number, number]>([28.6139, 77.2090]); // New Delhi default
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchMarker, setSearchMarker] = useState<[number, number] | null>(null);
+  const [centerOverride, setCenterOverride] = useState<[number, number] | null>(null);
 
   // Custom event handler to capture click coordinates on the map
   function MapEvents() {
@@ -50,8 +78,20 @@ export default function MapComponent({ points, setPoints, existingFarms }: MapCo
       click(e) {
         const { lat, lng } = e.latlng;
         setPoints([...points, [lat, lng]]);
+        reverseGeocode(lat, lng, onLocationSelect);
       },
     });
+    return null;
+  }
+
+  // Component to dynamically pan the map to the searched coordinates
+  function MapController({ center }: { center: [number, number] | null }) {
+    const map = useMap();
+    useEffect(() => {
+      if (center) {
+        map.flyTo(center, 15, { animate: true, duration: 1.5 });
+      }
+    }, [center, map]);
     return null;
   }
 
@@ -90,6 +130,8 @@ export default function MapComponent({ points, setPoints, existingFarms }: MapCo
             coords.pop();
           }
           setPoints(coords);
+          // Reverse geocode the first coordinate to populate address fields
+          reverseGeocode(coords[0][0], coords[0][1], onLocationSelect);
         } else {
           alert("Could not find a valid Polygon in the uploaded GeoJSON file.");
         }
@@ -99,6 +141,47 @@ export default function MapComponent({ points, setPoints, existingFarms }: MapCo
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearchLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1&addressdetails=1`,
+        { headers: { "User-Agent": "AgriSense-AI-App/1.0" } }
+      );
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const firstResult = data[0];
+        const lat = parseFloat(firstResult.lat);
+        const lon = parseFloat(firstResult.lon);
+        const newCenter: [number, number] = [lat, lon];
+        
+        setCenterOverride(newCenter);
+        setSearchMarker(newCenter);
+        
+        // Auto-fill the form with search result's address details
+        if (onLocationSelect && firstResult.address) {
+          const addr = firstResult.address;
+          onLocationSelect({
+            state: addr.state || "",
+            district: addr.district || addr.state_district || addr.county || "",
+            taluka: addr.subdistrict || addr.tehsil || addr.taluk || "",
+            village: addr.village || addr.town || addr.city || addr.neighbourhood || addr.suburb || "",
+          });
+        }
+      } else {
+        alert("Location not found. Please try a different query.");
+      }
+    } catch (err) {
+      console.error("Geocoding search error:", err);
+      alert("Error searching location. Please try again.");
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   return (
@@ -113,6 +196,9 @@ export default function MapComponent({ points, setPoints, existingFarms }: MapCo
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution="&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
         />
+
+        {/* Dynamic map controller for centering */}
+        <MapController center={centerOverride} />
 
         {/* Listen for click to draw vertices */}
         <MapEvents />
@@ -144,6 +230,20 @@ export default function MapComponent({ points, setPoints, existingFarms }: MapCo
           </>
         )}
 
+        {/* Render searched location marker */}
+        {searchMarker && (
+          <Marker
+            position={searchMarker}
+            eventHandlers={{
+              click: (e) => {
+                e.originalEvent.stopPropagation();
+                // Add search marker as a vertex
+                setPoints([...points, searchMarker]);
+              },
+            }}
+          />
+        )}
+
         {/* Render already registered farms */}
         {existingFarms.map((farm) => {
           if (!farm.boundary?.coordinates?.[0]) return null;
@@ -158,6 +258,30 @@ export default function MapComponent({ points, setPoints, existingFarms }: MapCo
           );
         })}
       </MapContainer>
+
+      {/* Search Bar Overlay */}
+      <div className="absolute top-4 left-14 z-[1000] w-72">
+        <form onSubmit={handleSearch} className="flex items-center gap-1 bg-[#0a1f0a]/95 border border-emerald-800 rounded-md p-1 shadow-md backdrop-blur-sm">
+          <input
+            type="text"
+            placeholder="Search location (e.g. Karnal)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent text-xs text-[#e2ebd5] placeholder-emerald-600 px-2 py-1 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={searchLoading}
+            className="p-1 bg-[#133513] hover:bg-[#1b4f1b] text-emerald-400 rounded transition"
+          >
+            {searchLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Search className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </form>
+      </div>
 
       {/* Control Buttons */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">

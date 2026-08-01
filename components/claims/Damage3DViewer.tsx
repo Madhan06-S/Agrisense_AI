@@ -61,7 +61,7 @@ export default function Damage3DViewer() {
         const ambientLight = new THREE.AmbientLight("#475569", 0.6);
         scene.add(ambientLight);
 
-        const keyLight = new THREE.DirectionalLight("#f59e0b", 1.0); # amber glow
+        const keyLight = new THREE.DirectionalLight("#f59e0b", 1.0); // amber glow
         keyLight.position.set(-10, 15, 10);
         scene.add(keyLight);
 
@@ -87,14 +87,14 @@ export default function Damage3DViewer() {
             heightVal = Math.sin(vx * 0.5) * 0.4 + Math.cos(vz * 0.5) * 0.4;
             color.setHSL(0.35 + Math.random() * 0.05, 0.85, 0.4);
           } else {
-            # Post-Damage Depressed Red State (center flooded/depressed crater)
+            // Post-Damage Depressed Red State (center flooded/depressed crater)
             const depression = 1.2 * Math.exp(-0.15 * (vx*vx + vz*vz));
             heightVal = (Math.sin(vx * 0.5) * 0.4 + Math.cos(vz * 0.5) * 0.4) - depression;
             
             if (dist < 2.5) {
-              color.setHSL(0.02, 0.9, 0.4); # Flooded/Damaged Red
+              color.setHSL(0.02, 0.9, 0.4); // Flooded/Damaged Red
             } else {
-              color.setHSL(0.12, 0.8, 0.45); # Stressed Yellow/Brown
+              color.setHSL(0.12, 0.8, 0.45); // Stressed Yellow/Brown
             }
           }
           
@@ -112,7 +112,7 @@ export default function Damage3DViewer() {
         });
 
         terrainMesh = new THREE.Mesh(geometry, material);
-        terrainMesh.position.set(-3.0, 0, 0); # Offset to the left
+        terrainMesh.position.set(-3.0, 0, 0); // Offset to the left
         scene.add(terrainMesh);
 
         // 6. Create XGBoost Radial 3D Bar Chart (Offset to the right)
@@ -121,7 +121,7 @@ export default function Damage3DViewer() {
         // Central prediction core
         const coreGeom = new THREE.SphereGeometry(0.5, 32, 32);
         const coreMat = new THREE.MeshStandardMaterial({
-          color: isPostDamage ? "#ef4444" : "#10b981", # Red core if severe damage
+          color: isPostDamage ? "#ef4444" : "#10b981", // Red core if severe damage
           emissive: isPostDamage ? "#ef4444" : "#10b981",
           emissiveIntensity: 0.6,
         });

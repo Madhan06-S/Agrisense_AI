@@ -76,12 +76,12 @@ export default function Pipeline3D() {
 
         // 5. Create Platforms in a Spiral Staircase
         stages.forEach((stage, idx) => {
-          const theta = (idx / stages.length) * Math.PI * 1.5; # 270 degree spiral
+          const theta = (idx / stages.length) * Math.PI * 1.5; // 270 degree spiral
           const radius = 4.5;
           
           const x = Math.cos(theta) * radius;
           const z = Math.sin(theta) * radius;
-          const y = (idx - stages.length / 2) * 1.2; # Spiral elevation
+          const y = (idx - stages.length / 2) * 1.2; // Spiral elevation
 
           // Stage Cylinder Mesh
           const geom = new THREE.CylinderGeometry(0.8, 0.8, 0.15, 32);
@@ -154,7 +154,7 @@ export default function Pipeline3D() {
               mesh: particle,
               p1,
               p2,
-              progress: p / particleCount, # Stagger start progress
+              progress: p / particleCount, // Stagger start progress
               speed: 0.005 + Math.random() * 0.005
             });
           }

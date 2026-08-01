@@ -70,7 +70,7 @@ export default function GlobeViewer() {
 
         // 2. Add farm markers as extruded pillars
         mockFarms.forEach((farm) => {
-          const height = farm.area * 10000.0; # Max height based on hectares
+          const height = farm.area * 10000.0; // Max height based on hectares
           viewer.entities.add({
             name: farm.name,
             description: `${farm.cropType} (${farm.area} ha)`,
@@ -92,7 +92,7 @@ export default function GlobeViewer() {
           for (let lat = -80; lat <= 80; lat += 5) {
             // Simplified polar orbit trajectory calculations
             const lng = 78.9629 + Math.sin(lat * Math.PI / 180.0) * 30.0 + offsetLng;
-            positions.push(Cesium.Cartesian3.fromDegrees(lng, lat, 700000.0)); # 700km altitude
+            positions.push(Cesium.Cartesian3.fromDegrees(lng, lat, 700000.0)); // 700km altitude
           }
           viewer.entities.add({
             polyline: {
@@ -121,9 +121,9 @@ export default function GlobeViewer() {
           }, 1000);
         };
 
-        drawOrbit(Cesium.Color.RED, -20.0);    # Sentinel-1
-        drawOrbit(Cesium.Color.GREEN, 0.0);     # Sentinel-2
-        drawOrbit(Cesium.Color.ORANGE, 20.0);   # LISS-IV
+        drawOrbit(Cesium.Color.RED, -20.0);    // Sentinel-1
+        drawOrbit(Cesium.Color.GREEN, 0.0);     // Sentinel-2
+        drawOrbit(Cesium.Color.ORANGE, 20.0);   // LISS-IV
 
         setLoading(false);
       } catch (err) {

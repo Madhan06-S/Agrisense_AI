@@ -16,6 +16,8 @@ class User(Base):
     password_reset_token = Column(String, nullable=True)
     last_login = Column(DateTime, nullable=True)
     login_attempts = Column(Integer, default=0, nullable=False)
+    role = Column(String, default="farmer", nullable=False)
+    pin = Column(String, nullable=True)
     
     # Relationships
     farms = relationship("Farm", back_populates="owner")

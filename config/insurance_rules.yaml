@@ -1,0 +1,27 @@
+rules:
+  - name: "NDVI Drop Payout"
+    condition: "ndvi_drop_percent > 40"
+    threshold: 40.0
+    payout_type: "percentage_of_sum_insured"
+    payout_value: 0.5
+    max_payout: 100000.0
+
+  - name: "Flood Index Payout"
+    condition: "flood_index > 0.8"
+    threshold: 0.8
+    payout_type: "fixed_per_hectare"
+    payout_value: 15000.0
+    max_payout: 200000.0
+
+  - name: "Rainfall Deficit"
+    condition: "rainfall_anomaly < -60"
+    threshold: -60.0
+    payout_type: "tiered"
+    tiers:
+      - threshold: -60.0
+        payout_percent: 0.25
+      - threshold: -80.0
+        payout_percent: 0.50
+      - threshold: -95.0
+        payout_percent: 0.75
+    max_payout: 150000.0

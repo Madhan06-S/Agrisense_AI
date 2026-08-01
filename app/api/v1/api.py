@@ -1,8 +1,10 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import farms, satellite, catalog, quality, pipeline, preprocessing, timeseries
+from app.api.v1.endpoints import farms, satellite, catalog, quality, pipeline, preprocessing, timeseries, features, ml, decision, insurance, payments, compliance, copilot, credit, agronomy, auth, notifications
 from app.pipeline.metrics import router as metrics_router
 
 api_router = APIRouter()
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(farms.router, prefix="/farms", tags=["farms"])
 api_router.include_router(satellite.router, prefix="/satellite", tags=["satellite"])
 api_router.include_router(catalog.router, prefix="/catalog", tags=["catalog"])
@@ -10,4 +12,13 @@ api_router.include_router(quality.router, prefix="/quality", tags=["quality"])
 api_router.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])
 api_router.include_router(preprocessing.router, prefix="/preprocessing", tags=["preprocessing"])
 api_router.include_router(timeseries.router, prefix="/timeseries", tags=["timeseries"])
+api_router.include_router(features.router, prefix="/features", tags=["features"])
+api_router.include_router(ml.router, prefix="/ml", tags=["ml"])
+api_router.include_router(decision.router, prefix="/decision", tags=["decision"])
+api_router.include_router(insurance.router, prefix="/insurance", tags=["insurance"])
+api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
+api_router.include_router(compliance.router, prefix="/compliance", tags=["compliance"])
+api_router.include_router(copilot.router, prefix="/copilot", tags=["copilot"])
+api_router.include_router(credit.router, prefix="/credit", tags=["credit"])
+api_router.include_router(agronomy.router, prefix="/agronomy", tags=["agronomy"])
 api_router.include_router(metrics_router, tags=["metrics"])

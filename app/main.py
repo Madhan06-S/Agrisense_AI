@@ -37,6 +37,28 @@ async def startup_event():
             f"Failed to auto-authenticate GEE on startup: {e}. "
             "Continuing boot; backend GEE health will show unhealthy."
         )
+    
+    # Run startup migrations/alters for SQLite database
+    logger.info("Running startup DB alters...")
+    try:
+        from app.core.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as session:
+            try:
+                await session.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'farmer'"))
+                await session.commit()
+                logger.info("Successfully added role column to users table.")
+            except Exception:
+                pass
+            
+            try:
+                await session.execute(text("ALTER TABLE users ADD COLUMN pin VARCHAR"))
+                await session.commit()
+                logger.info("Successfully added pin column to users table.")
+            except Exception:
+                pass
+    except Exception as e:
+        logger.error(f"Failed to run startup DB alters: {e}")
 
 # Request logger middleware
 @app.middleware("http")
