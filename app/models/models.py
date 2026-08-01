@@ -191,3 +191,29 @@ class DatasetVersion(Base):
         Index("idx_dataset_versions_version", "version"),
     )
 
+
+
+class Claim(Base):
+    __tablename__ = "claims"
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
+    farmer_name = Column(String, nullable=True)
+    farm_name = Column(String, nullable=True)
+    claim_type = Column(String, nullable=False) # "flood", "drought", "pest"
+    description = Column(String, nullable=True)
+    status = Column(String, default="submitted", nullable=False) # "submitted", "under_review", "approved", "rejected"
+    officer_remarks = Column(String, nullable=True)
+    submitted_at = Column(String, nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    officer_id = Column(Integer, nullable=True)
+
+class DamageAssessment(Base):
+    __tablename__ = "damage_assessments"
+    id = Column(Integer, primary_key=True, index=True)
+    claim_id = Column(Integer, nullable=False)
+    satellite_score = Column(Float, nullable=False)
+    image_score = Column(Float, nullable=False)
+    weather_score = Column(Float, nullable=False)
+    combined_score = Column(Float, nullable=False)
+    confidence = Column(Float, default=0.92)
+    explanation_json = Column(JSON, nullable=True)

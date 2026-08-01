@@ -113,3 +113,26 @@ def record_override(claim_id: int, official_id: int, original_color: str, new_co
     
     logger.info(f"Official {official_id} overrode Claim {claim_id} from {original_color} to {new_color}")
     return audit_entry
+
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.models import Claim, DamageAssessment
+
+async def apply_traffic_light_decision(claim_id: int, db: AsyncSession):
+    stmt = select(Claim).where(Claim.id == claim_id)
+    res = await db.execute(stmt)
+    claim = res.scalars().first()
+    if not claim:
+        return None
+        
+    stmt_assess = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
+    res_assess = await db.execute(stmt_assess)
+    assess = res_assess.scalars().first()
+    if not assess:
+        return None
+        
+    # Auto-update status or leave for manual verification
+    claim.status = "under_review"
+    await db.commit()
+    return claim

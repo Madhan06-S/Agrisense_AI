@@ -1,7 +1,7 @@
 import logging
-import random
 import time
 from typing import Dict, Any, List, Tuple, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.models import User
+from app.integrations.firebase_auth import FirebaseAuthService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -58,273 +59,128 @@ def decode_jwt(token: str) -> dict:
         raise ValueError(f"Invalid token: {str(e)}")
 
 # ----------------------------------------------------
-# OTP Storage & Management (Redis + In-Memory Fallback)
-# ----------------------------------------------------
-IN_MEMORY_OTP: Dict[str, Tuple[str, float]] = {}
-IN_MEMORY_ATTEMPTS: Dict[str, Tuple[int, float]] = {}
-IN_MEMORY_WRONG_ATTEMPTS: Dict[str, Tuple[int, float]] = {}
-SENT_SMS_MESSAGES: List[dict] = []
-
-try:
-    import redis
-    redis_client = redis.Redis(host="localhost", port=6379, db=0, socket_timeout=1)
-    redis_client.ping()
-    use_redis = True
-except Exception:
-    use_redis = False
-    redis_client = None
-
-def get_otp_store(phone: str) -> Optional[str]:
-    if use_redis:
-        try:
-            val = redis_client.get(f"otp:{phone}")
-            return val.decode("utf-8") if val else None
-        except Exception:
-            pass
-    if phone in IN_MEMORY_OTP:
-        otp, expire = IN_MEMORY_OTP[phone]
-        if expire > time.time():
-            return otp
-        else:
-            del IN_MEMORY_OTP[phone]
-    return None
-
-def set_otp_store(phone: str, otp: str, ttl: int = 300) -> None:
-    if use_redis:
-        try:
-            redis_client.setex(f"otp:{phone}", ttl, otp)
-            return
-        except Exception:
-            pass
-    IN_MEMORY_OTP[phone] = (otp, time.time() + ttl)
-
-def check_rate_limit(phone: str) -> bool:
-    now = time.time()
-    if use_redis:
-        try:
-            key = f"rate:{phone}"
-            val = redis_client.get(key)
-            if val:
-                count = int(val)
-                if count >= 3:
-                    return False
-                redis_client.incr(key)
-            else:
-                redis_client.setex(key, 3600, 1)
-            return True
-        except Exception:
-            pass
-    if phone in IN_MEMORY_ATTEMPTS:
-        count, reset_time = IN_MEMORY_ATTEMPTS[phone]
-        if now > reset_time:
-            IN_MEMORY_ATTEMPTS[phone] = (1, now + 3600)
-            return True
-        elif count >= 3:
-            return False
-        else:
-            IN_MEMORY_ATTEMPTS[phone] = (count + 1, reset_time)
-            return True
-    else:
-        IN_MEMORY_ATTEMPTS[phone] = (1, now + 3600)
-        return True
-
-def check_lockout(phone: str) -> Tuple[bool, int]:
-    now = time.time()
-    if use_redis:
-        try:
-            lock_key = f"lockout:{phone}"
-            lock_val = redis_client.get(lock_key)
-            if lock_val:
-                ttl = redis_client.ttl(lock_key)
-                return True, max(0, int(ttl))
-        except Exception:
-            pass
-    if phone in IN_MEMORY_WRONG_ATTEMPTS:
-        wrong_count, lockout_end = IN_MEMORY_WRONG_ATTEMPTS[phone]
-        if now < lockout_end:
-            return True, int(lockout_end - now)
-    return False, 0
-
-def increment_wrong_otp(phone: str) -> int:
-    now = time.time()
-    if use_redis:
-        try:
-            wrong_key = f"wrong:{phone}"
-            val = redis_client.get(wrong_key)
-            count = int(val or 0) + 1
-            if count >= 3:
-                redis_client.setex(f"lockout:{phone}", 300, "locked")
-                redis_client.delete(wrong_key)
-                return 3
-            else:
-                redis_client.setex(wrong_key, 300, count)
-                return count
-        except Exception:
-            pass
-    if phone in IN_MEMORY_WRONG_ATTEMPTS:
-        wrong_count, lockout_end = IN_MEMORY_WRONG_ATTEMPTS[phone]
-        count = wrong_count + 1
-        if count >= 3:
-            IN_MEMORY_WRONG_ATTEMPTS[phone] = (3, now + 300)
-            return 3
-        else:
-            IN_MEMORY_WRONG_ATTEMPTS[phone] = (count, 0)
-            return count
-    else:
-        IN_MEMORY_WRONG_ATTEMPTS[phone] = (1, 0)
-        return 1
-
-def reset_wrong_otp(phone: str) -> None:
-    if use_redis:
-        try:
-            redis_client.delete(f"wrong:{phone}")
-            redis_client.delete(f"lockout:{phone}")
-        except Exception:
-            pass
-    if phone in IN_MEMORY_WRONG_ATTEMPTS:
-        del IN_MEMORY_WRONG_ATTEMPTS[phone]
-
-# ----------------------------------------------------
 # Pydantic Schemas
 # ----------------------------------------------------
-class SendOTPRequest(BaseModel):
-    phone: str = Field(..., description="10-digit mobile number")
-    role: Optional[str] = "farmer"
+class PhoneRequest(BaseModel):
+    phone: str = Field(..., pattern=r'^[6-9]\d{9}$')
 
-class VerifyOTPRequest(BaseModel):
-    phone: str
-    otp: str
+class FirebaseVerifyRequest(BaseModel):
+    id_token: str
+    phone: str = Field(..., pattern=r'^[6-9]\d{9}$')
     pin: Optional[str] = None
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: dict
 
 # ----------------------------------------------------
 # Router Endpoints
 # ----------------------------------------------------
-@router.post("/send-otp")
-async def send_otp(req: SendOTPRequest):
-    phone = req.phone.strip()
-    if len(phone) != 10 or not phone.isdigit() or phone[0] not in "6789":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please enter a valid 10-digit mobile number starting with 6/7/8/9"
-        )
-    
-    is_locked, remaining_lock = check_lockout(phone)
-    if is_locked:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Too many wrong attempts. Locked out. Try again in {remaining_lock} seconds."
-        )
-    
-    if not check_rate_limit(phone):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Maximum 3 OTP requests per hour. Please wait."
-        )
-    
-    # Generate 6-digit OTP
-    otp = f"{random.randint(100000, 999999)}"
-    set_otp_store(phone, otp, ttl=300)
-    
-    # Log simulated SMS message
-    msg = f"Message from AGRISE: Your AgriSense OTP is {otp}. Valid for 5 mins."
-    SENT_SMS_MESSAGES.append({
-        "phone": phone,
-        "message": msg,
-        "timestamp": time.time()
-    })
-    logger.info(f"Simulated SMS for {phone}: {msg}")
-    
-    return {"message": "OTP sent successfully", "expires_in": 300}
 
-@router.post("/verify-otp")
-async def verify_otp(req: VerifyOTPRequest, response: Response, db: AsyncSession = Depends(get_db)):
-    phone = req.phone.strip()
-    otp = req.otp.strip()
+@router.post("/check-phone")
+async def check_phone(data: PhoneRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Checks if user phone number is registered in AgriSense database.
+    If not, raises 404.
+    """
+    phone = data.phone.strip()
+    stmt = select(User).where(User.phone == phone)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
     
-    is_locked, remaining_lock = check_lockout(phone)
-    if is_locked:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Locked out. Try again in {remaining_lock} seconds."
-        )
-        
-    stored_otp = get_otp_store(phone)
-    if not stored_otp or stored_otp != otp:
-        wrong_count = increment_wrong_otp(phone)
-        remaining = 3 - wrong_count
-        if remaining <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many incorrect OTP attempts. Locked out for 5 minutes."
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid OTP. {remaining} attempts remaining."
-            )
-            
-    # Success: Reset wrong attempts and delete OTP
-    reset_wrong_otp(phone)
-    if use_redis:
-        try:
-            redis_client.delete(f"otp:{phone}")
-        except Exception:
-            pass
-    elif phone in IN_MEMORY_OTP:
-        del IN_MEMORY_OTP[phone]
-        
-    # Get or create user
-    result = await db.execute(select(User).where(User.phone == phone))
-    user = result.scalars().first()
-    
-    # Simple role detection: default to farmer, but if phone in list or pin is provided, make them officer
-    role = "farmer"
-    if phone in ["9876543211", "9876543222", "9999988888"] or req.pin is not None:
-        role = "officer"
-        
     if not user:
-        # Sign up user
-        user = User(
-            email=f"{phone}@agrisense.gov.in",
-            phone=phone,
-            aadhaar_number=f"123456{phone}", # generate mock aadhaar
-            hashed_password="pbkdf2:sha256:260000$mock_hash_placeholder",
-            role=role,
-            pin=req.pin.strip() if req.pin else None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mobile number not registered. Contact your block agriculture officer."
         )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-    else:
-        # Upgrade to officer if PIN is provided on login
-        if req.pin and user.role == "farmer":
-            user.role = "officer"
-            user.pin = req.pin.strip()
-            await db.commit()
-            await db.refresh(user)
-            
-        # Check PIN for officers
-        if user.role == "officer":
-            if not user.pin:
-                # If first login, let them set a PIN
-                if req.pin:
-                    user.pin = req.pin.strip()
-                    await db.commit()
-                else:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="PIN is required for first-time officer login setup."
-                    )
-            elif req.pin and user.pin != req.pin.strip():
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid officer credentials (PIN mismatch)."
-                )
+        
+    return {
+        "exists": True,
+        "role": user.role
+    }
 
+@router.post("/verify-firebase-token", response_model=TokenResponse)
+async def verify_firebase_token(
+    data: FirebaseVerifyRequest, 
+    response: Response, 
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verifies Firebase ID Token, checks database registration, sets cookies, and returns AgriSense JWTs.
+    """
+    phone = data.phone.strip()
+    
+    try:
+        # Call Firebase Auth Service
+        token_data = FirebaseAuthService.verify_id_token(data.id_token)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Firebase ID Token: {str(e)}"
+        )
+        
+    # Verify the phone matches decoded token phone
+    token_phone = token_data.get("phone", "")
+    if token_phone != phone:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token phone number mismatch."
+        )
+        
+    # Find user in DB
+    stmt = select(User).where(User.phone == phone)
+    res = await db.execute(stmt)
+    user = res.scalars().first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User registration not found in local system."
+        )
+        
+    # Verify account active status
+    is_active = getattr(user, 'is_active', True)
+    if is_active is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account deactivated"
+        )
+        
+    # Simple role detection & PIN checking/upgrades from Checkpoint 2
+    if phone in ["9876543211", "9876543222", "9999988888"] or data.pin is not None:
+        if user.role == "farmer":
+            user.role = "officer"
+            if data.pin:
+                user.pin = data.pin.strip()
+            await db.commit()
+            
+    # Check PIN for officers
+    if user.role == "officer":
+        if not user.pin:
+            if data.pin:
+                user.pin = data.pin.strip()
+                await db.commit()
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="PIN is required for first-time officer login setup."
+                )
+        elif data.pin and user.pin != data.pin.strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid officer credentials (PIN mismatch)."
+            )
+            
+    # Update last login
+    user.last_login = datetime.utcnow()
+    await db.commit()
+    
     # Generate JWT Tokens
     now = int(time.time())
-    access_token = encode_jwt({"sub": str(user.id), "phone": user.phone, "role": user.role, "exp": now + 900}) # 15 mins
-    refresh_token = encode_jwt({"sub": str(user.id), "phone": user.phone, "role": user.role, "exp": now + 604800}) # 7 days
+    access_token = encode_jwt({"sub": str(user.id), "phone": user.phone, "role": user.role, "exp": now + 900})
+    refresh_token = encode_jwt({"sub": str(user.id), "phone": user.phone, "role": user.role, "exp": now + 604800})
     
     # Set cookies
     response.set_cookie(
@@ -333,7 +189,7 @@ async def verify_otp(req: VerifyOTPRequest, response: Response, db: AsyncSession
         httponly=True,
         max_age=900,
         samesite="lax",
-        secure=False # set true in prod
+        secure=False
     )
     response.set_cookie(
         key="refresh_token",
@@ -347,11 +203,13 @@ async def verify_otp(req: VerifyOTPRequest, response: Response, db: AsyncSession
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
+        "token_type": "bearer",
         "user": {
             "id": user.id,
-            "email": user.email,
+            "full_name": getattr(user, 'full_name', 'User'),
             "phone": user.phone,
-            "role": user.role
+            "role": user.role,
+            "aadhaar_verified": getattr(user, 'aadhaar_verified', False)
         }
     }
 
@@ -359,7 +217,6 @@ async def verify_otp(req: VerifyOTPRequest, response: Response, db: AsyncSession
 async def get_me(request: Request, db: AsyncSession = Depends(get_db)):
     token = request.cookies.get("access_token")
     if not token:
-        # Check Authorization header as fallback
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
@@ -390,6 +247,11 @@ async def get_me(request: Request, db: AsyncSession = Depends(get_db)):
 async def refresh(request: Request, response: Response):
     token = request.cookies.get("refresh_token")
     if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
         
     try:
@@ -418,10 +280,5 @@ async def logout(response: Response):
 
 @router.get("/last-sms")
 async def get_last_sms(phone: Optional[str] = None):
-    if phone:
-        matched = [m for m in SENT_SMS_MESSAGES if m["phone"] == phone]
-        if matched:
-            return matched[-1]
-    elif SENT_SMS_MESSAGES:
-        return SENT_SMS_MESSAGES[-1]
-    return {"message": "No SMS sent yet"}
+    # Backward compatibility mock response
+    return {"message": "SMS simulator is not active when Firebase Phone Auth is enabled."}

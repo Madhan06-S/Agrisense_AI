@@ -41,6 +41,14 @@ async def startup_event():
     # Run startup migrations/alters for SQLite database
     logger.info("Running startup DB alters...")
     try:
+        from app.core.database import engine
+        from app.models.models import Base
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Successfully ran Base.metadata.create_all on startup.")
+    except Exception as e:
+        logger.error(f"Failed metadata create_all: {e}")
+    try:
         from app.core.database import AsyncSessionLocal
         from sqlalchemy import text
         async with AsyncSessionLocal() as session:

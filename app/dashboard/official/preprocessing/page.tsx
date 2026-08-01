@@ -135,7 +135,7 @@ export default function PreprocessingDashboard() {
             Export GeoTIFF Zip
           </button>
         </div>
-      </div></div></header>
+      </header>
 
       {/* Main Grid Section */}
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">

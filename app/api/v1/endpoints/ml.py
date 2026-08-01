@@ -132,3 +132,19 @@ async def get_contrastive_explanation(farm_id: int, target_class: str = "no_dama
     except Exception as e:
         logger.error(f"Error generating contrastive explanation: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+from app.models.models import DamageAssessment
+from sqlalchemy import select
+
+@router.get("/analyze/{claim_id}/result")
+async def get_claim_assessment_result(claim_id: int, db: AsyncSession = Depends(get_db)):
+    stmt = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
+    res = await db.execute(stmt)
+    assess = res.scalars().first()
+    if not assess:
+        from app.ml.fusion_engine import run_fusion_pipeline
+        assess = await run_fusion_pipeline(claim_id, db)
+        if not assess:
+            raise HTTPException(status_code=404, detail="Assessment not found")
+    return assess

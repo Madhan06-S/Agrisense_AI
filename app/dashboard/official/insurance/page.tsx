@@ -332,7 +332,12 @@ export default function InsuranceDashboard() {
                     />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
-                        Claim #{tx.claim_id || tx.id} — {tx.beneficiary || tx.farmer}
+                        <Link
+                          href={`/dashboard/official/claims/${tx.claim_id || tx.id}`}
+                          className="text-[#166534] hover:text-emerald-800 font-bold hover:underline"
+                        >
+                          Claim #{tx.claim_id || tx.id}
+                        </Link> — {tx.beneficiary || tx.farmer}
                       </p>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {tx.time || "Today"} · Batch {tx.batch || tx.payment_id}

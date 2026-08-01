@@ -23,6 +23,7 @@ services:
     container_name: agrisense_redis
     ports:
       - "6379:6379"
+    command: redis-server --requirepass agrisense123
     volumes:
       - redisdata:/data
     healthcheck:

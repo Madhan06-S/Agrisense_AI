@@ -57,3 +57,6 @@ data/
 *.zip
 *.log
 
+
+# Firebase private credentials
+firebase-admin.json
