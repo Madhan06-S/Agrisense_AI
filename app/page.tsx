@@ -49,8 +49,8 @@ export default function HomePage() {
                       key={i}
                       x1="50"
                       y1="50"
-                      x2={50 + 45 * Math.cos(rad)}
-                      y2={50 + 45 * Math.sin(rad)}
+                      x2={Number((50 + 45 * Math.cos(rad)).toFixed(4))}
+                      y2={Number((50 + 45 * Math.sin(rad)).toFixed(4))}
                       strokeWidth="1.5"
                     />
                   );

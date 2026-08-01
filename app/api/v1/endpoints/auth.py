@@ -277,9 +277,9 @@ async def verify_otp(req: VerifyOTPRequest, response: Response, db: AsyncSession
     result = await db.execute(select(User).where(User.phone == phone))
     user = result.scalars().first()
     
-    # Simple role detection: default to farmer, but if phone starts with 987654322 or 9876543211 make them officer
+    # Simple role detection: default to farmer, but if phone in list or pin is provided, make them officer
     role = "farmer"
-    if phone in ["9876543211", "9876543222", "9999988888"]:
+    if phone in ["9876543211", "9876543222", "9999988888"] or req.pin is not None:
         role = "officer"
         
     if not user:
@@ -296,6 +296,13 @@ async def verify_otp(req: VerifyOTPRequest, response: Response, db: AsyncSession
         await db.commit()
         await db.refresh(user)
     else:
+        # Upgrade to officer if PIN is provided on login
+        if req.pin and user.role == "farmer":
+            user.role = "officer"
+            user.pin = req.pin.strip()
+            await db.commit()
+            await db.refresh(user)
+            
         # Check PIN for officers
         if user.role == "officer":
             if not user.pin:
