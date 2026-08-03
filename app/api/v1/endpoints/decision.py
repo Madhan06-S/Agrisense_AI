@@ -151,39 +151,14 @@ async def get_decision_stats():
     }
 
 
-from app.models.models import DamageAssessment
-from sqlalchemy import select
+
+from app.decision.engine import evaluate_traffic_light, apply_traffic_light_decision
 
 @router.post("/evaluate/{claim_id}")
 async def evaluate_claim_decision(claim_id: int, db: AsyncSession = Depends(get_db)):
-    stmt = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
-    res = await db.execute(stmt)
-    assess = res.scalars().first()
-    if not assess:
-        from app.ml.fusion_engine import run_fusion_pipeline
-        assess = await run_fusion_pipeline(claim_id, db)
-        if not assess:
-            raise HTTPException(status_code=404, detail="Damage assessment not found")
-            
-    score = assess.combined_score
-    if score >= 70:
-        light = "red"
-        message = "Auto-approve eligible. Severe damage detected."
-    elif score >= 40:
-        light = "yellow"
-        message = "Manual review required. Moderate damage detected."
-    else:
-        light = "green"
-        message = "Auto-close eligible. No significant damage detected."
-        
-    return {
-        "light": light,
-        "score": score,
-        "message": message,
-        "confidence": assess.confidence or 0.92,
-        "breakdown": {
-            "satellite": assess.satellite_score,
-            "image": assess.image_score,
-            "weather": assess.weather_score
-        }
-    }
+    return await evaluate_traffic_light(claim_id, db)
+
+@router.post("/apply/{claim_id}")
+async def apply_decision(claim_id: int, db: AsyncSession = Depends(get_db)):
+    await apply_traffic_light_decision(claim_id, db)
+    return {"status": "applied"}

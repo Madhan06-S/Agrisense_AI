@@ -49,7 +49,7 @@ class FirebaseAuthService:
             }
 
         try:
-            decoded_token = auth.verify_id_token(id_token)
+            decoded_token = auth.verify_id_token(id_token, clock_skew_seconds=30)
             uid = decoded_token.get("uid")
             phone = decoded_token.get("phone_number") or ""
             

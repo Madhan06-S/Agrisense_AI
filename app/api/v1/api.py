@@ -16,7 +16,7 @@ api_router.include_router(preprocessing.router, prefix="/preprocessing", tags=["
 api_router.include_router(timeseries.router, prefix="/timeseries", tags=["timeseries"])
 api_router.include_router(features.router, prefix="/features", tags=["features"])
 api_router.include_router(ml.router, prefix="/ml", tags=["ml"])
-api_router.include_router(decision.router, prefix="/decision", tags=["decision"])
+api_router.include_router(decision.router, prefix="/decision", tags=["Traffic Light"])
 api_router.include_router(insurance.router, prefix="/insurance", tags=["insurance"])
 api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
 api_router.include_router(compliance.router, prefix="/compliance", tags=["compliance"])

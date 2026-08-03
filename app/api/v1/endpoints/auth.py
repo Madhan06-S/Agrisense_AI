@@ -83,22 +83,15 @@ class TokenResponse(BaseModel):
 async def check_phone(data: PhoneRequest, db: AsyncSession = Depends(get_db)):
     """
     Checks if user phone number is registered in AgriSense database.
-    If not, raises 404.
     """
     phone = data.phone.strip()
     stmt = select(User).where(User.phone == phone)
     res = await db.execute(stmt)
     user = res.scalars().first()
     
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mobile number not registered. Contact your block agriculture officer."
-        )
-        
     return {
-        "exists": True,
-        "role": user.role
+        "exists": bool(user),
+        "role": user.role if user else None
     }
 
 @router.post("/verify-firebase-token", response_model=TokenResponse)

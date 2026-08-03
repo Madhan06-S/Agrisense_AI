@@ -41,12 +41,10 @@ mock_ee.ImageCollection.return_value = mock_collection
 
 sys.modules['ee'] = mock_ee
 
-# 2. Mock 'google.auth' and 'google.oauth2' modules
-mock_google_auth = MagicMock()
-mock_google_auth.default.return_value = (MagicMock(), "mock-project-id")
-sys.modules['google.auth'] = mock_google_auth
-sys.modules['google.oauth2'] = MagicMock()
-sys.modules['google.oauth2.service_account'] = MagicMock()
+# 2. Mock google.auth.default
+import google.auth
+mock_google_auth_default = MagicMock(return_value=(MagicMock(), "mock-project-id"))
+google.auth.default = mock_google_auth_default
 
 # 3. Monkey-patch geoalchemy2 Geometry & shape converters for SQLite compatibility
 import geoalchemy2

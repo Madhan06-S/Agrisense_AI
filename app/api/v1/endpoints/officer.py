@@ -61,6 +61,9 @@ async def officer_decision(
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
         
+    if claim.status in ["approved", "rejected"]:
+        raise HTTPException(status_code=400, detail=f"Claim already {claim.status}")
+        
     if req.action == "approve":
         claim.status = "approved"
     elif req.action == "reject":
@@ -84,4 +87,5 @@ async def officer_decision(
     )
     
     await db.commit()
+    await db.refresh(claim)
     return {"status": "success", "claim_id": claim_id, "new_status": claim.status}

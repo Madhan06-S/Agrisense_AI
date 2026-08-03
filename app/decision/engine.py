@@ -1,7 +1,11 @@
+from enum import Enum
 import logging
 import time
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.models import Claim, DamageAssessment
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,11 @@ class OverrideRequest(BaseModel):
     original_color: str
     new_color: str
     reason: str
+
+class TrafficLight(str, Enum):
+    GREEN = "green"
+    YELLOW = "yellow"
+    RED = "red"
 
 def evaluate_routing_rules_pillar5(
     ndvi: float,
@@ -114,25 +123,69 @@ def record_override(claim_id: int, official_id: int, original_color: str, new_co
     logger.info(f"Official {official_id} overrode Claim {claim_id} from {original_color} to {new_color}")
     return audit_entry
 
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from app.models.models import Claim, DamageAssessment
+async def evaluate_traffic_light(claim_id: int, db: AsyncSession) -> dict:
+    stmt = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
+    res = await db.execute(stmt)
+    assessment = res.scalars().first()
+    
+    if not assessment:
+        return {
+            "light": "yellow",
+            "score": 0,
+            "confidence": 0.0,
+            "message": "AI assessment pending. Routed to manual review.",
+            "auto_action": None,
+            "breakdown": {"satellite": 0, "image": 0, "weather": 0}
+        }
+        
+    score = assessment.combined_score
+    confidence = assessment.confidence
+    
+    # GREEN < 30, YELLOW 30-69, RED >= 70
+    if score < 30:
+        light = "green"
+        message = "Low damage detected. Claim eligible for auto-closure."
+        auto_action = "auto_reject"
+    elif score < 70:
+        light = "yellow"
+        message = "Moderate damage. Officer review required."
+        auto_action = None
+    else:
+        light = "red"
+        message = "Severe damage confirmed. Eligible for auto-approval."
+        auto_action = "auto_approve"
+        
+    return {
+        "light": light,
+        "score": score,
+        "confidence": confidence,
+        "message": message,
+        "auto_action": auto_action,
+        "breakdown": {
+            "satellite": assessment.satellite_score,
+            "image": assessment.image_score,
+            "weather": assessment.weather_score
+        }
+    }
 
 async def apply_traffic_light_decision(claim_id: int, db: AsyncSession):
     stmt = select(Claim).where(Claim.id == claim_id)
     res = await db.execute(stmt)
     claim = res.scalars().first()
     if not claim:
-        return None
+        return
         
-    stmt_assess = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
-    res_assess = await db.execute(stmt_assess)
-    assess = res_assess.scalars().first()
-    if not assess:
-        return None
+    decision = await evaluate_traffic_light(claim_id, db)
+    auto_action = decision["auto_action"]
+    score = decision["score"]
+    
+    if decision["light"] == "green":
+        claim.status = "rejected"
+        claim.officer_remarks = "Auto-closed: AI detected no significant damage."
+    elif decision["light"] == "red":
+        claim.status = "approved"
+        claim.officer_remarks = "Auto-approved: AI confirmed severe damage."
+        claim.ai_damage_score = score
         
-    # Auto-update status or leave for manual verification
-    claim.status = "under_review"
     await db.commit()
-    return claim
+    logger.info(f"Applied traffic light decision to Claim {claim_id}. Status: {claim.status}")

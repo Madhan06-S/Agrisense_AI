@@ -333,7 +333,7 @@ export default function InsuranceDashboard() {
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
                         <Link
-                          href={`/dashboard/official/claims/${tx.claim_id || tx.id}`}
+                          href={`/dashboard/officer/claims/${tx.claim_id || tx.id}`}
                           className="text-[#166534] hover:text-emerald-800 font-bold hover:underline"
                         >
                           Claim #{tx.claim_id || tx.id}

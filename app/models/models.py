@@ -18,6 +18,7 @@ class User(Base):
     login_attempts = Column(Integer, default=0, nullable=False)
     role = Column(String, default="farmer", nullable=False)
     pin = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     
     # Relationships
     farms = relationship("Farm", back_populates="owner")
@@ -206,6 +207,7 @@ class Claim(Base):
     submitted_at = Column(String, nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     officer_id = Column(Integer, nullable=True)
+    ai_damage_score = Column(Float, nullable=True)
 
 class DamageAssessment(Base):
     __tablename__ = "damage_assessments"

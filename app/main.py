@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import app.core.database
 from app.core.config import settings
 from app.api.v1.api import api_router
 from app.services.gee_auth import initialize_gee, check_gee_health, GEEAuthError
@@ -63,6 +64,18 @@ async def startup_event():
                 await session.execute(text("ALTER TABLE users ADD COLUMN pin VARCHAR"))
                 await session.commit()
                 logger.info("Successfully added pin column to users table.")
+            except Exception:
+                pass
+            try:
+                await session.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+                await session.commit()
+                logger.info("Successfully added is_active column to users table.")
+            except Exception:
+                pass
+            try:
+                await session.execute(text("ALTER TABLE claims ADD COLUMN ai_damage_score FLOAT"))
+                await session.commit()
+                logger.info("Successfully added ai_damage_score column to claims table.")
             except Exception:
                 pass
     except Exception as e:

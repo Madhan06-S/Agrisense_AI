@@ -39,7 +39,7 @@ async def create_claim(req: ClaimCreate, db: AsyncSession = Depends(get_db)):
         farm_name=farm.name,
         claim_type=req.claim_type,
         description=req.description,
-        status="submitted",
+        status="under_review",
         submitted_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     )
     db.add(claim)
@@ -51,6 +51,7 @@ async def create_claim(req: ClaimCreate, db: AsyncSession = Depends(get_db)):
     
     # Auto-apply traffic light
     await apply_traffic_light_decision(claim.id, db)
+    await db.refresh(claim)
     
     return {
         "claim_id": claim.id,
