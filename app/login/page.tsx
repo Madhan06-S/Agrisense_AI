@@ -241,6 +241,7 @@ export default function LoginPage() {
                     </span>
                     <input
                       type="tel"
+                      autoFocus
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       placeholder="9876543210"
@@ -302,6 +303,7 @@ export default function LoginPage() {
                   <input
                     type="text"
                     inputMode="numeric"
+                    autoFocus
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     placeholder="000000"
