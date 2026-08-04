@@ -49,7 +49,7 @@ export default function FarmerDashboard() {
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_role");
     localStorage.removeItem("user_name");
-    router.push("/login");
+    router.push("/");
   };
 
   useEffect(() => {
