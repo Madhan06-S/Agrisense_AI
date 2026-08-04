@@ -11,7 +11,8 @@ import {
   ArrowRight, 
   Shield,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,6 +43,14 @@ export default function FarmerDashboard() {
     approvedClaims: 0,
     pendingPayout: 0
   });
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user_name");
+    router.push("/login");
+  };
 
   useEffect(() => {
     const name = localStorage.getItem("user_name") || "Farmer";
@@ -108,8 +117,15 @@ export default function FarmerDashboard() {
             <Shield className="w-5 h-5 text-green-700" />
             <span className="font-semibold text-slate-900">AgriSense AI</span>
           </div>
-          <div className="text-sm text-slate-600">
-            Welcome, <span className="font-medium text-slate-900">{userName}</span>
+          <div className="flex items-center gap-4 text-sm text-slate-600">
+            <span>Welcome, <span className="font-medium text-slate-900">{userName}</span></span>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-slate-200 hover:bg-slate-50 hover:text-red-700 text-slate-600 rounded-md font-medium transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
+            </button>
           </div>
         </div>
       </div>
