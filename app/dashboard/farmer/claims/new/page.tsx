@@ -48,6 +48,8 @@ export default function FileClaimPage() {
   });
 
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     fetchFarms();
@@ -82,6 +84,20 @@ export default function FileClaimPage() {
     const toAdd = files.slice(0, remaining);
     
     if (toAdd.length === 0) return;
+
+    setUploadError(""); // Clear previous errors
+    
+    // Validate each file client-side first (size, type)
+    for (const file of toAdd) {
+        if (file.size > 5 * 1024 * 1024) {
+            setUploadError(`${file.name} is too large. Max 5MB.`);
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            setUploadError(`${file.name} is not an image.`);
+            return;
+        }
+    }
 
     const newImages = [...formData.images, ...toAdd];
     setFormData(prev => ({ ...prev, images: newImages }));
@@ -152,13 +168,18 @@ export default function FileClaimPage() {
           router.push("/login");
           return;
         }
+
+        if (!imgRes.ok) {
+          const err = await imgRes.json();
+          throw new Error(err.detail || "Image validation or upload failed");
+        }
       }
 
       // Success — redirect to My Claims
       router.push("/dashboard/farmer/claims");
 
     } catch (e: any) {
-      alert(e.message || "Submission failed. Please try again.");
+      setSubmitError(e.message || "Submission failed. Please try again.");
       setSubmitting(false);
     }
   }
@@ -314,6 +335,11 @@ export default function FileClaimPage() {
                   Photos <span className="text-slate-400">(max 5)</span>
                 </label>
                 
+                {uploadError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-3 w-full col-span-full">
+                    {uploadError}
+                  </div>
+                )}
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                   {previewUrls.map((url, idx) => (
                     <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
@@ -366,6 +392,11 @@ export default function FileClaimPage() {
           )}
 
           {/* Navigation Buttons */}
+          {submitError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-4 w-full">
+              {submitError}
+            </div>
+          )}
           <div className="flex justify-between mt-6 pt-4 border-t border-slate-200">
             {step > 1 ? (
               <button

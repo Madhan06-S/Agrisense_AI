@@ -23,6 +23,7 @@ from app.models.damage_assessment import DamageAssessment
 from app.schemas.claim import ClaimCreate, ClaimOut, ClaimDetailOut
 from app.compliance.audit_chain import AuditChainEngine
 from app.ml.fusion_engine import run_fusion_pipeline
+from app.ml.image_validator import validate_farmer_photo, ImageValidationError
 from app.integrations.gee_service import get_farm_ndvi_data, generate_ndvi_image_bytes
 from app.decision.engine import apply_traffic_light_decision
 
@@ -278,11 +279,32 @@ async def upload_images(
     claim_dir = f"uploads/claims/{claim_id}"
     os.makedirs(claim_dir, exist_ok=True)
 
+    # Get farm location for geotag verification
+    stmt_farm = select(Farm).where(Farm.id == claim.farm_id)
+    res_farm = await db.execute(stmt_farm)
+    farm = res_farm.scalars().first()
+    expected_location = None
+    if farm:
+        boundary_wkt = getattr(farm, 'boundary', None)
+        if boundary_wkt:
+            try:
+                from shapely.wkt import loads
+                poly = loads(boundary_wkt)
+                expected_location = (poly.centroid.y, poly.centroid.x)  # (lat, lon)
+            except Exception as e:
+                print(f"Failed to parse expected farm location: {e}")
+
     saved_images = []
     for f in files:
         data = await f.read()
         if len(data) > 10 * 1024 * 1024:  # 10MB
             raise HTTPException(status_code=400, detail=f"{f.filename} exceeds 10MB limit")
+
+        # AI VALIDATION
+        try:
+            validation = validate_farmer_photo(data, expected_location)
+        except ImageValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
         # Save file to uploads/claims/{claim_id}/{filename}
         file_path = os.path.join(claim_dir, f.filename)
@@ -292,7 +314,9 @@ async def upload_images(
         url = f"/uploads/claims/{claim_id}/{f.filename}"
 
         # Extract EXIF
-        lat, lng, captured_at = _extract_exif_gps(data)
+        _, _, captured_at = _extract_exif_gps(data)
+        lat = validation["latitude"]
+        lng = validation["longitude"]
         phash = _compute_phash(data)
 
         img_record = ClaimImage(
@@ -301,7 +325,7 @@ async def upload_images(
             image_hash=phash,
             latitude=lat,
             longitude=lng,
-            is_geo_tagged=lat is not None,
+            is_geo_tagged=True,
             captured_at=captured_at,
             file_size_bytes=len(data),
             original_filename=f.filename,

@@ -1,6 +1,7 @@
 import io
 import os
 import random
+import math
 from typing import Dict, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,69 +16,118 @@ try:
 except Exception as e:
     print(f"GEE not available: {e}")
 
+def hsv_to_rgb(h, s, v):
+    """Convert HSV to RGB (0-255 range)"""
+    h = h % 360
+    c = v * s
+    x = c * (1 - abs((h / 60) % 2 - 1))
+    m = v - c
+    if h < 60:   r, g, b = c, x, 0
+    elif h < 120: r, g, b = x, c, 0
+    elif h < 180: r, g, b = 0, c, x
+    elif h < 240: r, g, b = 0, x, c
+    elif h < 300: r, g, b = x, 0, c
+    else:         r, g, b = c, 0, x
+    return (int((r + m) * 255), int((g + m) * 255), int((b + m) * 255))
+
 def generate_ndvi_image_bytes(ndvi_score: int, ndvi_mean: float, farm_name: str = "Farm") -> bytes:
     """
-    Generate a synthetic NDVI heatmap image in memory.
-    Guaranteed to work on any system — no external font files needed.
+    Generate a realistic synthetic satellite NDVI image.
+    Includes field patterns, roads, water bodies — looks like real Sentinel-2.
     """
     try:
         from PIL import Image, ImageDraw, ImageFont
-        
         width, height = 800, 320
         
-        # Determine color based on NDVI mean
+        # Base color based on NDVI health
         if ndvi_mean < 0.2:
-            base = (139, 69, 19)      # Brown - severe damage
+            base_h, base_s, base_v = 30, 0.6, 0.35   # Brown
             label = "SEVERE DAMAGE DETECTED"
         elif ndvi_mean < 0.35:
-            base = (218, 165, 32)     # Yellow - moderate stress
+            base_h, base_s, base_v = 45, 0.7, 0.55   # Yellow-Orange
             label = "MODERATE STRESS"
         else:
-            base = (34, 139, 34)      # Green - healthy
+            base_h, base_s, base_v = 120, 0.5, 0.4   # Green
             label = "HEALTHY VEGETATION"
         
-        img = Image.new('RGB', (width, height), color=(30, 30, 30))
+        img = Image.new('RGB', (width, height), color=(25, 25, 30))
         draw = ImageDraw.Draw(img)
         
-        # Generate pixelated heatmap blocks
-        block_w, block_h = 40, 40
-        for row in range(height // block_h):
-            for col in range(width // block_w):
-                x, y = col * block_w, row * block_h
-                
-                # Add randomness to simulate real satellite variation
-                r = max(0, min(255, base[0] + random.randint(-40, 40)))
-                g = max(0, min(255, base[1] + random.randint(-40, 40)))
-                b = max(0, min(255, base[2] + random.randint(-40, 40)))
-                
-                # Some blocks darker (shadows/water), some lighter
-                if random.random() < 0.15:
-                    r, g, b = max(0, r-60), max(0, g-60), max(0, b-60)
-                
-                draw.rectangle([x, y, x + block_w - 1, y + block_h - 1], fill=(r, g, b))
+        # Generate field parcels (like real farm boundaries)
+        random.seed(42)  # Consistent for same farm
+        parcels = []
+        for _ in range(15):
+            x = random.randint(0, width - 100)
+            y = random.randint(0, height - 60)
+            w = random.randint(60, 180)
+            h = random.randint(40, 100)
+            parcels.append((x, y, x + w, y + h))
         
-        # Overlay info bar at bottom
-        draw.rectangle([0, height - 85, width, height], fill=(20, 20, 20))
+        # Draw parcels with NDVI-colored fills
+        for i, (x1, y1, x2, y2) in enumerate(parcels):
+            # Vary color slightly per parcel
+            hue_offset = random.randint(-15, 15)
+            sat_var = random.uniform(0.8, 1.2)
+            val_var = random.uniform(0.85, 1.15)
+            
+            h = max(0, min(360, base_h + hue_offset))
+            s = max(0, min(1, base_s * sat_var))
+            v = max(0, min(1, base_v * val_var))
+            r, g, b = hsv_to_rgb(h, s, v)
+            
+            # Draw field with slight texture
+            for dy in range(y1, y2, 3):
+                noise = random.randint(-8, 8)
+                draw.line([(x1, dy), (x2, dy)], fill=(max(0, r+noise), max(0, g+noise), max(0, b+noise)), width=2)
+            
+            # Field border
+            draw.rectangle([x1, y1, x2, y2], outline=(60, 60, 50), width=1)
         
-        # Try to load font, fallback to default
+        # Draw roads (gray lines)
+        for _ in range(4):
+            rx = random.randint(0, width)
+            draw.line([(rx, 0), (rx + random.randint(-30, 30), height)], fill=(90, 90, 85), width=3)
+        for _ in range(3):
+            ry = random.randint(0, height)
+            draw.line([(0, ry), (width, ry + random.randint(-20, 20))], fill=(90, 90, 85), width=3)
+        
+        # Draw water body (blue patch)
+        wx, wy = random.randint(100, width-200), random.randint(20, height-80)
+        for r in range(25):
+            draw.ellipse([wx-r, wy-r, wx+r, wy+r], fill=(40, 60, 90, 128))
+        
+        # Add subtle noise for realism
+        pixels = img.load()
+        for x in range(0, width, 2):
+            for y in range(0, height, 2):
+                r, g, b = pixels[x, y]
+                noise = random.randint(-5, 5)
+                pixels[x, y] = (max(0, min(255, r+noise)), max(0, min(255, g+noise)), max(0, min(255, b+noise)))
+        
+        # Bottom info bar
+        draw.rectangle([0, height - 70, width, height], fill=(15, 15, 20))
+        
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 22)
-            small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+            small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
         except:
             try:
-                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 22)
-                small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 16)
+                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
+                small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 14)
             except:
                 font = ImageFont.load_default()
                 small = font
         
-        draw.text((30, height - 75), f"SENTINEL-2 NDVI | {farm_name}", fill=(255, 255, 255), font=font)
-        draw.text((30, height - 42), f"{label} | NDVI Mean: {ndvi_mean} | Score: {ndvi_score}/100", fill=(200, 200, 200), font=small)
+        draw.text((25, height - 62), f"SENTINEL-2 NDVI | {farm_name}", fill=(240, 240, 240), font=font)
+        draw.text((25, height - 34), f"{label}  |  NDVI Mean: {ndvi_mean}  |  Score: {ndvi_score}/100", fill=(180, 180, 180), font=small)
         
-        # "SIMULATED" badge in top-left
-        badge_w, badge_h = 140, 32
-        draw.rectangle([10, 10, 10 + badge_w, 10 + badge_h], fill=(180, 140, 20))
-        draw.text((18, 14), "SIMULATED", fill=(255, 255, 255), font=small)
+        # SIMULATED badge
+        draw.rounded_rectangle([12, 12, 130, 42], radius=4, fill=(200, 160, 30))
+        draw.text((20, 16), "SIMULATED", fill=(255, 255, 255), font=small)
+        
+        # Scale bar
+        draw.rectangle([width - 150, height - 55, width - 50, height - 50], fill=(255, 255, 255))
+        draw.text((width - 150, height - 45), "500 m", fill=(200, 200, 200), font=small)
         
         buf = io.BytesIO()
         img.save(buf, format="PNG")
@@ -85,8 +135,8 @@ def generate_ndvi_image_bytes(ndvi_score: int, ndvi_mean: float, farm_name: str 
         return buf.getvalue()
         
     except Exception as e:
-        print(f"PIL image generation failed: {e}")
-        # Ultimate fallback: return a 1x1 transparent PNG
+        print(f"Image generation failed: {e}")
+        # Return 1x1 transparent pixel as ultimate fallback
         buf = io.BytesIO()
         Image.new('RGBA', (1, 1), (0, 0, 0, 0)).save(buf, format="PNG")
         buf.seek(0)
