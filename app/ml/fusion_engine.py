@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models import DamageAssessment, Claim
-from app.integrations.gee_service import get_farm_ndvi
+from app.integrations.gee_service import get_farm_ndvi_data
 
 async def run_fusion_pipeline(claim_id: int, db: AsyncSession):
     """
@@ -20,9 +20,9 @@ async def run_fusion_pipeline(claim_id: int, db: AsyncSession):
         return None
     
     # --- REAL SATELLITE DATA FROM GEE ---
-    gee_result = await get_farm_ndvi(claim.farm_id, db)
+    gee_result = await get_farm_ndvi_data(claim.farm_id, db)
     satellite_score = gee_result["ndvi_score"]
-    satellite_image = gee_result["image_path"]
+    satellite_image = f"/api/v1/claims/{claim_id}/satellite-image"
     ndvi_mean = gee_result["ndvi_mean"]
     
     # --- MOCK IMAGE & WEATHER (replace with real CV later) ---

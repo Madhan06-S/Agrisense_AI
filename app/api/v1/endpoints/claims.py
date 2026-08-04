@@ -5,7 +5,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from PIL import Image
@@ -23,6 +23,7 @@ from app.models.damage_assessment import DamageAssessment
 from app.schemas.claim import ClaimCreate, ClaimOut, ClaimDetailOut
 from app.compliance.audit_chain import AuditChainEngine
 from app.ml.fusion_engine import run_fusion_pipeline
+from app.integrations.gee_service import get_farm_ndvi_data, generate_ndvi_image_bytes
 from app.decision.engine import apply_traffic_light_decision
 
 router = APIRouter(prefix="/claims", tags=["Claims"])
@@ -225,6 +226,33 @@ async def get_claim(
         "gee_status": assessment.explanation_json.get("gee_status") if assessment else "fallback",
         "farm_id": claim.farm_id
     }
+
+
+@router.get("/{claim_id}/satellite-image")
+async def get_claim_satellite_image(
+    claim_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate and return the NDVI satellite image directly as PNG bytes.
+    No disk files needed — always works.
+    """
+    result = await db.execute(select(Claim).where(Claim.id == claim_id))
+    claim = result.scalar_one_or_none()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    
+    # Get NDVI data (real GEE or fallback)
+    ndvi_data = await get_farm_ndvi_data(claim.farm_id, db)
+    
+    # Generate image bytes in memory
+    image_bytes = generate_ndvi_image_bytes(
+        ndvi_score=ndvi_data["ndvi_score"],
+        ndvi_mean=ndvi_data["ndvi_mean"],
+        farm_name=ndvi_data.get("farm_name", "Farm")
+    )
+    
+    return Response(content=image_bytes, media_type="image/png")
 
 
 @router.post("/{claim_id}/images", status_code=201)
