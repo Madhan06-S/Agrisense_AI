@@ -210,6 +210,10 @@ async def get_claim(
         satellite_img = assessment.explanation_json.get("satellite_image_path")
         ndvi_mean_val = assessment.explanation_json.get("ndvi_mean")
 
+    weather_data = None
+    if assessment and assessment.explanation_json:
+        weather_data = assessment.explanation_json.get("weather")
+
     return {
         "id": claim.id,
         "farmer_name": farmer.full_name if farmer else "Unknown",
@@ -225,7 +229,8 @@ async def get_claim(
         "satellite_image": satellite_img,
         "ndvi_mean": ndvi_mean_val,
         "gee_status": assessment.explanation_json.get("gee_status") if assessment else "fallback",
-        "farm_id": claim.farm_id
+        "farm_id": claim.farm_id,
+        "weather": weather_data
     }
 
 

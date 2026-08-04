@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     # Redis & Celery
     REDIS_URL: str = "redis://localhost:6379/0"
     
+    # OpenWeatherMap
+    OPENWEATHER_API_KEY: Optional[str] = None
+
     # Google Earth Engine (GEE)
     GEE_SERVICE_ACCOUNT: Optional[str] = None
     GEE_KEY_FILE: Optional[str] = None

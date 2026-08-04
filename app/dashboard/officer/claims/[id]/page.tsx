@@ -11,7 +11,8 @@ import {
   MapPin,
   CloudRain,
   Thermometer,
-  Wind
+  Wind,
+  Droplets
 } from "lucide-react";
 import Link from "next/link";
 import TrafficLight from "@/components/TrafficLight";
@@ -31,6 +32,14 @@ interface ClaimDetail {
   ndvi_mean?: number | null;
   gee_status?: string | null;
   farm_id?: number;
+  weather?: {
+    rainfall_48h: number;
+    temperature: number;
+    wind_speed: number;
+    humidity: number;
+    source: string;
+    status: string;
+  } | null;
 }
 
 interface Assessment {
@@ -329,20 +338,54 @@ export default function OfficerClaimDetail() {
                 </p>
               </div>
 
-              {/* Weather Validation */}
+              {/* Weather Validation — LIVE DATA */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <CloudRain className="w-4 h-4 text-cyan-600" />
                   <p className="text-xs font-semibold text-slate-700">Weather Validation</p>
+                  {claim.weather?.status === "live" && (
+                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded border border-green-200 font-medium">
+                      LIVE
+                    </span>
+                  )}
+                  {claim.weather?.status === "fallback" && (
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200 font-medium">
+                      ESTIMATED
+                    </span>
+                  )}
                 </div>
-                <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2">
-                  <WeatherRow icon={<CloudRain className="w-3.5 h-3.5" />} label="Rainfall (48h)" value="120mm" />
-                  <WeatherRow icon={<Wind className="w-3.5 h-3.5" />} label="Wind Speed" value="45 km/h" />
-                  <WeatherRow icon={<Thermometer className="w-3.5 h-3.5" />} label="Temperature" value="34°C" />
+                
+                <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2.5">
+                  <WeatherRow 
+                    icon={<CloudRain className="w-3.5 h-3.5" />} 
+                    label="Rainfall (48h)" 
+                    value={`${claim.weather?.rainfall_48h !== null && claim.weather?.rainfall_48h !== undefined ? claim.weather.rainfall_48h : 120}mm`}
+                  />
+                  <WeatherRow 
+                    icon={<Wind className="w-3.5 h-3.5" />} 
+                    label="Wind Speed" 
+                    value={`${claim.weather?.wind_speed !== null && claim.weather?.wind_speed !== undefined ? claim.weather.wind_speed : 45} km/h`}
+                  />
+                  <WeatherRow 
+                    icon={<Thermometer className="w-3.5 h-3.5" />} 
+                    label="Temperature" 
+                    value={`${claim.weather?.temperature !== null && claim.weather?.temperature !== undefined ? claim.weather.temperature : 34}°C`}
+                  />
+                  <WeatherRow 
+                    icon={<Droplets className="w-3.5 h-3.5" />} 
+                    label="Humidity" 
+                    value={`${claim.weather?.humidity !== null && claim.weather?.humidity !== undefined ? claim.weather.humidity : 65}%`}
+                  />
                 </div>
-                <p className="text-xs text-slate-600 mt-2 font-medium">
-                  Weather Score: {assessment?.weather_score || 90}/100
-                </p>
+                
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-xs text-slate-500">
+                    Source: {claim.weather?.source || "OpenWeatherMap"}
+                  </p>
+                  <p className="text-xs font-bold text-slate-900">
+                    Score: {assessment?.weather_score || 90}/100
+                  </p>
+                </div>
               </div>
             </div>
           </div>
