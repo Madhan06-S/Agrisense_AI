@@ -221,7 +221,9 @@ async def get_claim(
         "images": image_urls,
         "farmer_id": claim.farmer_id,
         "satellite_image": satellite_img,
-        "ndvi_mean": ndvi_mean_val
+        "ndvi_mean": ndvi_mean_val,
+        "gee_status": assessment.explanation_json.get("gee_status") if assessment else "fallback",
+        "farm_id": claim.farm_id
     }
 
 
