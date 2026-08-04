@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 
@@ -33,6 +34,14 @@ export default function OfficerClaimsQueue() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user_name");
+    router.push("/login");
+  };
 
   useEffect(() => {
     fetchClaims();
@@ -121,9 +130,18 @@ export default function OfficerClaimsQueue() {
               <p className="text-xs text-slate-500">PMFBY Digital Claim Settlement</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-green-700" />
-            <span className="text-xs text-slate-600">Block Agriculture Officer</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-green-700" />
+              <span className="text-xs text-slate-600">Block Agriculture Officer</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-slate-200 hover:bg-slate-50 hover:text-red-700 text-slate-600 rounded-md font-medium transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
+            </button>
           </div>
         </div>
       </div>
