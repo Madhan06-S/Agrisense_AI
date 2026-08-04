@@ -8,16 +8,17 @@ from app.models.farm import Farm
 # Try to initialize GEE
 try:
     import ee
-    if not ee.data._initialized:
-        try:
-            ee.Initialize()
-            print("GEE initialized successfully in service")
-        except Exception:
-            print("GEE initialization skipped in service (no default auth)")
-            ee = None
+    try:
+        ee.Initialize()
+        GEE_INITIALIZED = True
+        print("GEE initialized successfully in service")
+    except Exception as e:
+        print(f"GEE initialization failed in service: {e}")
+        GEE_INITIALIZED = False
 except ImportError:
     print("earthengine-api not installed. GEE service will run in fallback mock mode.")
     ee = None
+    GEE_INITIALIZED = False
 
 async def get_farm_ndvi(farm_id: int, db: AsyncSession, claim_date: Optional[str] = None) -> Dict:
     """
@@ -44,7 +45,7 @@ async def get_farm_ndvi(farm_id: int, db: AsyncSession, claim_date: Optional[str
             print(f"Failed to parse farm boundary centroid: {e}")
     
     # Check if Earth Engine is active and authenticated
-    if ee and ee.data._initialized:
+    if ee and GEE_INITIALIZED:
         try:
             # Create a point and buffer (farm area)
             point = ee.Geometry.Point([lon, lat])
