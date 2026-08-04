@@ -60,3 +60,9 @@ data/
 
 # Firebase private credentials
 firebase-admin.json
+
+# Local databases and uploads
+agrisense.db
+.env.local
+uploads/
+media/

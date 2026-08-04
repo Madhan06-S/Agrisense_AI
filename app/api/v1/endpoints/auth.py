@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
-from app.models.models import User
+from app.models import User
 from app.integrations.firebase_auth import FirebaseAuthService
 
 logger = logging.getLogger(__name__)
@@ -172,7 +172,7 @@ async def verify_firebase_token(
     
     # Generate JWT Tokens
     now = int(time.time())
-    access_token = encode_jwt({"sub": str(user.id), "phone": user.phone, "role": user.role, "exp": now + 900})
+    access_token = encode_jwt({"sub": str(user.id), "phone": user.phone, "role": user.role, "exp": now + 14400})
     refresh_token = encode_jwt({"sub": str(user.id), "phone": user.phone, "role": user.role, "exp": now + 604800})
     
     # Set cookies
@@ -180,7 +180,7 @@ async def verify_firebase_token(
         key="access_token",
         value=access_token,
         httponly=True,
-        max_age=900,
+        max_age=14400,
         samesite="lax",
         secure=False
     )
@@ -253,13 +253,13 @@ async def refresh(request: Request, response: Response):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
         
     now = int(time.time())
-    access_token = encode_jwt({"sub": payload["sub"], "phone": payload["phone"], "role": payload["role"], "exp": now + 900})
+    access_token = encode_jwt({"sub": payload["sub"], "phone": payload["phone"], "role": payload["role"], "exp": now + 14400})
     
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        max_age=900,
+        max_age=14400,
         samesite="lax",
         secure=False
     )

@@ -549,7 +549,7 @@ function DashboardContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 md:p-6 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/90 p-4 md:p-6 backdrop-blur-sm overflow-y-auto"
           >
             <motion.div
               initial={{ scale: 0.95, y: 15 }}

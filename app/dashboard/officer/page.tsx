@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function OfficerDashboardRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/dashboard/official/insurance");
+    router.replace("/dashboard/officer/claims");
   }, [router]);
 
   return (

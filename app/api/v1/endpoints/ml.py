@@ -134,7 +134,7 @@ async def get_contrastive_explanation(farm_id: int, target_class: str = "no_dama
         raise HTTPException(status_code=400, detail=str(e))
 
 
-from app.models.models import DamageAssessment
+from app.models import DamageAssessment
 from sqlalchemy import select
 
 @router.get("/analyze/{claim_id}/result")

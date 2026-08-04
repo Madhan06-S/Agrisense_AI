@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 import app.core.database
 from app.core.config import settings
@@ -18,6 +19,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # CORS middleware for Next.js communication
 app.add_middleware(
@@ -42,8 +44,8 @@ async def startup_event():
     # Run startup migrations/alters for SQLite database
     logger.info("Running startup DB alters...")
     try:
-        from app.core.database import engine
-        from app.models.models import Base
+        from app.core.database import engine, Base
+        import app.models
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Successfully ran Base.metadata.create_all on startup.")
