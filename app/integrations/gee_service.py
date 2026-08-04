@@ -57,7 +57,7 @@ def generate_ndvi_image_bytes(ndvi_score: int, ndvi_mean: float, farm_name: str 
                 draw.rectangle([x, y, x + block_w - 1, y + block_h - 1], fill=(r, g, b))
         
         # Overlay info bar at bottom
-        draw.rectangle([0, height - 80, width, height], fill=(20, 20, 20))
+        draw.rectangle([0, height - 85, width, height], fill=(20, 20, 20))
         
         # Try to load font, fallback to default
         try:
@@ -71,8 +71,8 @@ def generate_ndvi_image_bytes(ndvi_score: int, ndvi_mean: float, farm_name: str 
                 font = ImageFont.load_default()
                 small = font
         
-        draw.text((20, height - 70), f"SENTINEL-2 NDVI | {farm_name}", fill=(255, 255, 255), font=font)
-        draw.text((20, height - 38), f"{label} | NDVI Mean: {ndvi_mean} | Score: {ndvi_score}/100", fill=(200, 200, 200), font=small)
+        draw.text((30, height - 75), f"SENTINEL-2 NDVI | {farm_name}", fill=(255, 255, 255), font=font)
+        draw.text((30, height - 42), f"{label} | NDVI Mean: {ndvi_mean} | Score: {ndvi_score}/100", fill=(200, 200, 200), font=small)
         
         # "SIMULATED" badge in top-left
         badge_w, badge_h = 140, 32

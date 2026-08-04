@@ -27,18 +27,18 @@ async def evaluate_traffic_light(claim_id: int, db: AsyncSession) -> Dict[str, A
     score = assessment.combined_score or 0
     confidence = assessment.confidence or 0.5
     
-    if score >= 70:
+    if score < 25:
         light = TrafficLight.GREEN
-        message = "Severe damage confirmed. Eligible for auto-approval."
-        auto_action = "auto_approve"
-    elif score >= 50:
+        message = "Low damage detected. Claim eligible for auto-closure."
+        auto_action = "auto_reject"
+    elif score < 70:
         light = TrafficLight.YELLOW
         message = "Moderate damage. Officer review required."
         auto_action = None
     else:
         light = TrafficLight.RED
-        message = "Low damage detected. Claim eligible for auto-closure."
-        auto_action = "auto_reject"
+        message = "Severe damage confirmed. Eligible for auto-approval."
+        auto_action = "auto_approve"
     
     return {
         "light": light.value,
