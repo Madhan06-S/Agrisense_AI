@@ -1,16 +1,15 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models import DamageAssessment, Claim
+from app.integrations.gee_service import get_farm_ndvi
 
 async def run_fusion_pipeline(claim_id: int, db: AsyncSession):
     """
-    Mock fusion pipeline for demo.
-    Returns existing assessment if already created.
+    Real fusion pipeline with GEE satellite data + mock image/weather.
     """
     stmt_da = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
     res_da = await db.execute(stmt_da)
     existing = res_da.scalars().first()
-    
     if existing:
         return existing
     
@@ -20,32 +19,49 @@ async def run_fusion_pipeline(claim_id: int, db: AsyncSession):
     if not claim:
         return None
     
-    # Score mapping by claim type
-    scores = {
-        "flood":    (82, 88, 90, 85),
-        "drought":  (65, 45, 70, 58),
-        "pest":     (30, 25, 40, 28),
-        "cyclone":  (75, 70, 80, 72),
-        "hailstorm":(60, 55, 65, 58),
-    }
+    # --- REAL SATELLITE DATA FROM GEE ---
+    gee_result = await get_farm_ndvi(claim.farm_id, db)
+    satellite_score = gee_result["ndvi_score"]
+    satellite_image = gee_result["image_path"]
+    ndvi_mean = gee_result["ndvi_mean"]
     
-    sat, img, wx, combined = scores.get(claim.claim_type.lower(), (50, 50, 50, 50))
+    # --- MOCK IMAGE & WEATHER (replace with real CV later) ---
+    image_scores = {
+        "flood": 88, "drought": 45, "pest": 25,
+        "cyclone": 70, "hailstorm": 55
+    }
+    image_score = image_scores.get(claim.claim_type.lower(), 50)
+    
+    weather_scores = {
+        "flood": 90, "drought": 70, "pest": 40,
+        "cyclone": 80, "hailstorm": 65
+    }
+    weather_score = weather_scores.get(claim.claim_type.lower(), 50)
+    
+    # Combined: weighted average
+    combined = int(satellite_score * 0.40 + image_score * 0.35 + weather_score * 0.25)
+    
+    # Also save the computed combined score on the Claim itself as cache/reference
+    claim.ai_damage_score = combined
     
     assessment = DamageAssessment(
         claim_id=claim_id,
-        satellite_score=sat,
-        image_score=img,
-        weather_score=wx,
+        satellite_score=satellite_score,
+        image_score=image_score,
+        weather_score=weather_score,
         combined_score=combined,
-        confidence=0.92,
+        confidence=0.88 if gee_result["status"] == "success" else 0.65,
         explanation_json={
-            "satellite_contribution": 0.35,
+            "satellite_contribution": 0.40,
             "image_contribution": 0.35,
-            "weather_contribution": 0.30,
+            "weather_contribution": 0.25,
+            "satellite_image_path": satellite_image,
+            "ndvi_mean": ndvi_mean,
+            "gee_status": gee_result["status"],
             "key_factors": [
-                f"NDVI drop detected: {sat}%",
-                f"Image analysis confidence: {img}%",
-                f"Weather validation: {wx}%"
+                f"Real NDVI mean: {ndvi_mean} (Sentinel-2)",
+                f"Image analysis: {image_score}/100",
+                f"Weather validation: {weather_score}/100"
             ]
         }
     )

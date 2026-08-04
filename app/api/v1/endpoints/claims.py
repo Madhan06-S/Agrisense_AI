@@ -199,6 +199,15 @@ async def get_claim(
         for img in images
     ]
 
+    # Fetch assessment to get GEE satellite image and NDVI mean
+    result_da = await db.execute(select(DamageAssessment).where(DamageAssessment.claim_id == claim_id))
+    assessment = result_da.scalar_one_or_none()
+    satellite_img = None
+    ndvi_mean_val = None
+    if assessment and assessment.explanation_json:
+        satellite_img = assessment.explanation_json.get("satellite_image_path")
+        ndvi_mean_val = assessment.explanation_json.get("ndvi_mean")
+
     return {
         "id": claim.id,
         "farmer_name": farmer.full_name if farmer else "Unknown",
@@ -210,7 +219,9 @@ async def get_claim(
         "officer_remarks": claim.officer_remarks,
         "ai_damage_score": claim.ai_damage_score,
         "images": image_urls,
-        "farmer_id": claim.farmer_id
+        "farmer_id": claim.farmer_id,
+        "satellite_image": satellite_img,
+        "ndvi_mean": ndvi_mean_val
     }
 
 

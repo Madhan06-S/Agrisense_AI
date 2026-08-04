@@ -27,6 +27,8 @@ interface ClaimDetail {
   officer_remarks: string | null;
   ai_damage_score: number | null;
   images: string[];
+  satellite_image?: string | null;
+  ndvi_mean?: number | null;
 }
 
 interface Assessment {
@@ -229,18 +231,36 @@ export default function OfficerClaimDetail() {
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <MapPin className="w-4 h-4 text-blue-600" />
-                  <p className="text-xs font-semibold text-slate-700">Satellite Analysis (NDVI)</p>
+                  <p className="text-xs font-semibold text-slate-700">Satellite Analysis (Sentinel-2 NDVI)</p>
                 </div>
-                <div className="h-40 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden relative">
-                  {/* Real satellite placeholder - replace with actual GEE image later */}
-                  <img 
-                    src={`https://via.placeholder.com/600x240/1a4d2e/ffffff?text=Sentinel-2+NDVI+${assessment?.satellite_score || 82}`}
-                    alt="Satellite NDVI"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 right-2 bg-white/90 px-2 py-1 rounded text-xs font-semibold text-slate-700 border border-slate-200">
-                    Score: {assessment?.satellite_score || 82}/100
+                <div className="h-48 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden relative">
+                  {claim.satellite_image ? (
+                    <img 
+                      src={`${backendUrl}${claim.satellite_image}`}
+                      alt="Sentinel-2 NDVI"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://via.placeholder.com/600x240/1a4d2e/ffffff?text=NDVI+${assessment?.satellite_score || 0}`;
+                      }}
+                    />
+                  ) : (
+                    <img 
+                      src={`https://via.placeholder.com/600x240/1a4d2e/ffffff?text=NDVI+${assessment?.satellite_score || 0}`}
+                      alt="Satellite Placeholder"
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  <div className="absolute bottom-2 right-2 bg-white/95 px-2.5 py-1 rounded text-xs font-semibold text-slate-700 border border-slate-200 shadow-sm">
+                    NDVI Mean: {claim.ndvi_mean || (assessment?.satellite_score ? (assessment.satellite_score / 100).toFixed(2) : "—")}
                   </div>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-xs text-slate-600 font-medium">
+                    Sentinel-2 SR Harmonized
+                  </p>
+                  <p className="text-xs font-semibold text-slate-900">
+                    Score: {assessment?.satellite_score || 82}/100
+                  </p>
                 </div>
               </div>
 
