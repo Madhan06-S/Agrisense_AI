@@ -56,12 +56,16 @@ class Claim(Base):
     trigger_source = Column(String(50), nullable=True)
     imd_alert_id = Column(Integer, nullable=True)
 
-    submitted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    reviewed_at = Column(DateTime(timezone=True), nullable=True)
-    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    # Policy & Snapshot Binding
+    policy_id = Column(Integer, ForeignKey("insurance_policies.id", ondelete="SET NULL"), nullable=True)
+    insured_snapshot_id = Column(String(100), nullable=True)
+    insured_boundary_version = Column(Integer, default=1, nullable=True)
+    coverage_type = Column(String(100), nullable=True)  # Standing Crop / Yield Loss, Prevented Sowing, etc.
+    damage_type = Column(String(100), nullable=True)  # Flood, Drought, Cyclone, Hailstorm, Heavy Rain, Pest/Disease, Other
 
     # Relationships
     farm = relationship("Farm", back_populates="claims")
+    policy = relationship("InsurancePolicy", back_populates="claims")
     farmer = relationship("User", back_populates="claims", foreign_keys=[farmer_id])
     images = relationship("ClaimImage", back_populates="claim", lazy="select", cascade="all, delete-orphan")
     damage_assessment = relationship("DamageAssessment", back_populates="claim", uselist=False, lazy="select")

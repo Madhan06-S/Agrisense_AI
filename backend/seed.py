@@ -7,7 +7,10 @@ from datetime import datetime, timezone, date
 from sqlalchemy import select, text
 from app.core.database import AsyncSessionLocal, create_tables
 from app.core.security import hash_password
-from app.models import User, Farm, Claim, DamageAssessment
+from app.models import (
+    User, Farm, Claim, DamageAssessment,
+    InsuranceScheme, InsurancePolicy, PolicyCoverage, ParametricTriggerConfig
+)
 from app.models.user import UserRole
 from app.models.claim import ClaimType, ClaimStatus
 from app.ml.fusion_engine import run_fusion_pipeline
@@ -111,6 +114,71 @@ async def seed():
                 print(f"Created farm: {farm.name}")
             else:
                 farms.append(existing)
+
+        # Create supported insurance schemes: PMFBY and RWBCIS
+        from app.models.insurance_models import InsuranceScheme, InsurancePolicy, ParametricTriggerConfig
+        schemes_data = [
+            {
+                "code": "PMFBY",
+                "name": "Pradhan Mantri Fasal Bima Yojana",
+                "type": "YIELD_BASED",
+                "description": "Yield-Based Crop Insurance Scheme",
+                "active": True
+            },
+            {
+                "code": "RWBCIS",
+                "name": "Restructured Weather Based Crop Insurance Scheme",
+                "type": "WEATHER_INDEX_PARAMETRIC",
+                "description": "Weather-Based Index Crop Protection Scheme",
+                "active": True
+            }
+        ]
+
+        schemes_map = {}
+        for s in schemes_data:
+            stmt_s = select(InsuranceScheme).where(InsuranceScheme.code == s["code"])
+            res_s = await db.execute(stmt_s)
+            existing_s = res_s.scalars().first()
+            if not existing_s:
+                scheme_obj = InsuranceScheme(**s)
+                db.add(scheme_obj)
+                await db.flush()
+                schemes_map[s["code"]] = scheme_obj
+                print(f"Created scheme: {scheme_obj.code} ({scheme_obj.name})")
+            else:
+                schemes_map[existing_s.code] = existing_s
+
+        # Link Insurance Policies for farms
+        policies_data = [
+            {
+                "policy_number": "PMFBY-MH-2026-001234",
+                "scheme_id": schemes_map["PMFBY"].id,
+                "farm_id": farms[0].id,
+                "crop": farms[0].crop_type,
+                "season": "Kharif",
+                "sum_insured": 120000.0,
+                "status": "ACTIVE"
+            },
+            {
+                "policy_number": "PMFBY-MH-2026-001235",
+                "scheme_id": schemes_map["RWBCIS"].id,
+                "farm_id": farms[1].id,
+                "crop": farms[1].crop_type,
+                "season": "Kharif",
+                "sum_insured": 150000.0,
+                "status": "ACTIVE"
+            }
+        ]
+
+        for p in policies_data:
+            stmt_p = select(InsurancePolicy).where(InsurancePolicy.policy_number == p["policy_number"])
+            res_p = await db.execute(stmt_p)
+            existing_p = res_p.scalars().first()
+            if not existing_p:
+                pol_obj = InsurancePolicy(**p)
+                db.add(pol_obj)
+                await db.flush()
+                print(f"Created policy #{pol_obj.policy_number} for Farm #{pol_obj.farm_id}")
 
         # Create claims with different types for traffic light demo
         claims_data = [

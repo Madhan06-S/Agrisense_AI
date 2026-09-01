@@ -7,7 +7,9 @@ class FarmCreate(BaseModel):
     name: str
     crop_type: str
     sowing_date: Optional[date] = None
+    insurance_scheme: Optional[str] = "PMFBY"  # PMFBY or RWBCIS
     insurance_policy_number: Optional[str] = None
+    season: Optional[str] = "Kharif"
     # GeoJSON polygon from Leaflet draw
     boundary_geojson: Optional[dict] = None
 

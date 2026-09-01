@@ -32,6 +32,7 @@ class Farm(Base):
     farmer = relationship("User", back_populates="farms")
     claims = relationship("Claim", back_populates="farm", lazy="select")
     satellite_records = relationship("SatelliteData", back_populates="farm", lazy="select")
+    policies = relationship("InsurancePolicy", back_populates="farm", lazy="select")
 
     def __repr__(self):
         return f"<Farm id={self.id} name={self.name} farmer_id={self.farmer_id}>"

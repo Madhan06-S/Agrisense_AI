@@ -168,6 +168,8 @@ export default function FileClaimPage() {
       const payload = {
         farm_id: parseInt(formData.farm_id),
         claim_type: formData.claim_type,
+        damage_type: formData.claim_type,
+        coverage_type: (formData as any).coverage_type || "Standing Crop / Yield Loss",
         description: formData.description,
         insured_snapshot_id: `SNAP-FARM${formData.farm_id}-V1`,
         insured_boundary_version: 1,
@@ -344,30 +346,97 @@ export default function FileClaimPage() {
             </div>
           )}
 
-          {/* Step 2: Damage Type */}
+          {/* Step 2: Coverage Situation & Damage Cause */}
           {step === 2 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold text-white">2. DAMAGE TYPE</h2>
-              <p className="text-xs text-emerald-400">Select the cause of crop damage</p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {DAMAGE_TYPES.map((type) => (
-                  <div
-                    key={type.id}
-                    onClick={() => setFormData(prev => ({ ...prev, claim_type: type.id }))}
-                    className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                      formData.claim_type === type.id
-                        ? "border-emerald-400 bg-emerald-950/80"
-                        : "border-emerald-800/80 bg-[#061406] hover:border-emerald-600"
-                    }`}
-                  >
-                    <div className="text-emerald-400">{type.icon}</div>
-                    <span className="text-sm font-semibold text-white">{type.label}</span>
-                    {formData.claim_type === type.id && (
-                      <CheckCircle className="w-5 h-5 text-emerald-400 ml-auto" />
-                    )}
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-white">2. COVERAGE & DAMAGE DETAILS</h2>
+                <p className="text-xs text-emerald-400">Specify what happened and what caused the damage to your crop</p>
+              </div>
+
+              {/* Question 1: What happened? (Coverage Situation) */}
+              <div className="bg-[#061406] border border-emerald-800 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>❓ What happened?</span>
+                  <span className="text-xs font-normal text-emerald-400">
+                    (Insurance Scheme: {selectedFarm && "insurance_scheme" in selectedFarm && selectedFarm.insurance_scheme ? (selectedFarm as any).insurance_scheme : "PMFBY"})
+                  </span>
+                </p>
+
+                {selectedFarm && "insurance_scheme" in selectedFarm && (selectedFarm as any).insurance_scheme === "RWBCIS" ? (
+                  <div className="p-3 bg-blue-950/80 border border-blue-600/80 rounded-lg text-xs text-blue-200 space-y-1">
+                    <p className="font-semibold text-blue-300">Weather-Based Index Monitoring (RWBCIS):</p>
+                    <p>"Weather conditions are being evaluated against the applicable policy trigger."</p>
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-2">
+                    {[
+                      { id: "Standing Crop / Yield Loss", label: "Standing Crop / Yield Loss", desc: "Damage to crop during growing stage" },
+                      { id: "Prevented Sowing", label: "Prevented Sowing / Planting", desc: "Unable to sow crop due to adverse weather" },
+                      { id: "Localized Calamity", label: "Localized Calamity", desc: "Hailstorm, landslide, or inundation in isolated field" },
+                      { id: "Mid-Season Adversity", label: "Mid-Season Adversity", desc: "Severe drought or dry spell during crop season" },
+                      { id: "Post-Harvest Loss", label: "Post-Harvest Loss", desc: "Damage to harvested crop cut and spread in field" },
+                    ].map((cov) => (
+                      <label
+                        key={cov.id}
+                        className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition ${
+                          formData.description.includes(`Coverage: ${cov.id}`)
+                            ? "border-emerald-400 bg-emerald-950/80"
+                            : "border-emerald-900 bg-[#0a1f0a] hover:border-emerald-700"
+                        }`}
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            coverage_type: cov.id
+                          }));
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="coverage_type"
+                          value={cov.id}
+                          defaultChecked={cov.id === "Standing Crop / Yield Loss"}
+                          className="mt-1 accent-emerald-500"
+                        />
+                        <div>
+                          <p className="text-xs font-bold text-white">{cov.label}</p>
+                          <p className="text-[11px] text-emerald-400">{cov.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Question 2: What caused the damage? */}
+              <div className="space-y-3">
+                <p className="text-sm font-bold text-white">What caused the damage?</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { id: "flood", label: "Flood / Heavy Rainfall", icon: <CloudRain className="w-5 h-5" /> },
+                    { id: "drought", label: "Drought / Water Deficit", icon: <ThermometerSun className="w-5 h-5" /> },
+                    { id: "cyclone", label: "Cyclone / High Winds", icon: <Wind className="w-5 h-5" /> },
+                    { id: "hailstorm", label: "Hailstorm", icon: <CloudLightning className="w-5 h-5" /> },
+                    { id: "pest", label: "Pest / Disease Attack", icon: <Bug className="w-5 h-5" /> },
+                    { id: "other", label: "Other Natural Calamity", icon: <ShieldCheck className="w-5 h-5" /> },
+                  ].map((type) => (
+                    <div
+                      key={type.id}
+                      onClick={() => setFormData(prev => ({ ...prev, claim_type: type.id }))}
+                      className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                        formData.claim_type === type.id
+                          ? "border-emerald-400 bg-emerald-950/80"
+                          : "border-emerald-800/80 bg-[#061406] hover:border-emerald-600"
+                      }`}
+                    >
+                      <div className="text-emerald-400">{type.icon}</div>
+                      <span className="text-xs font-semibold text-white">{type.label}</span>
+                      {formData.claim_type === type.id && (
+                        <CheckCircle className="w-5 h-5 text-emerald-400 ml-auto" />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

@@ -9,6 +9,12 @@ from app.models.audit_block import AuditBlock
 from app.models.pfms_transaction import PFMSTransaction
 from app.models.imd_alert import IMDAlert
 from app.models.grievance import Grievance
+from app.models.insurance_models import (
+    InsuranceScheme,
+    InsurancePolicy,
+    PolicyCoverage,
+    ParametricTriggerConfig,
+)
 
 __all__ = [
     "User", "UserRole",
@@ -22,4 +28,8 @@ __all__ = [
     "PFMSTransaction",
     "IMDAlert",
     "Grievance",
+    "InsuranceScheme",
+    "InsurancePolicy",
+    "PolicyCoverage",
+    "ParametricTriggerConfig",
 ]

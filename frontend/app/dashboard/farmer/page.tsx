@@ -132,11 +132,72 @@ export default function FarmerDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Welcome Banner */}
-        <div className="bg-[#1a4d2e] text-white rounded-lg p-6">
-          <h1 className="text-lg font-semibold">PMFBY Digital Claim Settlement Portal</h1>
+        <div className="bg-[#1a4d2e] text-white rounded-xl p-6 shadow-md border border-emerald-800">
+          <h1 className="text-xl font-bold tracking-tight">AI-powered Agricultural Risk, Insurance & Agronomic Support Platform</h1>
           <p className="text-sm text-green-100 mt-1">
-            File crop insurance claims and track settlement status online.
+            Identify insured farm land, monitor weather & crop risks, receive early warnings, and manage crop insurance claims.
           </p>
+        </div>
+
+        {/* 🌾 MY FARM RISK WIDGET (PILLAR 5 DE-RISKING & AGRONOMIC SUPPORT) */}
+        <div className="bg-gradient-to-br from-[#0c240c] to-[#071707] border-2 border-emerald-600/80 rounded-xl p-6 text-[#e2ebd5] shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-emerald-800/80 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🌾</span>
+              <div>
+                <h2 className="text-lg font-extrabold text-white">MY FARM RISK SUMMARY</h2>
+                <p className="text-xs text-emerald-400">Pillar 5 De-Risking, Parametric Insurance & Agronomic Support</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-700">
+              SIMULATED LIVE DATA
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
+              <p className="text-emerald-400 font-semibold">Crop Health</p>
+              <p className="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
+                🟢 Normal (NDVI: 0.62)
+              </p>
+            </div>
+
+            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
+              <p className="text-emerald-400 font-semibold">Weather Risk</p>
+              <p className="text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                🟠 High Rainfall Risk
+              </p>
+            </div>
+
+            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
+              <p className="text-emerald-400 font-semibold">Insurance Active</p>
+              <p className="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
+                🟢 PMFBY / RWBCIS
+              </p>
+            </div>
+
+            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
+              <p className="text-emerald-400 font-semibold">Current Risk Level</p>
+              <p className="text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                🟡 Moderate Risk
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#061406] border border-amber-700/60 rounded-lg p-4 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                ⚠️ Potential Risk Detected: <span className="text-white font-medium">Heavy rainfall expected over next few days</span>
+              </span>
+              <span className="text-[10px] text-emerald-400 font-mono">IMD Alert #2026-08</span>
+            </div>
+            <div className="pt-2 border-t border-emerald-900/80 space-y-1">
+              <p className="text-emerald-400 font-bold tracking-wider uppercase text-[10px]">💡 Agronomic Support Recommendation:</p>
+              <p className="text-emerald-100 text-sm font-semibold italic">
+                "Ensure field drainage channels are clear and monitor waterlogging over the next few days."
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats Grid */}

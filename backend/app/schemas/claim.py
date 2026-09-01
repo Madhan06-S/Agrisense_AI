@@ -8,6 +8,11 @@ class ClaimCreate(BaseModel):
     farm_id: int
     claim_type: ClaimType
     description: Optional[str] = None
+    policy_id: Optional[int] = None
+    insured_snapshot_id: Optional[str] = None
+    insured_boundary_version: Optional[int] = 1
+    coverage_type: Optional[str] = None
+    damage_type: Optional[str] = None
 
 
 class ClaimImageOut(BaseModel):

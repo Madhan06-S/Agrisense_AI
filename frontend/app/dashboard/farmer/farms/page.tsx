@@ -61,7 +61,9 @@ const farmSchema = z.object({
   name: z.string().min(2, "Farm name must be at least 2 characters"),
   crop_type: z.enum(["Rice", "Wheat", "Cotton", "Sugarcane", "Maize", "Mustard", "Soybeans"]),
   sowing_date: z.string().min(1, "Sowing date is required"),
+  insurance_scheme: z.enum(["PMFBY", "RWBCIS"]),
   insurance_policy_number: z.string().min(5, "Insurance policy number is required"),
+  season: z.enum(["Kharif", "Rabi", "Zaid"]),
   khasra_number: z.string().min(1, "Land Record / Khasra ID is required"),
   state: z.string().min(2, "State is required"),
   district: z.string().min(2, "District is required"),
@@ -90,6 +92,7 @@ function DashboardContent() {
 
   // Accordions
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const [showInsuranceDetails, setShowInsuranceDetails] = useState(false);
   const [showWhyPending, setShowWhyPending] = useState(false);
 
   // 3D Visualizer State
@@ -126,7 +129,9 @@ function DashboardContent() {
       name: "",
       crop_type: "Rice",
       sowing_date: new Date().toISOString().split("T")[0],
+      insurance_scheme: "PMFBY",
       insurance_policy_number: "",
+      season: "Kharif",
       khasra_number: "",
       state: "Tamil Nadu",
       district: "Kallakurichi",
@@ -603,29 +608,122 @@ function DashboardContent() {
                     </div>
                   </div>
 
-                  {/* Khasra & Insurance Policy */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-emerald-300 font-semibold mb-1">Land Record / Khasra ID</label>
-                      <input
-                        {...register("khasra_number")}
-                        placeholder="e.g. 223/4"
-                        className="w-full bg-[#061406] border border-emerald-700/80 rounded-xl px-4 py-2.5 text-white placeholder-emerald-700 focus:outline-none focus:border-emerald-400 font-mono"
-                      />
-                      <p className="text-xs text-emerald-500 mt-1">Enter the number from your land document.</p>
-                      {errors.khasra_number && <p className="text-red-400 text-xs mt-1">{errors.khasra_number.message}</p>}
+                  {/* Land Record / Khasra ID */}
+                  <div>
+                    <label className="block text-emerald-300 font-semibold mb-1">Land Record / Khasra ID</label>
+                    <input
+                      {...register("khasra_number")}
+                      placeholder="e.g. 223/4"
+                      className="w-full bg-[#061406] border border-emerald-700/80 rounded-xl px-4 py-2.5 text-white placeholder-emerald-700 focus:outline-none focus:border-emerald-400 font-mono"
+                    />
+                    <p className="text-xs text-emerald-500 mt-1">Enter the number from your official land document.</p>
+                    {errors.khasra_number && <p className="text-red-400 text-xs mt-1">{errors.khasra_number.message}</p>}
+                  </div>
+
+                  {/* 🛡️ FARM INSURANCE SECTION */}
+                  <div className="bg-[#061406] border border-emerald-800/80 rounded-xl p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-emerald-800/60 pb-2">
+                      <h3 className="text-xs font-bold text-emerald-400 tracking-wider uppercase flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" /> 🛡️ Farm Insurance
+                      </h3>
+                      <span className="text-[10px] font-semibold bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">
+                        Status: 🟢 Active
+                      </span>
                     </div>
 
                     <div>
-                      <label className="block text-emerald-300 font-semibold mb-1">Insurance Policy Number</label>
-                      <input
-                        {...register("insurance_policy_number")}
-                        placeholder="e.g. INS-772819"
-                        className="w-full bg-[#061406] border border-emerald-700/80 rounded-xl px-4 py-2.5 text-white placeholder-emerald-700 focus:outline-none focus:border-emerald-400 font-mono"
-                      />
-                      <p className="text-xs text-emerald-500 mt-1">Enter the number on your insurance policy.</p>
-                      {errors.insurance_policy_number && (
-                        <p className="text-red-400 text-xs mt-1">{errors.insurance_policy_number.message}</p>
+                      <label className="block text-xs font-bold text-emerald-300 mb-2">
+                        Which insurance scheme covers this farm?
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label
+                          className={`p-3 rounded-xl border-2 cursor-pointer transition flex items-start gap-2.5 ${
+                            watch("insurance_scheme") === "PMFBY"
+                              ? "bg-emerald-950/80 border-emerald-400"
+                              : "bg-[#0a1f0a] border-emerald-900 hover:border-emerald-700"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            value="PMFBY"
+                            {...register("insurance_scheme")}
+                            className="mt-0.5 accent-emerald-500"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-white">PMFBY</p>
+                            <p className="text-xs text-emerald-400">Crop Insurance</p>
+                          </div>
+                        </label>
+
+                        <label
+                          className={`p-3 rounded-xl border-2 cursor-pointer transition flex items-start gap-2.5 ${
+                            watch("insurance_scheme") === "RWBCIS"
+                              ? "bg-emerald-950/80 border-emerald-400"
+                              : "bg-[#0a1f0a] border-emerald-900 hover:border-emerald-700"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            value="RWBCIS"
+                            {...register("insurance_scheme")}
+                            className="mt-0.5 accent-emerald-500"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-white">RWBCIS</p>
+                            <p className="text-xs text-emerald-400">Weather-Based Insurance</p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-emerald-300 mb-1">Insurance Policy Number</label>
+                        <input
+                          {...register("insurance_policy_number")}
+                          placeholder="e.g. INS-772819"
+                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white placeholder-emerald-700 font-mono"
+                        />
+                        {errors.insurance_policy_number && (
+                          <p className="text-red-400 text-[10px] mt-0.5">{errors.insurance_policy_number.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-emerald-300 mb-1">Season</label>
+                        <select
+                          {...register("season")}
+                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white"
+                        >
+                          <option value="Kharif">Kharif (Monsoon)</option>
+                          <option value="Rabi">Rabi (Winter)</option>
+                          <option value="Zaid">Zaid (Summer)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Expandable Insurance Details */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowInsuranceDetails(!showInsuranceDetails)}
+                        className="text-xs text-emerald-400 hover:text-emerald-200 underline flex items-center gap-1 font-semibold"
+                      >
+                        {showInsuranceDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        {showInsuranceDetails ? "Hide insurance details" : "View insurance details"}
+                      </button>
+
+                      {showInsuranceDetails && (
+                        <div className="mt-2.5 p-3 bg-[#061406] border border-emerald-800 rounded-lg text-xs space-y-1.5 text-emerald-300">
+                          <p><span className="text-emerald-500 font-bold">Scheme Selected:</span> {watch("insurance_scheme") === "PMFBY" ? "Pradhan Mantri Fasal Bima Yojana" : "Restructured Weather Based Crop Insurance Scheme"}</p>
+                          <p><span className="text-emerald-500 font-bold">Sum Insured Estimate:</span> ₹1,20,000 / hectare</p>
+                          <p><span className="text-emerald-500 font-bold">Coverage Period:</span> Kharif Season 2026 (Active)</p>
+                          {watch("insurance_scheme") === "PMFBY" ? (
+                            <p><span className="text-emerald-500 font-bold">Coverage Provisions:</span> Standing Crop / Yield Loss, Prevented Sowing, Localized Calamity, Mid-Season Adversity, Post-Harvest Loss (Available during claim filing).</p>
+                          ) : (
+                            <p><span className="text-emerald-500 font-bold">Weather Protection:</span> Automatic weather-index monitoring active for rainfall, temperature, and wind anomalies.</p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1178,15 +1276,19 @@ function DashboardContent() {
                 </div>
 
                 <div className="space-y-1.5 text-xs text-emerald-300">
-                  <p>📍 Village: <span className="text-white font-medium">{farm.village}, {farm.district}</span></p>
+                  <p>📍 Location: <span className="text-white font-medium">{farm.village}, {farm.district}</span></p>
                   <p>📐 Area: <span className="text-emerald-400 font-bold">{farm.area_hectares} hectares</span> ({calculateAreaAcres(farm.area_hectares || 0)} acres)</p>
                   <p>🧾 Land Record: <span className="font-mono text-white">{farm.khasra_number || "223/4"}</span></p>
-                  <p>🛡 Policy: <span className="font-mono text-white">{farm.insurance_policy_number || "INS-772819"}</span></p>
+                  <p>🛡 Insurance Scheme: <span className="font-bold text-white">{"insurance_scheme" in farm && farm.insurance_scheme ? farm.insurance_scheme : "PMFBY"}</span></p>
+                  <p>📄 Policy Number: <span className="font-mono text-white">{farm.insurance_policy_number || "INS-772819"}</span></p>
                 </div>
 
-                <div className="pt-1">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-950/80 border border-amber-600/80 text-amber-300 text-xs font-semibold rounded-full">
-                    🟡 Land verification pending
+                <div className="pt-1 flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-950 border border-emerald-500 text-emerald-300 text-xs font-semibold rounded-full">
+                    🟢 Active Policy
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-950/80 border border-amber-600/80 text-amber-300 text-xs font-semibold rounded-full">
+                    🟡 Pending Official Verification
                   </span>
                 </div>
               </div>

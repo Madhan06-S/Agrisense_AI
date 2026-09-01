@@ -12,6 +12,12 @@ if "sqlite" in settings.DATABASE_URL:
     geoalchemy2.shape.from_shape = lambda shape, *args, **kwargs: str(shape.wkt)
     geoalchemy2.shape.to_shape = lambda val, *args, **kwargs: shapely.wkt.loads(val)
 
+class Base(DeclarativeBase):
+    pass
+
+# Import models so Base.metadata is populated
+from app.models.insurance_models import InsuranceScheme, InsurancePolicy, PolicyCoverage, ParametricTriggerConfig
+
 
 engine = create_async_engine(
     settings.DATABASE_URL,
@@ -30,8 +36,7 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-class Base(DeclarativeBase):
-    pass
+
 
 
 async def get_db() -> AsyncSession:
@@ -47,11 +52,16 @@ async def get_db() -> AsyncSession:
 
 async def create_tables():
     """Create all tables (used in dev). In prod, use Alembic migrations."""
+    import app.models
+    import app.models.insurance_models  # Register insurance models on Base.metadata
     async with engine.begin() as conn:
-        # Enable PostGIS
-        await conn.execute(
-            __import__("sqlalchemy").text("CREATE EXTENSION IF NOT EXISTS postgis")
-        )
+        # Enable PostGIS (PostgreSQL only)
+        try:
+            await conn.execute(
+                __import__("sqlalchemy").text("CREATE EXTENSION IF NOT EXISTS postgis")
+            )
+        except Exception:
+            pass
         
         # Alter userrole type to add collector
         try:
@@ -60,26 +70,57 @@ async def create_tables():
             pass
         
         # Raw alters for users
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE users ADD COLUMN IF NOT EXISTS aadhaar_hash VARCHAR(255);"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE users ADD COLUMN IF NOT EXISTS aadhaar_verified BOOLEAN DEFAULT FALSE;"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE users ADD COLUMN IF NOT EXISTS aadhaar_name VARCHAR(200);"))
+        try:
+            await conn.execute(__import__("sqlalchemy").text("ALTER TABLE users ADD COLUMN IF NOT EXISTS aadhaar_hash VARCHAR(255);"))
+            await conn.execute(__import__("sqlalchemy").text("ALTER TABLE users ADD COLUMN IF NOT EXISTS aadhaar_verified BOOLEAN DEFAULT FALSE;"))
+            await conn.execute(__import__("sqlalchemy").text("ALTER TABLE users ADD COLUMN IF NOT EXISTS aadhaar_name VARCHAR(200);"))
+        except Exception:
+            pass
         
         # Raw alters for farms
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS original_boundary geometry(POLYGON,4326);"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS boundary_edited BOOLEAN DEFAULT FALSE;"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS khasra_number VARCHAR(100);"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS land_record_source VARCHAR(100);"))
+        farm_cols = [
+            "farmer_id INTEGER",
+            "owner_id INTEGER",
+            "khasra_number VARCHAR(100)",
+            "land_record_source VARCHAR(100)",
+            "insurance_policy_number VARCHAR(100)",
+            "boundary_edited BOOLEAN DEFAULT FALSE"
+        ]
+        for col_def in farm_cols:
+            try:
+                if "sqlite" in settings.DATABASE_URL:
+                    await conn.execute(__import__("sqlalchemy").text(f"ALTER TABLE farms ADD COLUMN {col_def};"))
+                else:
+                    await conn.execute(__import__("sqlalchemy").text(f"ALTER TABLE farms ADD COLUMN IF NOT EXISTS {col_def};"))
+            except Exception:
+                pass
         
         # Raw alters for claims
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS pfms_transaction_id VARCHAR(100);"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS scheme_code VARCHAR(100);"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS sanction_order_no VARCHAR(100);"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS is_parametric BOOLEAN DEFAULT FALSE;"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS trigger_source VARCHAR(50);"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS imd_alert_id INTEGER;"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS payout_amount FLOAT;"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS damage_percent FLOAT;"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS farm_area FLOAT;"))
-        await conn.execute(__import__("sqlalchemy").text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS sum_insured FLOAT;"))
+        claim_cols = [
+            "pfms_transaction_id VARCHAR(100)",
+            "scheme_code VARCHAR(100)",
+            "sanction_order_no VARCHAR(100)",
+            "is_parametric BOOLEAN DEFAULT FALSE",
+            "trigger_source VARCHAR(50)",
+            "imd_alert_id INTEGER",
+            "payout_amount FLOAT",
+            "damage_percent FLOAT",
+            "farm_area FLOAT",
+            "sum_insured FLOAT",
+            "policy_id INTEGER",
+            "insured_snapshot_id VARCHAR(100)",
+            "insured_boundary_version INTEGER DEFAULT 1",
+            "coverage_type VARCHAR(100)",
+            "damage_type VARCHAR(100)"
+        ]
+        for col_def in claim_cols:
+            col_name = col_def.split()[0]
+            try:
+                if "sqlite" in settings.DATABASE_URL:
+                    await conn.execute(__import__("sqlalchemy").text(f"ALTER TABLE claims ADD COLUMN {col_def};"))
+                else:
+                    await conn.execute(__import__("sqlalchemy").text(f"ALTER TABLE claims ADD COLUMN IF NOT EXISTS {col_def};"))
+            except Exception:
+                pass
         
         await conn.run_sync(Base.metadata.create_all)

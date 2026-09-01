@@ -72,8 +72,9 @@ os.environ["LOCAL_STORAGE_DIR"] = "/tmp/agrisense_test_storage"
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from app.models.models import Base
-from app.core.database import get_db
+from app.core.database import Base
+import app.models
+import app.models.insurance_models
 
 # Configure Celery tasks to run synchronously in tests
 from app.tasks.celery_app import celery
