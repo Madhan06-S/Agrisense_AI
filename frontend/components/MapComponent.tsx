@@ -37,11 +37,13 @@ export interface Farm {
 }
 
 interface MapComponentProps {
+interface MapComponentProps {
   points: [number, number][];
   setPoints: (points: [number, number][]) => void;
   existingFarms: Farm[];
   onLocationSelect?: (location: { state: string; district: string; taluka: string; village: string }) => void;
   targetLocationQuery?: string;
+  targetCoordinates?: { lat: number; lng: number; zoom?: number } | null;
 }
 
 const reverseGeocode = async (lat: number, lon: number, callback?: MapComponentProps["onLocationSelect"]) => {
@@ -71,14 +73,27 @@ export default function MapComponent({
   setPoints, 
   existingFarms, 
   onLocationSelect, 
-  targetLocationQuery 
+  targetLocationQuery,
+  targetCoordinates
 }: MapComponentProps) {
   const [mapCenter] = useState<[number, number]>([28.6139, 77.2090]); // New Delhi default
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchMarker, setSearchMarker] = useState<[number, number] | null>(null);
   const [centerOverride, setCenterOverride] = useState<[number, number] | null>(null);
+  const [zoomOverride, setZoomOverride] = useState<number>(15);
   const [locationStatus, setLocationStatus] = useState<string | null>(null);
+
+  // Instant navigation when exact targetCoordinates are provided
+  useEffect(() => {
+    if (targetCoordinates && targetCoordinates.lat && targetCoordinates.lng) {
+      const coords: [number, number] = [targetCoordinates.lat, targetCoordinates.lng];
+      setCenterOverride(coords);
+      setSearchMarker(coords);
+      setZoomOverride(targetCoordinates.zoom || 13);
+      setLocationStatus(`Map centered instantly`);
+    }
+  }, [targetCoordinates]);
 
   // Auto-navigate map when targetLocationQuery updates from form
   useEffect(() => {
@@ -104,6 +119,7 @@ export default function MapComponent({
             const coords: [number, number] = [lat, lon];
             setCenterOverride(coords);
             setSearchMarker(coords);
+            setZoomOverride(15);
             setLocationStatus(`Centered on ${data[0].display_name.split(',')[0]}`);
           }
         }
@@ -112,7 +128,7 @@ export default function MapComponent({
       } finally {
         setSearchLoading(false);
       }
-    }, 700);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [targetLocationQuery]);
@@ -130,13 +146,13 @@ export default function MapComponent({
   }
 
   // Component to dynamically pan the map to the searched coordinates
-  function MapController({ center }: { center: [number, number] | null }) {
+  function MapController({ center, zoom }: { center: [number, number] | null; zoom: number }) {
     const map = useMap();
     useEffect(() => {
       if (center) {
-        map.flyTo(center, 15, { animate: true, duration: 1.5 });
+        map.flyTo(center, zoom || 15, { animate: true, duration: 1.0 });
       }
-    }, [center, map]);
+    }, [center, zoom, map]);
     return null;
   }
 
@@ -243,7 +259,7 @@ export default function MapComponent({
         />
 
         {/* Dynamic map controller for centering */}
-        <MapController center={centerOverride} />
+        <MapController center={centerOverride} zoom={zoomOverride} />
 
         {/* Listen for click to draw vertices */}
         <MapEvents />

@@ -12,6 +12,7 @@ import { Farm } from "@/components/MapComponent";
 import { HoloCard } from "@/components/ui/HoloCard";
 import FarmTerrain3D from "@/components/maps/FarmTerrain3D";
 import FeatureCube3D from "@/components/features/FeatureCube3D";
+import { INDIA_LOCATION_DATA } from "@/lib/indiaLocations";
 
 // Dynamically import Leaflet MapComponent to disable Server-Side Rendering (SSR)
 const MapComponent = dynamic(() => import("@/components/MapComponent"), {
@@ -70,6 +71,9 @@ function DashboardContent() {
   const [calculatedArea, setCalculatedArea] = useState<number>(0);
   const [localFarms, setLocalFarms] = useState<Farm[]>([]);
 
+  // Instant map coordinates target
+  const [targetCoords, setTargetCoords] = useState<{ lat: number; lng: number; zoom?: number } | null>(null);
+
   // 3D Visualizer States
   const [hasWebGL, setHasWebGL] = useState(true);
   const [selectedFarm3D, setSelectedFarm3D] = useState<Farm | null>(null);
@@ -100,9 +104,9 @@ function DashboardContent() {
   } = useForm<FarmFormData>({
     resolver: zodResolver(farmSchema),
     defaultValues: {
-      state: "Haryana",
-      district: "Karnal",
-      taluka: "Gharaunda",
+      state: "Tamil Nadu",
+      district: "Coimbatore",
+      taluka: "Kinathukadavu",
       village: "Basdhara",
     },
   });
@@ -111,6 +115,52 @@ function DashboardContent() {
   const districtVal = watch("district");
   const talukaVal = watch("taluka");
   const villageVal = watch("village");
+
+  // Get current state data & district options
+  const currentStateData = INDIA_LOCATION_DATA[stateVal];
+  const availableDistricts = currentStateData ? Object.keys(currentStateData.districts) : [];
+  
+  // Get current district data & taluka options
+  const currentDistrictData = currentStateData?.districts[districtVal];
+  const availableTalukas = currentDistrictData ? currentDistrictData.talukas : [];
+
+  // When State dropdown changes
+  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedState = e.target.value;
+    setValue("state", selectedState, { shouldValidate: true });
+    setValue("district", "", { shouldValidate: true });
+    setValue("taluka", "", { shouldValidate: true });
+    setValue("village", "", { shouldValidate: true });
+
+    const stateData = INDIA_LOCATION_DATA[selectedState];
+    if (stateData) {
+      setTargetCoords({ lat: stateData.lat, lng: stateData.lng, zoom: stateData.zoom || 7 });
+    }
+  };
+
+  // When District dropdown changes
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedDistrict = e.target.value;
+    setValue("district", selectedDistrict, { shouldValidate: true });
+    setValue("taluka", "", { shouldValidate: true });
+    setValue("village", "", { shouldValidate: true });
+
+    const distData = currentStateData?.districts[selectedDistrict];
+    if (distData) {
+      setTargetCoords({ lat: distData.lat, lng: distData.lng, zoom: 11 });
+    }
+  };
+
+  // When Taluka dropdown changes
+  const handleTalukaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedTaluka = e.target.value;
+    setValue("taluka", selectedTaluka, { shouldValidate: true });
+    setValue("village", "", { shouldValidate: true });
+
+    if (currentDistrictData) {
+      setTargetCoords({ lat: currentDistrictData.lat, lng: currentDistrictData.lng, zoom: 13 });
+    }
+  };
 
   const locationQuery = [villageVal, talukaVal, districtVal, stateVal]
     .filter(Boolean)
@@ -405,66 +455,90 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Geographical details */}
+            {/* Geographical details with Cascading Dropdowns */}
             <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Location & Region
+                <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1">
+                  📍 Select Location (Instant Zoom)
                 </span>
-                <span className="text-[10px] text-emerald-700 bg-emerald-100 font-medium px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
-                  📍 Auto-Navigates Map
+                <span className="text-[10px] text-emerald-700 bg-emerald-100 font-semibold px-2 py-0.5 rounded border border-emerald-200 shadow-xs">
+                  ⚡ Cascading Options
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
+                {/* State Dropdown */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
                     State
                   </label>
-                  <input
-                    type="text"
-                    {...register("state")}
-                    placeholder="e.g. Tamil Nadu"
-                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
-                  />
+                  <select
+                    value={stateVal}
+                    onChange={handleStateChange}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-emerald-600 shadow-xs"
+                  >
+                    <option value="">-- Select State --</option>
+                    {Object.keys(INDIA_LOCATION_DATA).map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
                   {errors.state && <p className="text-[9px] text-red-500 mt-0.5">{errors.state.message}</p>}
                 </div>
 
+                {/* District Dropdown */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
                     District
                   </label>
-                  <input
-                    type="text"
-                    {...register("district")}
-                    placeholder="e.g. Coimbatore"
-                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
-                  />
+                  <select
+                    value={districtVal}
+                    onChange={handleDistrictChange}
+                    disabled={!stateVal || availableDistricts.length === 0}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-emerald-600 disabled:bg-slate-100 disabled:text-slate-400 shadow-xs"
+                  >
+                    <option value="">{stateVal ? "-- Select District --" : "Select State First"}</option>
+                    {availableDistricts.map((dist) => (
+                      <option key={dist} value={dist}>
+                        {dist}
+                      </option>
+                    ))}
+                  </select>
                   {errors.district && <p className="text-[9px] text-red-500 mt-0.5">{errors.district.message}</p>}
                 </div>
 
+                {/* Taluka Dropdown */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
-                    Taluka
+                    Taluka / Tehsil
                   </label>
-                  <input
-                    type="text"
-                    {...register("taluka")}
-                    placeholder="e.g. Pollachi"
-                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
-                  />
+                  <select
+                    value={talukaVal}
+                    onChange={handleTalukaChange}
+                    disabled={!districtVal || availableTalukas.length === 0}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-emerald-600 disabled:bg-slate-100 disabled:text-slate-400 shadow-xs"
+                  >
+                    <option value="">{districtVal ? "-- Select Taluka --" : "Select District First"}</option>
+                    {availableTalukas.map((tal) => (
+                      <option key={tal} value={tal}>
+                        {tal}
+                      </option>
+                    ))}
+                  </select>
                   {errors.taluka && <p className="text-[9px] text-red-500 mt-0.5">{errors.taluka.message}</p>}
                 </div>
 
+                {/* Village Input */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
-                    Village
+                    Village Name
                   </label>
                   <input
                     type="text"
                     {...register("village")}
                     placeholder="e.g. Kinathukadavu"
-                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-emerald-600 shadow-xs"
                   />
                   {errors.village && <p className="text-[9px] text-red-500 mt-0.5">{errors.village.message}</p>}
                 </div>
@@ -531,6 +605,7 @@ function DashboardContent() {
               existingFarms={farmsList}
               onLocationSelect={handleLocationSelect}
               targetLocationQuery={locationQuery}
+              targetCoordinates={targetCoords}
             />
           </div>
 
