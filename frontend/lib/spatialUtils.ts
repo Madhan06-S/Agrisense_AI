@@ -72,6 +72,16 @@ export function evaluateLocationDistanceStatus(
 }
 
 /**
+ * Calculates the 2D centroid [lat, lng] of a polygon.
+ */
+export function calculatePolygonCentroid(points: [number, number][]): [number, number] {
+  if (points.length === 0) return [0, 0];
+  const sumLat = points.reduce((acc, p) => acc + p[0], 0);
+  const sumLng = points.reduce((acc, p) => acc + p[1], 0);
+  return [sumLat / points.length, sumLng / points.length];
+}
+
+/**
  * Ray-casting algorithm to test if a point [lat, lng] is inside a polygon [ [lat, lng], ... ].
  */
 export function isPointInPolygon(

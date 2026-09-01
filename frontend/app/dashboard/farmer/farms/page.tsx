@@ -32,6 +32,7 @@ import { INDIA_LOCATION_DATA } from "@/lib/indiaLocations";
 import {
   calculateHaversineDistance,
   evaluateLocationDistanceStatus,
+  calculatePolygonCentroid,
   isPointInPolygon,
   isPolygonSelfIntersecting,
   calculatePolygonAreaHectares,
@@ -179,10 +180,18 @@ function DashboardContent() {
     if (loc.village) setValue("village", loc.village, { shouldValidate: true });
   };
 
-  // Recalculate Area when polygon points change
+  // Recalculate Area & Auto-Place Land Center Pin inside drawn polygon
   useEffect(() => {
     const ha = calculatePolygonAreaHectares(points);
     setCalculatedArea(ha);
+
+    // Auto-place center pin inside drawn polygon if missing or currently outside
+    if (points.length >= 3) {
+      const centroid = calculatePolygonCentroid(points);
+      if (!insuredFarmLocation || !isPointInPolygon(insuredFarmLocation, points)) {
+        setInsuredFarmLocation(centroid);
+      }
+    }
   }, [points]);
 
   // Load Cached Local Farms
@@ -289,6 +298,18 @@ function DashboardContent() {
     setActiveStep(3); // Move directly to Step 3 Find Land
   };
 
+  // Handle "PLACE PIN INSIDE FIELD" Click
+  const handlePlacePinInsideField = () => {
+    if (points.length >= 3) {
+      const centroid = calculatePolygonCentroid(points);
+      setInsuredFarmLocation(centroid);
+    } else if (targetCoords) {
+      setInsuredFarmLocation([targetCoords.lat, targetCoords.lng]);
+    } else {
+      setInsuredFarmLocation([11.7384, 78.9639]);
+    }
+  };
+
   // SPATIAL BACKGROUND VALIDATION (Step 5)
   const isPolygonClosed = points.length >= 3;
   const isSelfIntersecting = isPolygonSelfIntersecting(points);
@@ -308,7 +329,7 @@ function DashboardContent() {
     }
   }
 
-  // Evaluate Distance Status (Informative badge, does NOT block registration)
+  // Evaluate Distance Status
   const distanceEval = evaluateLocationDistanceStatus(
     farmerCurrentLocation,
     insuredFarmLocation ? { latitude: insuredFarmLocation[0], longitude: insuredFarmLocation[1] } : null
@@ -316,7 +337,18 @@ function DashboardContent() {
 
   // Overall Land Check Validity
   const isLandCheckValid =
-    isPolygonClosed && !isSelfIntersecting && isCenterPinInside && !hasOverlap && calculatedArea > 0;
+    isPolygonClosed && !isSelfIntersecting && (isCenterPinInside || points.length >= 3) && !hasOverlap && calculatedArea > 0;
+
+  // Handle Proceed to Step 5 (Land Check)
+  const handleProceedToLandCheck = () => {
+    if (points.length >= 3) {
+      const centroid = calculatePolygonCentroid(points);
+      if (!insuredFarmLocation || !isPointInPolygon(insuredFarmLocation, points)) {
+        setInsuredFarmLocation(centroid);
+      }
+    }
+    setActiveStep(5);
+  };
 
   // SAVE FARM MUTATION
   const createFarmMutation = useMutation({
@@ -325,6 +357,8 @@ function DashboardContent() {
         type: "Polygon",
         coordinates: [points.map((p) => [p[1], p[0]])],
       };
+
+      const finalPin = insuredFarmLocation || (points.length >= 3 ? calculatePolygonCentroid(points) : [11.7384, 78.9639]);
 
       const newFarmObj: Farm = {
         id: Date.now(),
@@ -340,9 +374,7 @@ function DashboardContent() {
         village: formData.village,
         verification_status: "PENDING_OFFICIAL_VERIFICATION",
         farmerCurrentLocation: farmerCurrentLocation || undefined,
-        insuredFarmLocation: insuredFarmLocation
-          ? { latitude: insuredFarmLocation[0], longitude: insuredFarmLocation[1] }
-          : undefined,
+        insuredFarmLocation: { latitude: finalPin[0], longitude: finalPin[1] },
         boundary: polygonGeoJSON as any,
       };
 
@@ -810,20 +842,14 @@ function DashboardContent() {
                 <div className="bg-[#061406] border border-emerald-700/80 rounded-xl p-4 space-y-2">
                   <p className="font-bold text-white text-base">📌 Is this your field?</p>
                   <p className="text-emerald-300 text-xs">
-                    Place the land pin inside your field, then tap around the edges of your field.
+                    Tap around the edges of your field plot. The land center pin will be positioned automatically.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!insuredFarmLocation && targetCoords) {
-                        setInsuredFarmLocation([targetCoords.lat, targetCoords.lng]);
-                      } else if (!insuredFarmLocation) {
-                        setInsuredFarmLocation([11.7384, 78.9639]);
-                      }
-                    }}
+                    onClick={handlePlacePinInsideField}
                     className="py-3 px-4 bg-amber-950/80 hover:bg-amber-900 border border-amber-600/80 text-amber-200 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm shadow"
                   >
                     📌 PLACE PIN INSIDE FIELD
@@ -878,18 +904,6 @@ function DashboardContent() {
                   </p>
                 )}
 
-                {!insuredFarmLocation && points.length >= 3 && (
-                  <p className="text-amber-400 text-xs bg-amber-950/60 p-2.5 rounded-lg border border-amber-800/60">
-                    📌 Please place the pin inside your field.
-                  </p>
-                )}
-
-                {insuredFarmLocation && points.length >= 3 && !isCenterPinInside && (
-                  <p className="text-red-400 text-xs bg-red-950/80 p-2.5 rounded-lg border border-red-700">
-                    📌 Please drag the pin inside your field boundary.
-                  </p>
-                )}
-
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
@@ -900,8 +914,8 @@ function DashboardContent() {
                   </button>
                   <button
                     type="button"
-                    disabled={points.length < 3 || isSelfIntersecting || !insuredFarmLocation || !isCenterPinInside}
-                    onClick={() => setActiveStep(5)}
+                    disabled={points.length < 3 || isSelfIntersecting}
+                    onClick={handleProceedToLandCheck}
                     className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
                   >
                     ✓ DONE <ArrowRight className="w-5 h-5" />
@@ -984,7 +998,6 @@ function DashboardContent() {
                     </p>
                     {!isPolygonClosed && <p>• Please draw around the complete field (minimum 3 points).</p>}
                     {isSelfIntersecting && <p>• Some boundary lines cross each other. Please adjust points.</p>}
-                    {!isCenterPinInside && <p>• Please place the pin inside your field boundary.</p>}
                     {hasOverlap && <p>• ⚠️ This field appears to overlap another registered field.</p>}
                   </div>
                 )}
