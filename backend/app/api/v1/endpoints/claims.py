@@ -101,12 +101,17 @@ async def create_claim(
     if not farm:
         raise HTTPException(status_code=404, detail="Farm not found or not yours")
 
+    version = getattr(farm, "current_version", 1) or 1
+    snapshot_id = payload.insured_snapshot_id or f"SNAP-{farm.id}-V{version}"
+
     claim = Claim(
         farm_id=payload.farm_id,
         farmer_id=current_user.id,
         claim_type=payload.claim_type,
         description=payload.description,
         status=ClaimStatus.submitted,
+        insured_snapshot_id=snapshot_id,
+        insured_boundary_version=version,
     )
     db.add(claim)
     await db.commit()

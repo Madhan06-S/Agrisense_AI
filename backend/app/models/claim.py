@@ -42,6 +42,10 @@ class Claim(Base):
     officer_remarks = Column(Text, nullable=True)
     reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
+    # Claim-Time Insured Parcel Snapshot Binding
+    insured_snapshot_id = Column(String(100), nullable=True)
+    insured_boundary_version = Column(Integer, default=1)
+
     # Payout fields
     payout_amount = Column(Float, nullable=True)
     damage_percent = Column(Float, nullable=True)

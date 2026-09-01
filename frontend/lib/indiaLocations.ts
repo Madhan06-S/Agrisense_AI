@@ -25,6 +25,7 @@ export const INDIA_LOCATION_DATA: Record<string, StateDetails> = {
       "Dharmapuri": { lat: 12.1357, lng: 78.1560, talukas: ["Dharmapuri", "Harur", "Pappireddipatti", "Pennagaram", "Palacode"] },
       "Dindigul": { lat: 10.3673, lng: 77.9803, talukas: ["Dindigul East", "Dindigul West", "Palani", "Kodaikanal", "Nilakottai", "Oddanchatram"] },
       "Erode": { lat: 11.3410, lng: 77.7172, talukas: ["Erode", "Bhavani", "Gobichettipalayam", "Sathyamangalam", "Perundurai"] },
+      "Kallakurichi": { lat: 11.7384, lng: 78.9639, talukas: ["Kallakurichi", "Sankarapuram", "Tirukoilur", "Ulundurpet", "Chinnasalem", "Kalvarayan Hills"] },
       "Kanchipuram": { lat: 12.8342, lng: 79.7036, talukas: ["Kanchipuram", "Sriperumbudur", "Uthiramerur", "Walajabad"] },
       "Kanyakumari": { lat: 8.0883, lng: 77.5385, talukas: ["Agastheeswaram", "Thovalai", "Kalkulam", "Vilavancode"] },
       "Karur": { lat: 10.9601, lng: 78.0766, talukas: ["Karur", "Aravakurichi", "Kulithalai", "Krishnarayapuram"] },
