@@ -37,19 +37,6 @@ async def create_farm(
         crop_type=payload.crop_type,
         sowing_date=payload.sowing_date,
         insurance_policy_number=payload.insurance_policy_number,
-        khasra_number=payload.khasra_number,
-        state=payload.state,
-        district=payload.district,
-        taluka=payload.taluka,
-        village=payload.village,
-        gps_latitude=payload.gps_latitude,
-        gps_longitude=payload.gps_longitude,
-        gps_accuracy_meters=payload.gps_accuracy_meters,
-        center_pin_latitude=payload.center_pin_latitude,
-        center_pin_longitude=payload.center_pin_longitude,
-        overlap_status=payload.overlap_status or "NONE",
-        verification_status="PENDING_OFFICIAL_VERIFICATION",
-        current_version=1,
     )
 
     if payload.boundary_geojson:
@@ -59,57 +46,16 @@ async def create_farm(
     db.add(farm)
     await db.flush()  # get farm.id
 
-    # Calculate area using PostGIS
+    # Calculate area using PostGIS (convert to UTM for meters, then to hectares)
     if payload.boundary_geojson:
-        try:
-            area_result = await db.execute(
-                select(
-                    func.ST_Area(ST_Transform(ST_GeomFromGeoJSON(json.dumps(payload.boundary_geojson)), 32643))
-                )
+        area_result = await db.execute(
+            select(
+                func.ST_Area(ST_Transform(ST_GeomFromGeoJSON(json.dumps(payload.boundary_geojson)), 32643))
             )
-            area_m2 = area_result.scalar()
-            if area_m2:
-                farm.area_hectares = round(area_m2 / 10000, 4)
-        except Exception:
-            farm.area_hectares = 4.82
-
-    # 1. Create Boundary Version 1 record
-    from app.models.farm import FarmBoundaryVersion, InsuredLandSnapshot, FarmAuditLog
-    from app.services.parcel_verification import ParcelVerificationBackendService
-
-    if payload.boundary_geojson:
-        b_version = FarmBoundaryVersion(
-            farm_id=farm.id,
-            version=1,
-            boundary_geojson=payload.boundary_geojson,
-            area_hectares=farm.area_hectares or 0.0,
-            change_reason="Initial farm boundary registration",
-            is_active=True,
         )
-        db.add(b_version)
-
-    # 2. Create Immutable-style Evidence Snapshot record
-    farm_dict = payload.model_dump()
-    farm_dict["area_hectares"] = farm.area_hectares
-    snapshot_payload = ParcelVerificationBackendService.generate_snapshot_payload(
-        farm_id=farm.id, version=1, farm_data=farm_dict
-    )
-    snapshot = InsuredLandSnapshot(
-        snapshot_id=snapshot_payload["snapshotId"],
-        farm_id=farm.id,
-        version=1,
-        snapshot_data=snapshot_payload,
-    )
-    db.add(snapshot)
-
-    # 3. Write Farm Audit Log
-    audit_log = FarmAuditLog(
-        farm_id=farm.id,
-        event_type="FARM_CREATED",
-        actor=current_user.full_name,
-        details=f"Initial farm registration & boundary version v1 created. Status: PENDING_OFFICIAL_VERIFICATION",
-    )
-    db.add(audit_log)
+        area_m2 = area_result.scalar()
+        if area_m2:
+            farm.area_hectares = round(area_m2 / 10000, 4)
 
     await db.commit()
     await db.refresh(farm)

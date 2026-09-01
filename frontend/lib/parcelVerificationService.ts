@@ -1,145 +1,46 @@
 /**
- * Parcel Verification & Insurance Evidence Snapshot Service
- * Interface for official cadastral/land-record GIS integration and audit trail logging.
+ * Parcel Verification Service Interface & Architecture
+ *
+ * Prepared for future integration with state/national government Cadastral GIS APIs
+ * (e.g. Tamil Nadu Nilam, Haryana Jamabandi, Punjab Land Records, etc.)
  */
 
-export interface InsuredLandSnapshot {
-  snapshotId: string;
-  farmId: number;
-  version: number;
-  capturedAt: string;
-  farmName: string;
-  cropType: string;
-  sowingDate: string;
-  state: string;
-  district: string;
-  taluka: string;
-  village: string;
-  khasraNumber: string;
-  insurancePolicyNumber: string;
-  gpsLatitude: number | null;
-  gpsLongitude: number | null;
-  gpsAccuracyMeters: number | null;
-  centerPinLatitude: number | null;
-  centerPinLongitude: number | null;
-  boundaryGeoJSON: {
-    type: "Polygon";
-    coordinates: number[][][];
-  };
-  areaHectares: number;
-  areaAcres: number;
-  boundaryVertexCount: number;
-  overlapStatus: "NONE" | "PARTIAL" | "SIGNIFICANT";
-  overlappingFarmIds: number[];
-  verificationStatus: "PENDING_OFFICIAL_VERIFICATION" | "PARCEL_MATCHED" | "VERIFIED";
-  disclaimer: string;
-}
-
-export interface BoundaryVersion {
-  version: number;
-  boundaryGeoJSON: {
-    type: "Polygon";
-    coordinates: number[][][];
-  };
-  areaHectares: number;
-  areaAcres: number;
-  createdAt: string;
-  changeReason?: string;
-  isActive: boolean;
-}
-
-export interface AuditLogEntry {
-  id: string;
-  farmId: number;
-  eventType:
-    | "FARM_CREATED"
-    | "GPS_CAPTURED"
-    | "LAND_PIN_PLACED"
-    | "BOUNDARY_DRAWN"
-    | "BOUNDARY_EDITED"
-    | "BOUNDARY_VERSION_CREATED"
-    | "OVERLAP_CHECKED"
-    | "VERIFICATION_STATUS_CHANGED"
-    | "SNAPSHOT_CREATED";
-  timestamp: string;
-  actor: string;
-  details: string;
-}
-
-export interface VerificationResult {
-  status: "PENDING_OFFICIAL_VERIFICATION" | "PARCEL_MATCHED" | "VERIFIED";
-  matchScore: number | null;
-  officialParcelId: string | null;
-  officialAreaHectares: number | null;
+export interface ParcelVerificationResult {
+  status: "PENDING_OFFICIAL_VERIFICATION" | "PARCEL_MATCHED" | "MISMATCH" | "MANUAL_REVIEW_REQUIRED";
+  matchScore: number | null; // 0 to 100
+  khasraVerified: boolean;
+  cadastralBoundaryFound: boolean;
+  areaMatchPercentage: number | null;
   message: string;
-  checklist: {
-    gpsCaptured: boolean;
-    centerPinAdded: boolean;
-    boundaryDrawn: boolean;
-    boundaryValid: boolean;
-    noOverlapConflict: boolean;
-    officialRecordMatch: boolean;
-  };
+  notes: string;
+  verifiedAt?: string;
 }
 
 export class ParcelVerificationService {
   /**
-   * Verify parcel details against state land-record GIS registry.
-   * Returns PENDING_OFFICIAL_VERIFICATION until official API integration.
+   * Evaluates user-drawn polygon and land record ID against official cadastral GIS endpoints.
+   * Currently defaults to PENDING_OFFICIAL_VERIFICATION until live government API tokens are connected.
    */
-  static async verifyParcelWithCadastral(
-    khasraNumber: string,
-    state: string,
-    district: string,
-    boundaryGeoJSON: any
-  ): Promise<VerificationResult> {
-    // Note: Official state land record API integration placeholder
+  static async verifyLandRecord(payload: {
+    state: string;
+    district: string;
+    taluka: string;
+    village: string;
+    khasraNumber: string;
+    userPolygon: [number, number][];
+    claimedAreaHectares: number;
+  }): Promise<ParcelVerificationResult> {
+    // Structural interface for future official API call:
+    // e.g. await fetch(`https://api.landrecords.gov.in/v1/verify?khasra=${payload.khasraNumber}...`)
+
     return {
       status: "PENDING_OFFICIAL_VERIFICATION",
       matchScore: null,
-      officialParcelId: null,
-      officialAreaHectares: null,
-      message: "Pending official state cadastral GIS verification.",
-      checklist: {
-        gpsCaptured: true,
-        centerPinAdded: true,
-        boundaryDrawn: true,
-        boundaryValid: true,
-        noOverlapConflict: true,
-        officialRecordMatch: false,
-      },
-    };
-  }
-
-  /**
-   * Create an immutable evidence snapshot for insurance claim baseline.
-   */
-  static createSnapshot(data: Omit<InsuredLandSnapshot, "snapshotId" | "capturedAt">): InsuredLandSnapshot {
-    const timestamp = new Date().toISOString();
-    const snapshotId = `SNAP-${data.farmId}-${data.version}-${Date.now().toString(36).toUpperCase()}`;
-    return {
-      ...data,
-      snapshotId,
-      capturedAt: timestamp,
-    };
-  }
-
-  /**
-   * Generate initial audit log entries for farm registration.
-   */
-  static createAuditLog(
-    farmId: number,
-    eventType: AuditLogEntry["eventType"],
-    details: string,
-    actor: string = "Farmer"
-  ): AuditLogEntry {
-    return {
-      id: `LOG-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-      farmId,
-      eventType,
-      timestamp: new Date().toISOString(),
-      actor,
-      details,
+      khasraVerified: false,
+      cadastralBoundaryFound: false,
+      areaMatchPercentage: null,
+      message: "Recorded locally. Pending official state government land record verification.",
+      notes: "Official cadastral parcel API integration pending. Land record ID recorded for offline audit.",
     };
   }
 }
