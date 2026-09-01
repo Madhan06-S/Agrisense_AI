@@ -95,6 +95,7 @@ function DashboardContent() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FarmFormData>({
     resolver: zodResolver(farmSchema),
@@ -105,6 +106,15 @@ function DashboardContent() {
       village: "Basdhara",
     },
   });
+
+  const stateVal = watch("state");
+  const districtVal = watch("district");
+  const talukaVal = watch("taluka");
+  const villageVal = watch("village");
+
+  const locationQuery = [villageVal, talukaVal, districtVal, stateVal]
+    .filter(Boolean)
+    .join(", ");
 
   const handleLocationSelect = (loc: { state: string; district: string; taluka: string; village: string }) => {
     if (loc.state) setValue("state", loc.state, { shouldValidate: true });
@@ -396,22 +406,68 @@ function DashboardContent() {
             </div>
 
             {/* Geographical details */}
-            <div className="grid grid-cols-2 gap-2 bg-white/50 p-2.5 rounded-lg border border-emerald-800/40">
-              <div>
-                <label className="block text-[9px] font-semibold uppercase text-[#166534] mb-0.5">State</label>
-                <input type="text" {...register("state")} className="w-full bg-[#030903] border border-slate-200 rounded px-2 py-0.5 text-[10px]" />
+            <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                  Location & Region
+                </span>
+                <span className="text-[10px] text-emerald-700 bg-emerald-100 font-medium px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                  📍 Auto-Navigates Map
+                </span>
               </div>
-              <div>
-                <label className="block text-[9px] font-semibold uppercase text-[#166534] mb-0.5">District</label>
-                <input type="text" {...register("district")} className="w-full bg-[#030903] border border-slate-200 rounded px-2 py-0.5 text-[10px]" />
-              </div>
-              <div>
-                <label className="block text-[9px] font-semibold uppercase text-[#166534] mb-0.5">Taluka</label>
-                <input type="text" {...register("taluka")} className="w-full bg-[#030903] border border-slate-200 rounded px-2 py-0.5 text-[10px]" />
-              </div>
-              <div>
-                <label className="block text-[9px] font-semibold uppercase text-[#166534] mb-0.5">Village</label>
-                <input type="text" {...register("village")} className="w-full bg-[#030903] border border-slate-200 rounded px-2 py-0.5 text-[10px]" />
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    {...register("state")}
+                    placeholder="e.g. Tamil Nadu"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
+                  />
+                  {errors.state && <p className="text-[9px] text-red-500 mt-0.5">{errors.state.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
+                    District
+                  </label>
+                  <input
+                    type="text"
+                    {...register("district")}
+                    placeholder="e.g. Coimbatore"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
+                  />
+                  {errors.district && <p className="text-[9px] text-red-500 mt-0.5">{errors.district.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
+                    Taluka
+                  </label>
+                  <input
+                    type="text"
+                    {...register("taluka")}
+                    placeholder="e.g. Pollachi"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
+                  />
+                  {errors.taluka && <p className="text-[9px] text-red-500 mt-0.5">{errors.taluka.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-[#166534] mb-0.5">
+                    Village
+                  </label>
+                  <input
+                    type="text"
+                    {...register("village")}
+                    placeholder="e.g. Kinathukadavu"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 font-medium shadow-sm"
+                  />
+                  {errors.village && <p className="text-[9px] text-red-500 mt-0.5">{errors.village.message}</p>}
+                </div>
               </div>
             </div>
 
@@ -469,7 +525,13 @@ function DashboardContent() {
               <LandPlot className="h-5 w-5 text-[#166534]" />
               Boundary Mapping View (Esri Satellite Base Layer)
             </h2>
-            <MapComponent points={points} setPoints={setPoints} existingFarms={farmsList} onLocationSelect={handleLocationSelect} />
+            <MapComponent
+              points={points}
+              setPoints={setPoints}
+              existingFarms={farmsList}
+              onLocationSelect={handleLocationSelect}
+              targetLocationQuery={locationQuery}
+            />
           </div>
 
           {/* List of Registered Farms using HoloCards */}

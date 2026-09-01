@@ -41,6 +41,7 @@ interface MapComponentProps {
   setPoints: (points: [number, number][]) => void;
   existingFarms: Farm[];
   onLocationSelect?: (location: { state: string; district: string; taluka: string; village: string }) => void;
+  targetLocationQuery?: string;
 }
 
 const reverseGeocode = async (lat: number, lon: number, callback?: MapComponentProps["onLocationSelect"]) => {
@@ -65,12 +66,56 @@ const reverseGeocode = async (lat: number, lon: number, callback?: MapComponentP
   }
 };
 
-export default function MapComponent({ points, setPoints, existingFarms, onLocationSelect }: MapComponentProps) {
+export default function MapComponent({ 
+  points, 
+  setPoints, 
+  existingFarms, 
+  onLocationSelect, 
+  targetLocationQuery 
+}: MapComponentProps) {
   const [mapCenter] = useState<[number, number]>([28.6139, 77.2090]); // New Delhi default
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchMarker, setSearchMarker] = useState<[number, number] | null>(null);
   const [centerOverride, setCenterOverride] = useState<[number, number] | null>(null);
+  const [locationStatus, setLocationStatus] = useState<string | null>(null);
+
+  // Auto-navigate map when targetLocationQuery updates from form
+  useEffect(() => {
+    if (!targetLocationQuery || targetLocationQuery.trim().length < 3) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        setLocationStatus(`Navigating map to ${targetLocationQuery}...`);
+        const query = targetLocationQuery.toLowerCase().includes("india")
+          ? targetLocationQuery
+          : `${targetLocationQuery}, India`;
+          
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`,
+          { headers: { "User-Agent": "AgriSense-AI-App/1.0" } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            const coords: [number, number] = [lat, lon];
+            setCenterOverride(coords);
+            setSearchMarker(coords);
+            setLocationStatus(`Centered on ${data[0].display_name.split(',')[0]}`);
+          }
+        }
+      } catch (err) {
+        console.error("Auto geocoding error:", err);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [targetLocationQuery]);
 
   // Custom event handler to capture click coordinates on the map
   function MapEvents() {
@@ -311,6 +356,13 @@ export default function MapComponent({ points, setPoints, existingFarms, onLocat
         <p>• Click any marker vertex to delete it.</p>
         <p>• Minimum 3 vertices to register a valid boundary.</p>
       </div>
+
+      {locationStatus && (
+        <div className="absolute bottom-4 right-4 z-[1000] bg-[#0a1f0a]/95 border border-emerald-500 text-emerald-300 text-xs px-3 py-2 rounded-md shadow-lg backdrop-blur-sm flex items-center gap-2 pointer-events-none animate-pulse">
+          {searchLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />}
+          <span>{locationStatus}</span>
+        </div>
+      )}
     </div>
   );
 }
