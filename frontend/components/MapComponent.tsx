@@ -37,7 +37,6 @@ export interface Farm {
 }
 
 interface MapComponentProps {
-interface MapComponentProps {
   points: [number, number][];
   setPoints: (points: [number, number][]) => void;
   existingFarms: Farm[];
