@@ -280,11 +280,11 @@ export default function FarmTerrain3D({ geojson, ndviData, livePreview = false, 
   };
 
   return (
-    <div className={`relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden ${livePreview ? "h-[280px]" : ""}`}>
+    <div className={`relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden ${livePreview ? "h-[280px]" : ""}`}>
       {loading && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/80 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
-          <span className="text-xs font-medium text-slate-300">Generating 3D Terrain...</span>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-[#2E7D32]" />
+          <span className="text-xs font-medium text-[#374151]">Generating 3D Terrain...</span>
         </div>
       )}
 
@@ -293,10 +293,10 @@ export default function FarmTerrain3D({ geojson, ndviData, livePreview = false, 
 
       {/* Slider / Date controls overlay - hide on live preview */}
       {!livePreview && (
-        <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-col md:flex-row gap-4 justify-between items-center p-3 rounded-xl border border-white/10 bg-slate-950/80 backdrop-blur-md">
+        <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-col md:flex-row gap-4 justify-between items-center p-3 rounded-xl border border-[#E5EBE3] bg-white/90 backdrop-blur-md">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-semibold text-emerald-400">Chronological NDVI Growth Slider</span>
-            <span className="text-[9px] text-slate-400">Selected Date: <b className="text-slate-200">{ndviDate}</b></span>
+            <span className="text-[10px] font-semibold text-[#2E7D32]">Chronological NDVI Growth Slider</span>
+            <span className="text-[9px] text-[#5B6B5B]">Selected Date: <b className="text-[#1B5E20]">{ndviDate}</b></span>
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">

@@ -234,19 +234,19 @@ export default function FeatureCube3D({ farmName = "Selected Farm", farmGeoJSON,
   }, [farmGeoJSON]);
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden flex flex-col font-sans">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden flex flex-col font-sans">
       
       {/* Top controls header */}
-      <div className="p-4 border-b border-white/10 bg-slate-900/40 flex justify-between items-center z-10">
+      <div className="p-4 border-b border-[#E5EBE3] bg-[#F7F9F5] flex justify-between items-center z-10">
         <div>
-          <h3 className="text-sm font-bold text-white tracking-wide">3D Feature Cube Viewer</h3>
-          <p className="text-[10px] text-emerald-400 mt-0.5">{farmName} • Multi-Spectral Cube</p>
+          <h3 className="text-sm font-bold text-[#1B5E20] tracking-wide">3D Feature Cube Viewer</h3>
+          <p className="text-[10px] text-[#2E7D32] mt-0.5">{farmName} • Multi-Spectral Cube</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setCompareMode(!compareMode)}
             className={`py-1 px-3 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-              compareMode ? "bg-[#22c55e] text-black" : "bg-white/5 text-slate-300 hover:bg-white/10"
+              compareMode ? "bg-[#2E7D32] text-white" : "bg-emerald-50 text-[#1B5E20] border border-[#2E7D32]/30 hover:bg-emerald-100"
             }`}
           >
             {compareMode ? "Single Mode" : "Comparison Mode"}
@@ -254,7 +254,7 @@ export default function FeatureCube3D({ farmName = "Selected Farm", farmGeoJSON,
           <button
             onClick={() => setAutoRotate(!autoRotate)}
             className={`py-1 px-3 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-              autoRotate ? "bg-white/15 text-white" : "bg-white/5 text-slate-300 hover:bg-white/10"
+              autoRotate ? "bg-[#2E7D32] text-white" : "bg-emerald-50 text-[#1B5E20] border border-[#2E7D32]/30 hover:bg-emerald-100"
             }`}
           >
             {autoRotate ? "Pause Auto-Rotate" : "Auto-Rotate"}
@@ -263,7 +263,7 @@ export default function FeatureCube3D({ farmName = "Selected Farm", farmGeoJSON,
       </div>
 
       {/* R3F Canvas Container */}
-      <div className="relative w-full h-[400px] bg-slate-950 cursor-grab active:cursor-grabbing">
+      <div className="relative w-full h-[400px] bg-[#F7F9F5] cursor-grab active:cursor-grabbing">
         <Canvas camera={{ position: [0, 6, 10], fov: 45 }} shadows>
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 15, 10]} intensity={1.5} castShadow />
@@ -347,14 +347,14 @@ export default function FeatureCube3D({ farmName = "Selected Farm", farmGeoJSON,
       </div>
 
       {/* Chronological growing season scrubber */}
-      <div className="p-4 border-t border-white/10 bg-slate-900/20 flex flex-col md:flex-row gap-4 justify-between items-center z-10">
+      <div className="p-4 border-t border-[#E5EBE3] bg-[#F7F9F5] flex flex-col md:flex-row gap-4 justify-between items-center z-10">
         <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-semibold text-slate-300">Feature Cube Timeline Scrubber</span>
-          <span className="text-[10px] text-slate-400">Selected Date: <b className="text-slate-200">{dates[timeStep]}</b></span>
+          <span className="text-xs font-semibold text-[#1B5E20]">Feature Cube Timeline Scrubber</span>
+          <span className="text-[10px] text-[#5B6B5B]">Selected Date: <b className="text-[#1B5E20]">{dates[timeStep]}</b></span>
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase">June</span>
+          <span className="text-[10px] text-[#5B6B5B] font-semibold uppercase">June</span>
           <input
             type="range"
             min="0"
@@ -362,15 +362,15 @@ export default function FeatureCube3D({ farmName = "Selected Farm", farmGeoJSON,
             step="1"
             value={timeStep}
             onChange={(e) => setTimeStep(parseInt(e.target.value))}
-            className="w-full md:w-60 accent-emerald-400"
+            className="w-full md:w-60 accent-[#2E7D32]"
           />
-          <span className="text-[10px] text-slate-500 font-semibold uppercase">July</span>
+          <span className="text-[10px] text-[#5B6B5B] font-semibold uppercase">July</span>
         </div>
       </div>
 
       {/* Explanatory notes overlay */}
-      <div className="p-3 bg-slate-900/50 border-t border-white/5 text-[9px] text-slate-500 flex items-start gap-2">
-        <Info className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
+      <div className="p-3 bg-[#F7F9F5] border-t border-[#E5EBE3] text-[9px] text-[#5B6B5B] flex items-start gap-2">
+        <Info className="w-3.5 h-3.5 text-[#5B6B5B] flex-shrink-0 mt-0.5" />
         <p className="leading-relaxed">
           The 3D Feature Cube maps 6 key vegetation indices on its 6 faces. Drag to rotate manually. 
           Hover over any point to inspect precise index values, latitude, and longitude computed in real-time.

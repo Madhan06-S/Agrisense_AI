@@ -227,11 +227,11 @@ export default function Damage3DViewer() {
   }, [isPostDamage]);
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden">
       {loading && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/80 gap-3">
-          <Loader2 className="w-10 h-10 animate-spin text-emerald-400" />
-          <span className="text-sm font-medium tracking-wider text-slate-300">Initializing 3D Claims Assessment...</span>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 gap-3">
+          <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
+          <span className="text-sm font-medium tracking-wider text-[#374151]">Initializing 3D Claims Assessment...</span>
         </div>
       )}
 
@@ -239,13 +239,13 @@ export default function Damage3DViewer() {
       <div ref={containerRef} className="w-full h-[480px]" />
 
       {/* Left-side slider overlays */}
-      <div className="absolute bottom-4 left-4 z-20 p-4 rounded-xl border border-white/10 bg-slate-950/80 backdrop-blur-md flex flex-col gap-2">
-        <span className="text-xs font-semibold text-slate-300">3D Terrain Chronology</span>
+      <div className="absolute bottom-4 left-4 z-20 p-4 rounded-xl border border-[#E5EBE3] bg-white/90 backdrop-blur-md flex flex-col gap-2">
+        <span className="text-xs font-semibold text-[#1B5E20]">3D Terrain Chronology</span>
         <div className="flex gap-2">
           <button
             onClick={() => setIsPostDamage(false)}
             className={`py-1 px-3 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-              !isPostDamage ? "bg-emerald-500 text-slate-950" : "bg-white/5 text-slate-300 hover:bg-white/10"
+              !isPostDamage ? "bg-[#2E7D32] text-white" : "bg-emerald-50 text-[#1B5E20] border border-[#2E7D32]/30 hover:bg-emerald-100"
             }`}
           >
             Pre-damage (Normal)
@@ -253,7 +253,7 @@ export default function Damage3DViewer() {
           <button
             onClick={() => setIsPostDamage(true)}
             className={`py-1 px-3 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-              isPostDamage ? "bg-red-500 text-slate-950" : "bg-white/5 text-slate-300 hover:bg-white/10"
+              isPostDamage ? "bg-red-600 text-white" : "bg-emerald-50 text-[#1B5E20] border border-[#2E7D32]/30 hover:bg-emerald-100"
             }`}
           >
             Post-damage (Flooded)
@@ -262,15 +262,15 @@ export default function Damage3DViewer() {
       </div>
 
       {/* Right-side model feature weights overlays */}
-      <div className="absolute top-4 right-4 z-20 w-72 p-4 rounded-xl border border-white/10 bg-slate-950/80 backdrop-blur-md">
-        <h4 className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-2">XGBoost Feature Importance</h4>
+      <div className="absolute top-4 right-4 z-20 w-72 p-4 rounded-xl border border-[#E5EBE3] bg-white/90 backdrop-blur-md">
+        <h4 className="text-[10px] font-bold text-[#5B6B5B] tracking-wider uppercase mb-2">XGBoost Feature Importance</h4>
         {activeFeature ? (
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-emerald-400">{activeFeature}</span>
-            <span className="text-[10px] text-slate-400">Hovering 3D Feature Bar</span>
+            <span className="text-xs font-semibold text-[#2E7D32]">{activeFeature}</span>
+            <span className="text-[10px] text-[#5B6B5B]">Hovering 3D Feature Bar</span>
           </div>
         ) : (
-          <span className="text-xs text-slate-500 italic">Hover over radial 3D pillars to inspect weights...</span>
+          <span className="text-xs text-[#5B6B5B] italic">Hover over radial 3D pillars to inspect weights...</span>
         )}
         
         <div className="mt-3 flex flex-col gap-2 border-t border-white/5 pt-3">

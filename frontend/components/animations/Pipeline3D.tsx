@@ -222,11 +222,11 @@ export default function Pipeline3D() {
   }, []);
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden">
       {loading && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/80 gap-3">
-          <Loader2 className="w-10 h-10 animate-spin text-emerald-400" />
-          <span className="text-sm font-medium tracking-wider text-slate-300">Building 3D Pipeline...</span>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 gap-3">
+          <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
+          <span className="text-sm font-medium tracking-wider text-[#374151]">Building 3D Pipeline...</span>
         </div>
       )}
 
@@ -234,17 +234,17 @@ export default function Pipeline3D() {
       <div ref={containerRef} className="w-full h-[450px]" />
 
       {/* Stage detail cards overlay */}
-      <div className="absolute top-4 right-4 z-20 w-72 p-4 rounded-xl border border-white/10 bg-slate-950/80 backdrop-blur-md">
-        <h4 className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-3">Live Stage Monitor</h4>
+      <div className="absolute top-4 right-4 z-20 w-72 p-4 rounded-xl border border-[#E5EBE3] bg-white/90 backdrop-blur-md">
+        <h4 className="text-[10px] font-bold text-[#5B6B5B] tracking-wider uppercase mb-3">Live Stage Monitor</h4>
         {activeStage ? (
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-emerald-400">{activeStage.name}</span>
-            <span className="text-xs text-slate-300 leading-normal">{activeStage.description}</span>
-            <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-              <span className="text-[10px] text-slate-500 font-semibold uppercase">Status</span>
+            <span className="text-sm font-semibold text-[#2E7D32]">{activeStage.name}</span>
+            <span className="text-xs text-[#374151] leading-normal">{activeStage.description}</span>
+            <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#E5EBE3]">
+              <span className="text-[10px] text-[#5B6B5B] font-semibold uppercase">Status</span>
               <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                activeStage.status === "completed" ? "text-emerald-400" : (
-                  activeStage.status === "running" ? "text-yellow-400" : "text-slate-400"
+                activeStage.status === "completed" ? "text-[#2ECC71]" : (
+                  activeStage.status === "running" ? "text-yellow-600" : "text-[#5B6B5B]"
                 )
               }`}>{activeStage.status}</span>
             </div>

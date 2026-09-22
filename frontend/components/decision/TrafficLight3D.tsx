@@ -172,13 +172,13 @@ export default function TrafficLight3D({ decisionColor, payoutAmount = 0, timeli
   }, [decisionColor, payoutAmount]);
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden flex flex-col font-sans">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden flex flex-col font-sans">
 
       {/* Header */}
-      <div className="p-4 border-b border-white/10 bg-slate-900/40 flex justify-between items-center z-10">
+      <div className="p-4 border-b border-[#E5EBE3] bg-[#F7F9F5] flex justify-between items-center z-10">
         <div>
-          <h3 className="text-sm font-bold text-white tracking-wide">Automated Verification</h3>
-          <p className="text-[10px] text-slate-400 mt-0.5">Pillar 5 Binary De-Risking Status</p>
+          <h3 className="text-sm font-bold text-[#1B5E20] tracking-wide">Automated Verification</h3>
+          <p className="text-[10px] text-[#5B6B5B] mt-0.5">Pillar 5 Binary De-Risking Status</p>
         </div>
         <div className={`px-2.5 py-1 rounded-md border text-[9px] font-bold uppercase tracking-wider ${textInfo.colorClass}`}>
           {textInfo.label}
@@ -186,7 +186,7 @@ export default function TrafficLight3D({ decisionColor, payoutAmount = 0, timeli
       </div>
 
       {/* R3F Canvas */}
-      <div className="relative w-full h-[380px] bg-slate-950">
+      <div className="relative w-full h-[380px] bg-[#F7F9F5]">
         <Canvas camera={{ position: [0, 5, 9], fov: 45 }}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 10, 5]} intensity={1.5} />
@@ -257,9 +257,9 @@ export default function TrafficLight3D({ decisionColor, payoutAmount = 0, timeli
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-white/10 bg-slate-900/30 text-[9.5px] text-slate-400 flex flex-col gap-1">
-        <div className="flex items-center gap-1 text-slate-200">
-          <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+      <div className="p-3 border-t border-[#E5EBE3] bg-[#F7F9F5] text-[9.5px] text-[#5B6B5B] flex flex-col gap-1">
+        <div className="flex items-center gap-1 text-[#1B5E20]">
+          <HelpCircle className="w-3.5 h-3.5 text-[#5B6B5B]" />
           <span>Digital Trust Verification — How was this decided?</span>
         </div>
         <p className="leading-relaxed">

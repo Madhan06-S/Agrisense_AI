@@ -118,10 +118,10 @@ export default function Payout3D({ amount = 45000, farmerName = "Ramesh Patel", 
   ], []);
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden flex flex-col font-sans">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden flex flex-col font-sans">
       
       {/* 3D Money flow canvas */}
-      <div className="relative w-full h-[320px] bg-[#020617]">
+      <div className="relative w-full h-[320px] bg-[#F7F9F5]">
         <Canvas camera={{ position: [0, 6, 10], fov: 40 }}>
           <ambientLight intensity={0.5} />
           <directionalLight position={[10, 15, 10]} intensity={1.5} />
@@ -141,8 +141,8 @@ export default function Payout3D({ amount = 45000, farmerName = "Ramesh Patel", 
               <meshStandardMaterial color="#0f172a" roughness={0.4} />
             </mesh>
             <Html position={[0, 1.7, 0]} center>
-              <div className="flex gap-1 items-center px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-[7px] text-slate-300 font-bold uppercase tracking-wider whitespace-nowrap pointer-events-none">
-                <Landmark className="w-2.5 h-2.5 text-blue-400" />
+              <div className="flex gap-1 items-center px-2 py-0.5 rounded bg-white border border-[#E5EBE3] text-[7px] text-[#1B5E20] font-bold uppercase tracking-wider whitespace-nowrap pointer-events-none">
+                <Landmark className="w-2.5 h-2.5 text-blue-600" />
                 RBI Treasury
               </div>
             </Html>
@@ -165,8 +165,8 @@ export default function Payout3D({ amount = 45000, farmerName = "Ramesh Patel", 
               />
             </mesh>
             <Html position={[0, 1.6, 0]} center>
-              <div className="flex gap-1 items-center px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-[7px] text-slate-300 font-bold uppercase tracking-wider whitespace-nowrap pointer-events-none">
-                <Smartphone className="w-2.5 h-2.5 text-emerald-400" />
+              <div className="flex gap-1 items-center px-2 py-0.5 rounded bg-white border border-[#E5EBE3] text-[7px] text-[#1B5E20] font-bold uppercase tracking-wider whitespace-nowrap pointer-events-none">
+                <Smartphone className="w-2.5 h-2.5 text-emerald-600" />
                 Farmer Phone
               </div>
             </Html>
@@ -203,43 +203,43 @@ export default function Payout3D({ amount = 45000, farmerName = "Ramesh Patel", 
         </Canvas>
 
         {/* Real-time status badge */}
-        <div className="absolute top-4 left-4 bg-slate-900/90 border border-white/10 px-3 py-1.5 rounded-lg backdrop-blur flex gap-2 items-center">
+        <div className="absolute top-4 left-4 bg-white/95 border border-[#E5EBE3] px-3 py-1.5 rounded-lg backdrop-blur flex gap-2 items-center">
           <div className={`w-2.5 h-2.5 rounded-full ${
-            status === "COMPLETED" ? "bg-emerald-500 animate-pulse" : status === "FAILED" ? "bg-red-500" : "bg-blue-400 animate-ping"
+            status === "COMPLETED" ? "bg-[#2ECC71] animate-pulse" : status === "FAILED" ? "bg-red-500" : "bg-blue-500 animate-ping"
           }`} />
-          <span className="text-[10px] text-white font-bold uppercase tracking-wider">{status}</span>
+          <span className="text-[10px] text-[#1B5E20] font-bold uppercase tracking-wider">{status}</span>
         </div>
       </div>
 
       {/* Transaction status stages progress checklist */}
-      <div className="p-4 border-t border-white/10 bg-slate-900/30 grid grid-cols-5 gap-2 text-center">
+      <div className="p-4 border-t border-[#E5EBE3] bg-[#F7F9F5] grid grid-cols-5 gap-2 text-center">
         <div className="flex flex-col items-center gap-1.5">
-          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 1 ? "text-emerald-500" : "text-slate-600"}`} />
-          <span className="text-[7.5px] text-slate-400 font-semibold uppercase">AI Approved</span>
+          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 1 ? "text-[#2ECC71]" : "text-slate-400"}`} />
+          <span className="text-[7.5px] text-[#5B6B5B] font-semibold uppercase">AI Approved</span>
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 2 ? "text-emerald-500" : "text-slate-600"}`} />
-          <span className="text-[7.5px] text-slate-400 font-semibold uppercase">Rules Evaluated</span>
+          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 2 ? "text-[#2ECC71]" : "text-slate-400"}`} />
+          <span className="text-[7.5px] text-[#5B6B5B] font-semibold uppercase">Rules Evaluated</span>
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 3 ? "text-emerald-500" : "text-slate-600"}`} />
-          <span className="text-[7.5px] text-slate-400 font-semibold uppercase">Calculated</span>
+          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 3 ? "text-[#2ECC71]" : "text-slate-400"}`} />
+          <span className="text-[7.5px] text-[#5B6B5B] font-semibold uppercase">Calculated</span>
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 4 ? "text-emerald-500" : "text-slate-600"}`} />
-          <span className="text-[7.5px] text-slate-400 font-semibold uppercase">Bank Verified</span>
+          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 4 ? "text-[#2ECC71]" : "text-slate-400"}`} />
+          <span className="text-[7.5px] text-[#5B6B5B] font-semibold uppercase">Bank Verified</span>
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 5 ? "text-emerald-500" : "text-slate-600"}`} />
-          <span className="text-[7.5px] text-slate-400 font-semibold uppercase">Disbursed</span>
+          <CheckCircle2 className={`w-4 h-4 ${currentStage >= 5 ? "text-[#2ECC71]" : "text-slate-400"}`} />
+          <span className="text-[7.5px] text-[#5B6B5B] font-semibold uppercase">Disbursed</span>
         </div>
       </div>
 
       {/* Payout Details */}
-      <div className="p-4 border-t border-white/10 bg-slate-900/50 flex justify-between items-center text-xs">
+      <div className="p-4 border-t border-[#E5EBE3] bg-[#F7F9F5] flex justify-between items-center text-xs">
         <div>
-          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Recipient</span>
-          <span className="font-bold text-white">{farmerName}</span>
+          <span className="text-[9px] text-[#5B6B5B] font-bold uppercase tracking-wider block">Recipient</span>
+          <span className="font-bold text-[#1B5E20]">{farmerName}</span>
         </div>
         
         <div className="text-right">

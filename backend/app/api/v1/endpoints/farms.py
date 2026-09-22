@@ -1,26 +1,44 @@
 import json
+import math
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_Area, ST_AsGeoJSON, ST_Transform
-from geoalchemy2.shape import to_shape
+from sqlalchemy import select
+from shapely.geometry import shape
 
 from app.core.database import get_db
 from app.core.security import require_farmer, get_current_user
 from app.models.farm import Farm
 from app.models.user import User
 from app.schemas.farm import FarmCreate, FarmUpdate, FarmOut, FarmListOut
-from typing import List, Optional
 
 router = APIRouter(prefix="/farms", tags=["Farms"])
 
 
-def _geojson_from_boundary(boundary) -> Optional[dict]:
-    """Convert PostGIS geometry to GeoJSON dict."""
-    if boundary is None:
-        return None
+def _calculate_area_hectares(boundary_geojson: dict) -> float:
+    """Calculate polygon area in hectares using Shapely with latitude correction."""
+    if not boundary_geojson:
+        return 0.0
     try:
-        return json.loads(to_shape(boundary).__geo_interface__.__str__().replace("'", '"'))
+        poly = shape(boundary_geojson)
+        centroid = poly.centroid
+        lat_rad = math.radians(centroid.y)
+        m_lat = 111132.92
+        m_lon = 111412.84 * math.cos(lat_rad)
+        area_m2 = poly.area * m_lat * m_lon
+        return round(area_m2 / 10000.0, 4)
+    except Exception:
+        return 0.0
+
+
+def _parse_boundary_json(boundary_val) -> Optional[dict]:
+    """Parse stored boundary value to GeoJSON dict."""
+    if not boundary_val:
+        return None
+    if isinstance(boundary_val, dict):
+        return boundary_val
+    try:
+        return json.loads(str(boundary_val))
     except Exception:
         return None
 
@@ -31,32 +49,21 @@ async def create_farm(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_farmer),
 ):
+    boundary_text = json.dumps(payload.boundary_geojson) if payload.boundary_geojson else None
+    calculated_area = _calculate_area_hectares(payload.boundary_geojson) if payload.boundary_geojson else None
+
     farm = Farm(
         farmer_id=current_user.id,
         name=payload.name,
         crop_type=payload.crop_type,
         sowing_date=payload.sowing_date,
         insurance_policy_number=payload.insurance_policy_number,
+        khasra_number=payload.khasra_number,
+        boundary=boundary_text,
+        area_hectares=calculated_area,
     )
 
-    if payload.boundary_geojson:
-        geojson_str = json.dumps(payload.boundary_geojson)
-        farm.boundary = ST_GeomFromGeoJSON(geojson_str)
-
     db.add(farm)
-    await db.flush()  # get farm.id
-
-    # Calculate area using PostGIS (convert to UTM for meters, then to hectares)
-    if payload.boundary_geojson:
-        area_result = await db.execute(
-            select(
-                func.ST_Area(ST_Transform(ST_GeomFromGeoJSON(json.dumps(payload.boundary_geojson)), 32643))
-            )
-        )
-        area_m2 = area_result.scalar()
-        if area_m2:
-            farm.area_hectares = round(area_m2 / 10000, 4)
-
     await db.commit()
     await db.refresh(farm)
 
@@ -65,18 +72,44 @@ async def create_farm(
     return out
 
 
-@router.get("")
+@router.get("", response_model=List[FarmOut])
+@router.get("/", response_model=List[FarmOut])
 async def get_my_farms(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.role != "farmer":
         raise HTTPException(status_code=403, detail="Only farmers can view farms")
-    
+
     result = await db.execute(
         select(Farm).where(Farm.farmer_id == current_user.id)
     )
-    return result.scalars().all()
+    farms = result.scalars().all()
+    
+    out_list = []
+    for f in farms:
+        item = FarmOut.model_validate(f)
+        item.boundary_geojson = _parse_boundary_json(f.boundary)
+        out_list.append(item)
+    return out_list
+
+
+@router.get("/nearby", response_model=List[FarmOut])
+async def get_nearby_farms(
+    lat: float,
+    lon: float,
+    radius_km: float = 10.0,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Farm))
+    farms = result.scalars().all()
+    out_list = []
+    for f in farms:
+        item = FarmOut.model_validate(f)
+        item.boundary_geojson = _parse_boundary_json(f.boundary)
+        out_list.append(item)
+    return out_list
 
 
 @router.get("/{farm_id}", response_model=FarmOut)
@@ -90,21 +123,11 @@ async def get_farm(
     if not farm:
         raise HTTPException(status_code=404, detail="Farm not found")
 
-    # Officers can see any farm; farmers only their own
     if current_user.role == "farmer" and farm.farmer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
 
     out = FarmOut.model_validate(farm)
-    if farm.boundary is not None:
-        try:
-            geojson_result = await db.execute(
-                select(ST_AsGeoJSON(Farm.boundary)).where(Farm.id == farm_id)
-            )
-            geojson_str = geojson_result.scalar()
-            if geojson_str:
-                out.boundary_geojson = json.loads(geojson_str)
-        except Exception:
-            pass
+    out.boundary_geojson = _parse_boundary_json(farm.boundary)
     return out
 
 
@@ -126,14 +149,13 @@ async def update_farm(
         setattr(farm, field, value)
 
     if payload.boundary_geojson:
-        geojson_str = json.dumps(payload.boundary_geojson)
-        farm.boundary = ST_GeomFromGeoJSON(geojson_str)
+        farm.boundary = json.dumps(payload.boundary_geojson)
+        farm.area_hectares = _calculate_area_hectares(payload.boundary_geojson)
 
     await db.commit()
     await db.refresh(farm)
     out = FarmOut.model_validate(farm)
-    if payload.boundary_geojson:
-        out.boundary_geojson = payload.boundary_geojson
+    out.boundary_geojson = _parse_boundary_json(farm.boundary)
     return out
 
 

@@ -141,10 +141,10 @@ export default function CreditScore3D({ score = 680, breakdown, regionalAverage 
   }, [score]);
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden flex flex-col md:flex-row font-sans">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden flex flex-col md:flex-row font-sans">
       
       {/* 3D Canvas view (Left) */}
-      <div className="relative flex-grow h-[380px] bg-slate-950">
+      <div className="relative flex-grow h-[380px] bg-[#F7F9F5]">
         <Canvas camera={{ position: [0, 0, 7.5], fov: 40 }}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 5, 5]} intensity={1.5} />
@@ -185,17 +185,17 @@ export default function CreditScore3D({ score = 680, breakdown, regionalAverage 
         </Canvas>
 
         {/* Regional indicator badge */}
-        <div className="absolute top-4 left-4 bg-slate-900/90 border border-white/10 px-3 py-1.5 rounded-lg backdrop-blur text-[9.5px]">
-          <span className="text-slate-400 block mb-0.5 uppercase tracking-wide">Regional Comparison</span>
-          <p className="text-white font-bold">You: <span className="text-emerald-400">{score}</span> | Region Avg: <span className="text-slate-400">{regionalAverage}</span></p>
+        <div className="absolute top-4 left-4 bg-white/95 border border-[#E5EBE3] px-3 py-1.5 rounded-lg backdrop-blur text-[9.5px]">
+          <span className="text-[#5B6B5B] block mb-0.5 uppercase tracking-wide">Regional Comparison</span>
+          <p className="text-[#1B5E20] font-bold">You: <span className="text-[#2E7D32]">{score}</span> | Region Avg: <span className="text-[#5B6B5B]">{regionalAverage}</span></p>
         </div>
       </div>
 
       {/* Loan Simulator Panel (Right sidebar) */}
-      <div className="w-full md:w-80 bg-slate-900/40 p-4 border-t md:border-t-0 md:border-l border-white/10 flex flex-col gap-4">
+      <div className="w-full md:w-80 bg-[#F7F9F5] p-4 border-t md:border-t-0 md:border-l border-[#E5EBE3] flex flex-col gap-4">
         <div>
-          <h4 className="text-xs font-bold text-white tracking-wide uppercase">Interactive Loan Simulator</h4>
-          <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+          <h4 className="text-xs font-bold text-[#1B5E20] tracking-wide uppercase">Interactive Loan Simulator</h4>
+          <p className="text-[10px] text-[#5B6B5B] mt-1 leading-relaxed">
             See your eligible credit limit, interest rates, and monthly EMI based on satellite score.
           </p>
         </div>
@@ -238,25 +238,25 @@ export default function CreditScore3D({ score = 680, breakdown, regionalAverage 
           </div>
 
           {/* EMI Results Box */}
-          <div className="p-3.5 rounded-lg border border-white/5 bg-slate-950 flex flex-col gap-2">
+          <div className="p-3.5 rounded-lg border border-[#E5EBE3] bg-white flex flex-col gap-2">
             <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 uppercase font-semibold">Interest Rate</span>
-              <span className="text-white font-extrabold">{interestRate}% p.a.</span>
+              <span className="text-[#5B6B5B] uppercase font-semibold">Interest Rate</span>
+              <span className="text-[#1B5E20] font-extrabold">{interestRate}% p.a.</span>
             </div>
             <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400 uppercase font-semibold">Monthly EMI</span>
-              <span className="text-emerald-400 font-extrabold text-xs">₹{Math.round(monthlyEMI).toLocaleString("en-IN")}</span>
+              <span className="text-[#5B6B5B] uppercase font-semibold">Monthly EMI</span>
+              <span className="text-[#2E7D32] font-extrabold text-xs">₹{Math.round(monthlyEMI).toLocaleString("en-IN")}</span>
             </div>
-            <div className="flex justify-between items-center text-[10px] border-t border-white/5 pt-2 mt-1">
-              <span className="text-slate-400 uppercase font-semibold text-[8px]">Repayment Total</span>
-              <span className="text-white font-bold text-[10px]">₹{Math.round(monthlyEMI * tenureMonths).toLocaleString("en-IN")}</span>
+            <div className="flex justify-between items-center text-[10px] border-t border-[#E5EBE3] pt-2 mt-1">
+              <span className="text-[#5B6B5B] uppercase font-semibold text-[8px]">Repayment Total</span>
+              <span className="text-[#1B5E20] font-bold text-[10px]">₹{Math.round(monthlyEMI * tenureMonths).toLocaleString("en-IN")}</span>
             </div>
           </div>
         </div>
 
         {/* Global actions */}
-        <div className="flex flex-col gap-2 pt-4 border-t border-white/5">
-          <button className="w-full flex items-center justify-center gap-1.5 bg-[#22c55e] hover:bg-emerald-500 text-black font-bold py-2 px-4 rounded-lg text-xs transition cursor-pointer">
+        <div className="flex flex-col gap-2 pt-4 border-t border-[#E5EBE3]">
+          <button className="w-full flex items-center justify-center gap-1.5 bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-bold py-2 px-4 rounded-lg text-xs transition cursor-pointer">
             <Landmark className="w-3.5 h-3.5" /> Apply for Loan
           </button>
           

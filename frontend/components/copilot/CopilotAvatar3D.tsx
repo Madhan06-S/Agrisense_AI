@@ -148,22 +148,22 @@ export default function CopilotAvatar3D({ adviceText = "Namaste Ramesh ji! Heavy
   };
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden flex flex-col font-sans">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden flex flex-col font-sans">
       
       {/* Speech bubble header */}
-      <div className="p-4 border-b border-white/10 bg-slate-900/40 flex justify-between items-center z-10">
+      <div className="p-4 border-b border-[#E5EBE3] bg-[#F7F9F5] flex justify-between items-center z-10">
         <div className="flex gap-2 items-center">
           <span className="text-xl">{topicIcon}</span>
           <div>
-            <h3 className="text-xs font-bold text-white tracking-wide uppercase">AI Agronomy Assistant</h3>
-            <p className="text-[9px] text-slate-400">Interactive 3D Guidance</p>
+            <h3 className="text-xs font-bold text-[#1B5E20] tracking-wide uppercase">AI Agronomy Assistant</h3>
+            <p className="text-[9px] text-[#5B6B5B]">Interactive 3D Guidance</p>
           </div>
         </div>
         
         <button
           onClick={handleSpeakText}
           className={`flex gap-1.5 items-center py-1 px-2.5 rounded text-[9px] font-bold uppercase transition ${
-            speaking ? "bg-emerald-500 text-black animate-pulse" : "bg-white/5 text-slate-300 hover:bg-white/10"
+            speaking ? "bg-[#2E7D32] text-white animate-pulse" : "bg-emerald-50 text-[#1B5E20] hover:bg-emerald-100 border border-[#2E7D32]/30"
           }`}
         >
           <Volume2 className="w-3.5 h-3.5" />
@@ -172,7 +172,7 @@ export default function CopilotAvatar3D({ adviceText = "Namaste Ramesh ji! Heavy
       </div>
 
       {/* R3F Canvas */}
-      <div className="relative w-full h-[280px] bg-slate-950">
+      <div className="relative w-full h-[280px] bg-[#F7F9F5]">
         <Canvas camera={{ position: [0, 2, 5], fov: 40 }}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 8, 5]} intensity={1.5} />

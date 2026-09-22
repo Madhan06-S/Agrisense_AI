@@ -22,6 +22,8 @@ class ClaimStatus(str, enum.Enum):
     under_review = "under_review"
     approved = "approved"
     rejected = "rejected"
+    closed_no_damage = "closed_no_damage"
+    field_visit_required = "field_visit_required"
     pending_evidence = "pending_evidence"
     payout_processed = "payout_processed"
 

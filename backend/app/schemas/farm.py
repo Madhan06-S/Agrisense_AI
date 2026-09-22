@@ -9,6 +9,7 @@ class FarmCreate(BaseModel):
     sowing_date: Optional[date] = None
     insurance_scheme: Optional[str] = "PMFBY"  # PMFBY or RWBCIS
     insurance_policy_number: Optional[str] = None
+    khasra_number: Optional[str] = None
     season: Optional[str] = "Kharif"
     # GeoJSON polygon from Leaflet draw
     boundary_geojson: Optional[dict] = None
@@ -19,6 +20,7 @@ class FarmUpdate(BaseModel):
     crop_type: Optional[str] = None
     sowing_date: Optional[date] = None
     insurance_policy_number: Optional[str] = None
+    khasra_number: Optional[str] = None
     boundary_geojson: Optional[dict] = None
 
 
@@ -30,6 +32,7 @@ class FarmOut(BaseModel):
     area_hectares: Optional[float]
     sowing_date: Optional[date]
     insurance_policy_number: Optional[str]
+    khasra_number: Optional[str] = None
     boundary_geojson: Optional[dict] = None  # populated by endpoint
     created_at: datetime
 

@@ -11,8 +11,21 @@ async def test_farms_api_crud_workflow(db_session):
     async def override_get_db():
         yield db_session
         
+    from app.core.security import require_farmer, get_current_user
+    from app.models.user import User
+
+    mock_farmer = User(id=1, phone="9876543210", role="farmer", full_name="Test Farmer")
+
+    async def override_require_farmer():
+        return mock_farmer
+
+    async def override_get_current_user():
+        return mock_farmer
+
     app.dependency_overrides[get_db] = override_get_db
-    
+    app.dependency_overrides[require_farmer] = override_require_farmer
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
     # Configure ASGI transport for newer HTTPX compatibility
     transport = httpx.ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -27,7 +40,7 @@ async def test_farms_api_crud_workflow(db_session):
             "district": "Karnal",
             "taluka": "Gharaunda",
             "village": "Basdhara",
-            "boundary": {
+            "boundary_geojson": {
                 "type": "Polygon",
                 "coordinates": [
                     [

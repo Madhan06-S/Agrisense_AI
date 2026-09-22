@@ -278,10 +278,10 @@ export default function Explainability3D({ farmName = "Basdhara Paddy Fields", s
   }, [baseVal, initialShapValues]);
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950 overflow-hidden flex flex-col md:flex-row font-sans">
+    <div className="relative w-full rounded-2xl border border-[#E5EBE3] bg-white overflow-hidden flex flex-col md:flex-row font-sans">
       
       {/* 3D Canvas View (Left) */}
-      <div className="relative flex-grow h-[450px] bg-slate-950">
+      <div className="relative flex-grow h-[450px] bg-[#F7F9F5]">
         <Canvas camera={{ position: [0, 8, 14], fov: 45 }}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 15, 10]} intensity={1.5} />
@@ -409,10 +409,10 @@ export default function Explainability3D({ farmName = "Basdhara Paddy Fields", s
       </div>
 
       {/* What-If Sliders Panel (Right sidebar) */}
-      <div className="w-full md:w-80 bg-slate-900/40 p-4 border-t md:border-t-0 md:border-l border-white/10 flex flex-col gap-4">
+      <div className="w-full md:w-80 bg-[#F7F9F5] p-4 border-t md:border-t-0 md:border-l border-[#E5EBE3] flex flex-col gap-4">
         <div>
-          <h4 className="text-xs font-bold text-white tracking-wide uppercase">XGBoost What-If Simulator</h4>
-          <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+          <h4 className="text-xs font-bold text-[#1B5E20] tracking-wide uppercase">XGBoost What-If Simulator</h4>
+          <p className="text-[10px] text-[#5B6B5B] mt-1 leading-relaxed">
             Drag sliders to simulate ground changes and observe predictions update in real-time.
           </p>
         </div>

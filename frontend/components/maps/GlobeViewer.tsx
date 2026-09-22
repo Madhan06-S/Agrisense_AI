@@ -158,11 +158,11 @@ export default function GlobeViewer() {
   };
 
   return (
-    <div className="relative w-full h-[600px] rounded-2xl overflow-hidden border border-white/10 bg-slate-950">
+    <div className="relative w-full h-[600px] rounded-2xl overflow-hidden border border-[#E5EBE3] bg-[#F7F9F5]">
       {loading && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/80 gap-3">
-          <Loader2 className="w-10 h-10 animate-spin text-emerald-400" />
-          <span className="text-sm font-medium tracking-wider text-slate-300">Initializing Cesium Globe...</span>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 gap-3">
+          <Loader2 className="w-10 h-10 animate-spin text-[#2E7D32]" />
+          <span className="text-sm font-medium tracking-wider text-[#374151]">Initializing Globe Viewer...</span>
         </div>
       )}
       
@@ -170,12 +170,12 @@ export default function GlobeViewer() {
       <div ref={containerRef} className="w-full h-full" />
 
       {/* Control Widgets */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-3 p-4 rounded-xl border border-white/10 bg-slate-950/70 backdrop-blur-md">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Globe Dashboard</h4>
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-3 p-4 rounded-xl border border-[#E5EBE3] bg-white/90 backdrop-blur-md">
+        <h4 className="text-xs font-semibold text-[#5B6B5B] uppercase tracking-widest">Globe Dashboard</h4>
         
         <button
           onClick={resetView}
-          className="w-full py-1.5 px-3 rounded-lg text-xs font-medium bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition-colors"
+          className="w-full py-1.5 px-3 rounded-lg text-xs font-medium bg-[#2E7D32] hover:bg-[#1B5E20] text-white transition-colors"
         >
           Reset View
         </button>

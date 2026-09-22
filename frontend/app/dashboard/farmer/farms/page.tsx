@@ -243,18 +243,17 @@ function DashboardContent() {
   const { data: dbFarms = [] } = useQuery<Farm[]>({
     queryKey: ["farms"],
     queryFn: async () => {
-      try {
-        const res = await fetch("http://localhost:8000/api/v1/farms/");
-        if (!res.ok) throw new Error("API Offline");
-        return await res.json();
-      } catch {
-        const cached = localStorage.getItem("agrisense_cached_farms");
-        return cached ? JSON.parse(cached) : [];
+      const res = await fetch("/api/v1/farms");
+      if (!res.ok) {
+        const altRes = await fetch("http://localhost:8000/api/v1/farms/");
+        if (!altRes.ok) return [];
+        return await altRes.json();
       }
+      return await res.json();
     },
   });
 
-  const farmsList = dbFarms.length > 0 ? dbFarms : localFarms;
+  const farmsList = dbFarms;
 
   // Handle Option A: "I'M AT MY FIELD" (GPS Capture)
   const handleSelectAtFieldChoice = () => {
@@ -383,10 +382,27 @@ function DashboardContent() {
         boundary: polygonGeoJSON as any,
       };
 
-      try {
-        const res = await fetch("http://localhost:8000/api/v1/farms/", {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      let res = await fetch("/api/v1/farms/", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: formData.name,
+          crop_type: formData.crop_type,
+          sowing_date: formData.sowing_date,
+          insurance_policy_number: formData.insurance_policy_number,
+          khasra_number: formData.khasra_number,
+          boundary_geojson: polygonGeoJSON,
+        }),
+      });
+
+      if (!res.ok) {
+        res = await fetch("http://localhost:8000/api/v1/farms/", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             name: formData.name,
             crop_type: formData.crop_type,
@@ -396,18 +412,13 @@ function DashboardContent() {
             boundary_geojson: polygonGeoJSON,
           }),
         });
-
-        if (res.ok) {
-          const apiFarm = await res.json();
-          newFarmObj.id = apiFarm.id;
-        }
-      } catch {
-        console.warn("Backend offline; saving locally.");
       }
 
-      const updatedLocal = [newFarmObj, ...localFarms];
-      setLocalFarms(updatedLocal);
-      localStorage.setItem("agrisense_cached_farms", JSON.stringify(updatedLocal));
+      if (res.ok) {
+        const apiFarm = await res.json();
+        newFarmObj.id = apiFarm.id;
+        if (apiFarm.area_hectares) newFarmObj.area_hectares = apiFarm.area_hectares;
+      }
       return newFarmObj;
     },
     onSuccess: (savedFarm) => {

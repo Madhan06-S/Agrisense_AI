@@ -329,7 +329,7 @@ export default function FileClaimPage() {
                       className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
                         isAtFieldChoice === "no"
                           ? "bg-[#2E7D32] text-white border-[#2E7D32] font-extrabold"
-                          : "bg-[#061406] text-[#374151] border-emerald-800 hover:border-emerald-600"
+                          : "bg-white text-[#374151] border-[#E5EBE3] hover:border-[#2E7D32]"
                       }`}
                     >
                       🗺️ NO, I'M SOMEWHERE ELSE
