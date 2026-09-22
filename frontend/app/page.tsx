@@ -6,18 +6,14 @@ import { ArrowRight, Shield, Satellite, CheckCircle, Info, FileText, Globe, Land
 
 export default function HomePage() {
   const [lang, setLang] = useState<"en" | "hi">("en");
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Only redirect if already logged in with valid token
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token");
       const role = localStorage.getItem("user_role");
+      const token = localStorage.getItem("access_token");
       if (token && role) {
-        if (role === "officer" || role === "admin") {
-          window.location.href = "/dashboard/officer/claims";
-        } else if (role === "farmer") {
-          window.location.href = "/dashboard/farmer";
-        }
+        setUserRole(role);
       }
     }
   }, []);
@@ -89,12 +85,21 @@ export default function HomePage() {
             <a href="#features" className="text-[#374151] hover:text-[#1B5E20]">Features</a>
             <a href="#how-it-works" className="text-[#374151] hover:text-[#1B5E20]">How It Works</a>
             <a href="#eligibility" className="text-[#374151] hover:text-[#1B5E20]">Eligibility</a>
-            <Link 
-              href="/login" 
-              className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-4 py-2 rounded-md font-bold transition"
-            >
-              Get Started
-            </Link>
+            {userRole ? (
+              <Link 
+                href={userRole === 'officer' || userRole === 'admin' ? '/dashboard/officer/claims' : '/dashboard/farmer'} 
+                className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-4 py-2 rounded-md font-bold transition flex items-center gap-1.5"
+              >
+                Go to Dashboard <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <Link 
+                href="/login" 
+                className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white px-4 py-2 rounded-md font-bold transition"
+              >
+                Get Started
+              </Link>
+            )}
           </div>
         </div>
       </header>
