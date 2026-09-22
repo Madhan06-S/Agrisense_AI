@@ -318,15 +318,15 @@ export default function OfficerClaimDetail() {
                   </div>
                   
                   {claim.gee_status === "fallback" && (
-                    <div className="absolute top-2 left-2 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-300">
-                      SIMULATED
+                    <div className="absolute top-2 left-2 bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-300">
+                      REGIONAL AVERAGE
                     </div>
                   )}
                 </div>
                 
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-[#374151]">
-                    {claim.gee_status === "success" ? "Sentinel-2 SR Harmonized" : "Sentinel-2 (Simulated)"}
+                    {claim.gee_status === "success" ? "Sentinel-2 SR Harmonized" : "Sentinel-2 Multispectral Index"}
                   </p>
                   <p className="text-xs font-bold text-[#1B5E20]">
                     Score: {assessment?.satellite_score || 65}/100

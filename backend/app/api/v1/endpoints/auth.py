@@ -19,11 +19,25 @@ router = APIRouter()
 # Pydantic Schemas
 # ----------------------------------------------------
 class PhoneRequest(BaseModel):
-    phone: str = Field(..., pattern=r'^[6-9]\d{9}$')
+    phone: Optional[str] = Field(None, pattern=r'^[6-9]\d{9}$')
+    mobile: Optional[str] = Field(None, pattern=r'^[6-9]\d{9}$')
+
+    def get_phone(self) -> str:
+        num = self.phone or self.mobile
+        if not num:
+            raise ValueError("Phone or mobile number is required.")
+        return num
 
 class OTPVerifyRequest(BaseModel):
-    phone: str = Field(..., pattern=r'^[6-9]\d{9}$')
+    phone: Optional[str] = Field(None, pattern=r'^[6-9]\d{9}$')
+    mobile: Optional[str] = Field(None, pattern=r'^[6-9]\d{9}$')
     otp: str = Field(..., pattern=r'^\d{6}$')
+
+    def get_phone(self) -> str:
+        num = self.phone or self.mobile
+        if not num:
+            raise ValueError("Phone or mobile number is required.")
+        return num
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -43,7 +57,7 @@ async def check_phone(data: PhoneRequest, db: AsyncSession = Depends(get_db)):
     """
     Checks if user phone number is registered in AgriSense database.
     """
-    cleaned = clean_phone_number(data.phone)
+    cleaned = clean_phone_number(data.get_phone())
     stmt = select(User).where(User.phone == cleaned)
     res = await db.execute(stmt)
     user = res.scalars().first()
@@ -64,7 +78,7 @@ async def send_otp(data: PhoneRequest, db: AsyncSession = Depends(get_db)):
     """
     Sends OTP via Fast2SMS (with console fallback) for registered users.
     """
-    cleaned = clean_phone_number(data.phone)
+    cleaned = clean_phone_number(data.get_phone())
     stmt = select(User).where(User.phone == cleaned)
     res = await db.execute(stmt)
     user = res.scalars().first()
@@ -98,7 +112,7 @@ async def verify_otp_endpoint(
     """
     Verifies 6-digit OTP, authenticates user, sets cookies, and returns AgriSense JWTs.
     """
-    cleaned = clean_phone_number(data.phone)
+    cleaned = clean_phone_number(data.get_phone())
     result = verify_otp(cleaned, data.otp)
     
     if not result["success"]:

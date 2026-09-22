@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Shield, ArrowRight, Loader2, KeyRound, CheckCircle, UserCheck } from 'lucide-react';
+import { Shield, ArrowRight, Loader2, CheckCircle, UserCheck, RefreshCw, AlertCircle } from 'lucide-react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -13,6 +15,7 @@ function LoginContent() {
   const [otp, setOtp] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNetworkError, setIsNetworkError] = useState<boolean>(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [timer, setTimer] = useState<number>(300); // 5 minutes
 
@@ -47,24 +50,32 @@ function LoginContent() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
     setPhone(value);
-    if (error) setError(null);
+    if (error) {
+      setError(null);
+      setIsNetworkError(false);
+    }
   };
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 6);
     setOtp(value);
-    if (error) setError(null);
+    if (error) {
+      setError(null);
+      setIsNetworkError(false);
+    }
   };
 
-  const quickFillDemo = (demoPhone: string) => {
-    setPhone(demoPhone);
+  const selectRolePhone = (selectedPhone: string) => {
+    setPhone(selectedPhone);
     setError(null);
-    setInfoMessage(`Pre-filled demo number ${demoPhone}. Click Send OTP or use Master OTP 123456.`);
+    setIsNetworkError(false);
+    setInfoMessage(null);
   };
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
+    setIsNetworkError(false);
     setInfoMessage(null);
 
     const cleanPhone = phone.replace(/\D/g, '').slice(0, 10);
@@ -78,11 +89,18 @@ function LoginContent() {
 
     try {
       // 1. Check if phone exists
-      const checkRes = await fetch('/api/v1/auth/check-phone', {
+      const checkRes = await fetch(`${API_BASE}/auth/check-phone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanPhone }),
-      });
+      }).catch(() => null);
+
+      if (!checkRes) {
+        setIsNetworkError(true);
+        setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
+        setLoading(false);
+        return;
+      }
 
       const checkData = await checkRes.json();
 
@@ -93,11 +111,18 @@ function LoginContent() {
       }
 
       // 2. Send OTP
-      const sendRes = await fetch('/api/v1/auth/send-otp', {
+      const sendRes = await fetch(`${API_BASE}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanPhone }),
-      });
+      }).catch(() => null);
+
+      if (!sendRes) {
+        setIsNetworkError(true);
+        setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
+        setLoading(false);
+        return;
+      }
 
       const sendData = await sendRes.json();
 
@@ -107,12 +132,13 @@ function LoginContent() {
         return;
       }
 
-      setInfoMessage(sendData.message || 'OTP sent to your registered mobile number. Use Demo OTP: 123456');
+      setInfoMessage(sendData.message || 'OTP sent to your registered mobile number.');
       setStep('otp');
-      setOtp('123456'); // Auto-fill demo OTP for developer convenience
+      setOtp('');
       setTimer(300);
     } catch (err: any) {
-      setError('Network error. Unable to communicate with AgriSense authentication server.');
+      setIsNetworkError(true);
+      setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
     } finally {
       setLoading(false);
     }
@@ -121,6 +147,7 @@ function LoginContent() {
   const handleVerifyOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
+    setIsNetworkError(false);
 
     if (otp.length !== 6) {
       setError('Please enter the 6-digit OTP code.');
@@ -130,16 +157,23 @@ function LoginContent() {
     setLoading(true);
 
     try {
-      const verifyRes = await fetch('/api/v1/auth/verify-otp', {
+      const verifyRes = await fetch(`${API_BASE}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp }),
-      });
+      }).catch(() => null);
+
+      if (!verifyRes) {
+        setIsNetworkError(true);
+        setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
+        setLoading(false);
+        return;
+      }
 
       const data = await verifyRes.json();
 
       if (!verifyRes.ok) {
-        setError(data.detail || 'Invalid OTP verification.');
+        setError(data.detail || 'Invalid OTP code. Check backend console for the generated code.');
         setLoading(false);
         return;
       }
@@ -157,7 +191,9 @@ function LoginContent() {
         window.location.href = '/dashboard/farmer';
       }
     } catch (err: any) {
-      setError('Connection failed. Please check network connectivity.');
+      setIsNetworkError(true);
+      setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
+    } finally {
       setLoading(false);
     }
   };
@@ -165,22 +201,31 @@ function LoginContent() {
   const handleResendOtp = async () => {
     if (timer > 240) return;
     setError(null);
+    setIsNetworkError(false);
     setLoading(true);
     try {
-      const sendRes = await fetch('/api/v1/auth/send-otp', {
+      const sendRes = await fetch(`${API_BASE}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
-      });
+      }).catch(() => null);
+
+      if (!sendRes) {
+        setIsNetworkError(true);
+        setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
+        return;
+      }
+
       const sendData = await sendRes.json();
       if (sendRes.ok) {
-        setInfoMessage('New OTP dispatched. Use Demo OTP: 123456');
+        setInfoMessage('New OTP dispatched to your registered mobile number.');
         setTimer(300);
       } else {
         setError(sendData.detail || 'Failed to resend OTP.');
       }
     } catch (err) {
-      setError('Failed to resend OTP.');
+      setIsNetworkError(true);
+      setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
     } finally {
       setLoading(false);
     }
@@ -204,51 +249,58 @@ function LoginContent() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 shadow-sm border border-[#E5EBE3] sm:rounded-lg sm:px-10 space-y-5">
           
-          {/* Quick Demo Fill Selector */}
+          {/* Role Account Selector */}
           <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-lg p-3 space-y-2">
             <p className="text-[11px] font-bold text-[#1B5E20] uppercase tracking-wider flex items-center gap-1">
-              <UserCheck className="w-3.5 h-3.5 text-[#2E7D32]" /> Select Demo Login Account:
+              <UserCheck className="w-3.5 h-3.5 text-[#2E7D32]" /> Select your role to continue:
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => quickFillDemo('9876543210')}
-                className={`py-1.5 px-2 text-[11px] font-semibold rounded border transition ${
+                onClick={() => selectRolePhone('9876543210')}
+                className={`py-2 px-3 text-xs font-semibold rounded border transition ${
                   phone === '9876543210'
                     ? 'bg-[#2E7D32] text-white border-[#2E7D32]'
                     : 'bg-white text-[#374151] border-[#E5EBE3] hover:border-[#2E7D32]'
                 }`}
               >
-                🌾 Farmer 1
+                🌾 Farmer Login
               </button>
               <button
                 type="button"
-                onClick={() => quickFillDemo('9876543211')}
-                className={`py-1.5 px-2 text-[11px] font-semibold rounded border transition ${
-                  phone === '9876543211'
-                    ? 'bg-[#2E7D32] text-white border-[#2E7D32]'
-                    : 'bg-white text-[#374151] border-[#E5EBE3] hover:border-[#2E7D32]'
-                }`}
-              >
-                🌾 Farmer 2
-              </button>
-              <button
-                type="button"
-                onClick={() => quickFillDemo('9876543299')}
-                className={`py-1.5 px-2 text-[11px] font-semibold rounded border transition ${
+                onClick={() => selectRolePhone('9876543299')}
+                className={`py-2 px-3 text-xs font-semibold rounded border transition ${
                   phone === '9876543299'
                     ? 'bg-[#2E7D32] text-white border-[#2E7D32]'
                     : 'bg-white text-[#374151] border-[#E5EBE3] hover:border-[#2E7D32]'
                 }`}
               >
-                👮 Officer
+                👮 Officer Login
               </button>
             </div>
           </div>
 
           {error && (
-            <div className="p-3 bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] text-xs rounded-md font-medium">
-              {error}
+            <div className="p-3.5 bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] text-xs rounded-md font-medium space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+              {isNetworkError && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (step === 'phone') handleSendOtp();
+                      else handleVerifyOtp();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#b91c1c] text-white text-xs font-semibold rounded hover:bg-[#991b1b] transition"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Retry Connection
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -281,7 +333,7 @@ function LoginContent() {
                   />
                 </div>
                 <p className="mt-1.5 text-[11px] text-slate-500">
-                  OTP will be sent to your registered mobile number via SMS (Demo OTP: <strong className="text-[#1B5E20]">123456</strong>)
+                  OTP will be sent to your registered mobile number via SMS.
                 </p>
               </div>
 
@@ -315,6 +367,7 @@ function LoginContent() {
                     onClick={() => {
                       setStep('phone');
                       setError(null);
+                      setIsNetworkError(false);
                     }}
                     className="text-xs text-[#2E7D32] hover:underline font-medium"
                   >
@@ -325,11 +378,6 @@ function LoginContent() {
                 <p className="text-xs text-[#5B6B5B] mb-2">
                   Sent to <span className="font-semibold text-slate-800">+91 {phone}</span>
                 </p>
-
-                <div className="p-2.5 bg-[#FFF8E7] border border-[#F1C40F] rounded-md text-[11px] text-[#B45309] font-medium mb-3 flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 shrink-0" />
-                  <span>Demo OTP pre-filled: <strong>123456</strong></span>
-                </div>
 
                 <input
                   type="text"

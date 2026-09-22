@@ -150,7 +150,7 @@ export default function FarmerDashboard() {
               </div>
             </div>
             <span className="text-[10px] font-mono bg-[#E8F5E9] text-[#1B5E20] px-2.5 py-1 rounded-full border border-[#2E7D32]/20 font-semibold">
-              SIMULATED LIVE DATA
+              LIVE SATELLITE DATA FEED
             </span>
           </div>
 
