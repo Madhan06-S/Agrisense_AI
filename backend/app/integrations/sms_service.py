@@ -20,6 +20,11 @@ def send_otp_sms(phone: str, otp: str) -> dict:
     # Always print OTP to console as fallback / audit log
     print(f"[SMS] OTP for +91{cleaned_phone}: {otp}")
     logger.info(f"[SMS] OTP for +91{cleaned_phone}: {otp}")
+    try:
+        with open("otp.log", "a") as f:
+            f.write(f"[SMS] OTP for +91{cleaned_phone}: {otp}\n")
+    except Exception:
+        pass
     
     url = "https://www.fast2sms.com/dev/bulkV2"
     headers = {
