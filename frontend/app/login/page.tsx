@@ -184,7 +184,11 @@ function LoginContent() {
       localStorage.setItem('user_role', data.user.role);
       localStorage.setItem('user_name', data.user.full_name || data.user.phone);
 
-      // Hard redirect to correct dashboard
+      // Store cookies so Next.js middleware recognizes authenticated session
+      document.cookie = `access_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `user_role=${data.user.role}; path=/; max-age=604800; SameSite=Lax`;
+
+      // Redirect to correct dashboard
       if (data.user.role === 'officer' || data.user.role === 'admin') {
         window.location.href = '/dashboard/officer/claims';
       } else {

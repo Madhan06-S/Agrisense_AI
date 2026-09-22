@@ -3,10 +3,9 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value || 
+                request.cookies.get('user_role')?.value ||
                 request.headers.get('authorization')?.replace('Bearer ', '');
   
-  // For client-side routing, we check localStorage in components
-  // This middleware handles server-side and initial loads
   const pathname = request.nextUrl.pathname;
   
   // Public routes
@@ -14,9 +13,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // If no token, redirect to login
+  // Dashboard route authentication check
   if (!token && pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    // Check if request is direct navigation or initial load; if no token or role cookie, redirect to login
+    const isDirectNav = request.headers.get('accept')?.includes('text/html');
+    if (isDirectNav && !request.cookies.has('access_token') && !request.cookies.has('user_role')) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   }
 
   return NextResponse.next();
