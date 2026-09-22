@@ -195,31 +195,31 @@ export default function OfficerClaimDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-green-700" />
+      <div className="min-h-screen bg-[#F7F9F5] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#1B5E20]" />
       </div>
     );
   }
 
-  if (!claim) return <div className="p-8 text-slate-600">Claim not found</div>;
+  if (!claim) return <div className="p-8 text-[#374151]">Claim not found</div>;
 
   const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F7F9F5]">
       {/* Government Header */}
-      <div className="bg-[#1a4d2e] text-white text-xs py-2 px-4 text-center">
+      <div className="bg-[#E8F5E9] text-[#1B5E20] text-xs py-2 px-4 text-center font-semibold border-b border-[#E5EBE3]">
         भारत सरकार | Government of India | Ministry of Agriculture & Farmers Welfare
       </div>
 
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-[#E5EBE3]">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
           <Link href="/dashboard/officer/claims" className="p-1.5 hover:bg-slate-100 rounded">
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
+            <ArrowLeft className="w-5 h-5 text-[#374151]" />
           </Link>
           <div>
-            <h1 className="text-base font-semibold text-slate-900">Claim #{claimId}</h1>
-            <p className="text-xs text-slate-500">Review AI assessment and evidence</p>
+            <h1 className="text-base font-semibold text-[#1B5E20]">Claim #{claimId}</h1>
+            <p className="text-xs text-[#5B6B5B]">Review AI assessment and evidence</p>
           </div>
         </div>
       </div>
@@ -229,8 +229,8 @@ export default function OfficerClaimDetail() {
           
           {/* LEFT: Claim Info */}
           <div className="space-y-4">
-            <div className="bg-white border border-slate-200 rounded-lg p-5">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">
+            <div className="bg-white border border-[#E5EBE3] rounded-lg p-5">
+              <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider mb-4">
                 Claim Information
               </h3>
               <div className="space-y-3 text-sm">
@@ -242,19 +242,19 @@ export default function OfficerClaimDetail() {
                   value={claim.submitted_at ? new Date(claim.submitted_at).toLocaleString() : "—"} 
                 />
                 <div className="pt-3 border-t border-slate-100">
-                  <span className="text-slate-500 block text-xs mb-1 uppercase tracking-wide">Description</span>
+                  <span className="text-[#5B6B5B] block text-xs mb-1 uppercase tracking-wide">Description</span>
                   <p className="text-slate-800 leading-relaxed">{claim.description}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-lg p-5">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+            <div className="bg-white border border-[#E5EBE3] rounded-lg p-5">
+              <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider mb-3">
                 Current Status
               </h3>
               <StatusBadge status={claim.status} />
               {claim.officer_remarks && (
-                <p className="mt-3 text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-200">
+                <p className="mt-3 text-xs text-[#374151] bg-[#F7F9F5] p-2.5 rounded border border-[#E5EBE3]">
                   {claim.officer_remarks}
                 </p>
               )}
@@ -264,8 +264,8 @@ export default function OfficerClaimDetail() {
           {/* CENTER: Evidence Review */}
           <div className="space-y-4">
             {/* Satellite Analysis */}
-            <div className="bg-white border border-slate-200 rounded-lg p-5">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+            <div className="bg-white border border-[#E5EBE3] rounded-lg p-5">
+              <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider mb-3">
                 Evidence Review
               </h3>
               
@@ -273,10 +273,10 @@ export default function OfficerClaimDetail() {
               <div className="mb-5">
                 <div className="flex items-center gap-2 mb-2">
                   <MapPin className="w-4 h-4 text-blue-600" />
-                  <p className="text-xs font-semibold text-slate-700">Satellite Analysis (Sentinel-2 NDVI)</p>
+                  <p className="text-xs font-semibold text-[#1B5E20]">Satellite Analysis (Sentinel-2 NDVI)</p>
                 </div>
                 
-                <div className="h-52 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden relative">
+                <div className="h-52 bg-slate-100 rounded-lg border border-[#E5EBE3] overflow-hidden relative">
                   <img 
                     src={`${backendUrl}/api/v1/claims/${claimId}/satellite-image`}
                     alt="Sentinel-2 NDVI"
@@ -313,7 +313,7 @@ export default function OfficerClaimDetail() {
                     }}
                   />
                   
-                  <div className="absolute bottom-2 right-2 bg-white/95 px-2.5 py-1 rounded text-xs font-semibold text-slate-700 border border-slate-200 shadow-sm">
+                  <div className="absolute bottom-2 right-2 bg-white/95 px-2.5 py-1 rounded text-xs font-semibold text-[#1B5E20] border border-[#E5EBE3] shadow-sm">
                     NDVI Mean: {claim.ndvi_mean !== null && claim.ndvi_mean !== undefined ? claim.ndvi_mean : (assessment?.satellite_score ? (assessment.satellite_score/100).toFixed(2) : "0.28")}
                   </div>
                   
@@ -325,10 +325,10 @@ export default function OfficerClaimDetail() {
                 </div>
                 
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-[#374151]">
                     {claim.gee_status === "success" ? "Sentinel-2 SR Harmonized" : "Sentinel-2 (Simulated)"}
                   </p>
-                  <p className="text-xs font-bold text-slate-900">
+                  <p className="text-xs font-bold text-[#1B5E20]">
                     Score: {assessment?.satellite_score || 65}/100
                   </p>
                 </div>
@@ -338,19 +338,19 @@ export default function OfficerClaimDetail() {
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle className="w-4 h-4 text-purple-600" />
-                  <p className="text-xs font-semibold text-slate-700">
+                  <p className="text-xs font-semibold text-[#1B5E20]">
                     Farmer Uploaded Photos ({claim.images.length})
                   </p>
                 </div>
                 
                 {claim.images.length === 0 ? (
-                  <div className="h-24 bg-slate-50 rounded-lg border border-dashed border-slate-300 flex items-center justify-center">
+                  <div className="h-24 bg-[#F7F9F5] rounded-lg border border-dashed border-slate-300 flex items-center justify-center">
                     <p className="text-xs text-slate-400">No photos uploaded</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {claim.images.map((imgUrl, idx) => (
-                      <div key={idx} className="aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-100">
+                      <div key={idx} className="aspect-square rounded-lg border border-[#E5EBE3] overflow-hidden bg-slate-100">
                         <img 
                           src={`${backendUrl}${imgUrl}`}
                           alt={`Evidence ${idx + 1}`}
@@ -363,7 +363,7 @@ export default function OfficerClaimDetail() {
                     ))}
                   </div>
                 )}
-                <p className="text-xs text-slate-600 mt-2 font-medium">
+                <p className="text-xs text-[#374151] mt-2 font-medium">
                   Image Analysis Score: {assessment?.image_score || 88}/100
                 </p>
               </div>
@@ -372,9 +372,9 @@ export default function OfficerClaimDetail() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <CloudRain className="w-4 h-4 text-cyan-600" />
-                  <p className="text-xs font-semibold text-slate-700">Weather Validation</p>
+                  <p className="text-xs font-semibold text-[#1B5E20]">Weather Validation</p>
                   {claim.weather?.status === "live" && (
-                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded border border-green-200 font-medium">
+                    <span className="text-[10px] bg-green-100 text-[#1B5E20] px-1.5 py-0.5 rounded border border-green-200 font-medium">
                       LIVE
                     </span>
                   )}
@@ -385,7 +385,7 @@ export default function OfficerClaimDetail() {
                   )}
                 </div>
                 
-                <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2.5">
+                <div className="bg-[#F7F9F5] rounded-lg border border-[#E5EBE3] p-3 space-y-2.5">
                   <WeatherRow 
                     icon={<CloudRain className="w-3.5 h-3.5" />} 
                     label="Rainfall (48h)" 
@@ -409,10 +409,10 @@ export default function OfficerClaimDetail() {
                 </div>
                 
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#5B6B5B]">
                     Source: {claim.weather?.source || "OpenWeatherMap"}
                   </p>
-                  <p className="text-xs font-bold text-slate-900">
+                  <p className="text-xs font-bold text-[#1B5E20]">
                     Score: {assessment?.weather_score || 90}/100
                   </p>
                 </div>
@@ -432,8 +432,8 @@ export default function OfficerClaimDetail() {
             )}
 
             {decision?.breakdown && (
-              <div className="bg-white border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+              <div className="bg-white border border-[#E5EBE3] rounded-lg p-5">
+                <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider mb-3">
                   AI Score Breakdown
                 </h3>
                 <div className="space-y-3">
@@ -442,15 +442,15 @@ export default function OfficerClaimDetail() {
                   <ScoreBar label="Weather" score={decision.breakdown.weather} color="cyan" />
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-100">
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#5B6B5B]">
                     Confidence: {((decision.confidence || 0.92) * 100).toFixed(0)}%
                   </p>
                 </div>
               </div>
             )}
 
-            <div className="bg-white border border-slate-200 rounded-lg p-5">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+            <div className="bg-white border border-[#E5EBE3] rounded-lg p-5">
+              <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider mb-3">
                 Officer Decision
               </h3>
               
@@ -479,7 +479,7 @@ export default function OfficerClaimDetail() {
                     {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                     Process Payout
                   </button>
-                  <p className="text-xs text-slate-500 text-center">
+                  <p className="text-xs text-[#5B6B5B] text-center">
                     Farmer will see status change to "Paid"
                   </p>
                 </div>
@@ -514,7 +514,7 @@ export default function OfficerClaimDetail() {
                   <button
                     onClick={() => handleDecision("approve")}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-md transition-colors"
+                    className="w-full flex items-center justify-center gap-2 bg-[#2E7D32] hover:bg-[#1B5E20] disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-md transition-colors"
                   >
                     {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                     Approve Claim
@@ -527,7 +527,7 @@ export default function OfficerClaimDetail() {
                     <XCircle className="w-4 h-4" />
                     Reject Claim
                   </button>
-                  <button className="w-full flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium py-2.5 rounded-md transition-colors">
+                  <button className="w-full flex items-center justify-center gap-2 bg-white border border-slate-300 text-[#1B5E20] hover:bg-[#F7F9F5] text-sm font-medium py-2.5 rounded-md transition-colors">
                     <AlertCircle className="w-4 h-4" />
                     Request More Evidence
                   </button>
@@ -545,8 +545,8 @@ export default function OfficerClaimDetail() {
 function InfoRow({ label, value, capitalize }: { label: string; value: string; capitalize?: boolean }) {
   return (
     <div className="flex justify-between items-start">
-      <span className="text-slate-500 text-xs uppercase tracking-wide">{label}</span>
-      <span className={`font-medium text-slate-900 text-right max-w-[60%] ${capitalize ? "capitalize" : ""}`}>
+      <span className="text-[#5B6B5B] text-xs uppercase tracking-wide">{label}</span>
+      <span className={`font-medium text-[#1B5E20] text-right max-w-[60%] ${capitalize ? "capitalize" : ""}`}>
         {value}
       </span>
     </div>
@@ -555,12 +555,12 @@ function InfoRow({ label, value, capitalize }: { label: string; value: string; c
 
 function WeatherRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between text-xs text-slate-700">
+    <div className="flex items-center justify-between text-xs text-[#1B5E20]">
       <div className="flex items-center gap-2">
-        <span className="text-slate-500">{icon}</span>
+        <span className="text-[#5B6B5B]">{icon}</span>
         <span>{label}</span>
       </div>
-      <span className="font-semibold text-slate-900">{value}</span>
+      <span className="font-semibold text-[#1B5E20]">{value}</span>
     </div>
   );
 }
@@ -569,7 +569,7 @@ function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     submitted: "bg-blue-50 text-blue-700 border-blue-200",
     under_review: "bg-amber-50 text-amber-700 border-amber-200",
-    approved: "bg-green-50 text-green-700 border-green-200",
+    approved: "bg-green-50 text-[#1B5E20] border-green-200",
     rejected: "bg-red-50 text-red-700 border-red-200",
     payout_processed: "bg-blue-50 text-blue-700 border-blue-200",
   };
@@ -599,8 +599,8 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-slate-600">{label}</span>
-        <span className="font-semibold text-slate-900">{score}/100</span>
+        <span className="text-[#374151]">{label}</span>
+        <span className="font-semibold text-[#1B5E20]">{score}/100</span>
       </div>
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
         <div 

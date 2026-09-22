@@ -102,26 +102,26 @@ export default function FarmerDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-green-700" />
+      <div className="min-h-screen bg-[#F7F9F5] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#1B5E20]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F7F9F5]">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-[#E5EBE3]">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-green-700" />
-            <span className="font-semibold text-slate-900">AgriSense AI</span>
+            <Shield className="w-5 h-5 text-[#1B5E20]" />
+            <span className="font-semibold text-[#1B5E20]">AgriSense AI</span>
           </div>
-          <div className="flex items-center gap-4 text-sm text-slate-600">
-            <span>Welcome, <span className="font-medium text-slate-900">{userName}</span></span>
+          <div className="flex items-center gap-4 text-sm text-[#374151]">
+            <span>Welcome, <span className="font-medium text-[#1B5E20]">{userName}</span></span>
             <button
               onClick={handleLogout}
-              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-slate-200 hover:bg-slate-50 hover:text-red-700 text-slate-600 rounded-md font-medium transition-colors"
+              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-[#E5EBE3] hover:bg-[#F7F9F5] hover:text-red-700 text-[#374151] rounded-md font-medium transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
               Logout
@@ -132,68 +132,68 @@ export default function FarmerDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Welcome Banner */}
-        <div className="bg-[#1a4d2e] text-white rounded-xl p-6 shadow-md border border-emerald-800">
-          <h1 className="text-xl font-bold tracking-tight">AI-powered Agricultural Risk, Insurance & Agronomic Support Platform</h1>
-          <p className="text-sm text-green-100 mt-1">
+        <div className="bg-white border border-[#E5EBE3] border-l-4 border-l-[#2E7D32] rounded-xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          <h1 className="text-xl font-bold tracking-tight text-[#1B5E20]">AI-powered Agricultural Risk, Insurance & Agronomic Support Platform</h1>
+          <p className="text-sm text-[#5B6B5B] mt-1">
             Identify insured farm land, monitor weather & crop risks, receive early warnings, and manage crop insurance claims.
           </p>
         </div>
 
         {/* 🌾 MY FARM RISK WIDGET (PILLAR 5 DE-RISKING & AGRONOMIC SUPPORT) */}
-        <div className="bg-gradient-to-br from-[#0c240c] to-[#071707] border-2 border-emerald-600/80 rounded-xl p-6 text-[#e2ebd5] shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-emerald-800/80 pb-3">
+        <div className="bg-white border border-[#E5EBE3] rounded-xl p-6 text-[#374151] shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
+          <div className="flex items-center justify-between border-b border-[#EEF2EE] pb-3">
             <div className="flex items-center gap-2">
               <span className="text-2xl">🌾</span>
               <div>
-                <h2 className="text-lg font-extrabold text-white">MY FARM RISK SUMMARY</h2>
-                <p className="text-xs text-emerald-400">Pillar 5 De-Risking, Parametric Insurance & Agronomic Support</p>
+                <h2 className="text-lg font-extrabold text-[#1B5E20]">MY FARM RISK SUMMARY</h2>
+                <p className="text-xs text-[#5B6B5B]">Pillar 5 De-Risking, Parametric Insurance & Agronomic Support</p>
               </div>
             </div>
-            <span className="text-[10px] font-mono bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-700">
+            <span className="text-[10px] font-mono bg-[#E8F5E9] text-[#1B5E20] px-2.5 py-1 rounded-full border border-[#2E7D32]/20 font-semibold">
               SIMULATED LIVE DATA
             </span>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
-              <p className="text-emerald-400 font-semibold">Crop Health</p>
-              <p className="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
-                🟢 Normal (NDVI: 0.62)
+            <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
+              <p className="text-[#6B7280] font-semibold">Crop Health</p>
+              <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2ECC71] inline-block mr-1" /> Normal (NDVI: 0.62)
               </p>
             </div>
 
-            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
-              <p className="text-emerald-400 font-semibold">Weather Risk</p>
-              <p className="text-sm font-bold text-amber-300 flex items-center gap-1.5">
-                🟠 High Rainfall Risk
+            <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
+              <p className="text-[#6B7280] font-semibold">Weather Risk</p>
+              <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F39C12] inline-block mr-1" /> High Rainfall Risk
               </p>
             </div>
 
-            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
-              <p className="text-emerald-400 font-semibold">Insurance Active</p>
-              <p className="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
-                🟢 PMFBY / RWBCIS
+            <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
+              <p className="text-[#6B7280] font-semibold">Insurance Active</p>
+              <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2ECC71] inline-block mr-1" /> PMFBY / RWBCIS
               </p>
             </div>
 
-            <div className="bg-[#061406] p-3.5 rounded-lg border border-emerald-800/80 space-y-1">
-              <p className="text-emerald-400 font-semibold">Current Risk Level</p>
-              <p className="text-sm font-bold text-amber-300 flex items-center gap-1.5">
-                🟡 Moderate Risk
+            <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
+              <p className="text-[#6B7280] font-semibold">Current Risk Level</p>
+              <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F1C40F] inline-block mr-1" /> Moderate Risk
               </p>
             </div>
           </div>
 
-          <div className="bg-[#061406] border border-amber-700/60 rounded-lg p-4 space-y-2 text-xs">
+          <div className="bg-[#FFF8E7] border border-[#F1C40F] rounded-lg p-4 space-y-2 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-amber-300 flex items-center gap-1.5">
-                ⚠️ Potential Risk Detected: <span className="text-white font-medium">Heavy rainfall expected over next few days</span>
+              <span className="font-bold text-[#B45309] flex items-center gap-1.5">
+                ⚠️ Potential Risk Detected: <span className="text-[#374151] font-medium">Heavy rainfall expected over next few days</span>
               </span>
-              <span className="text-[10px] text-emerald-400 font-mono">IMD Alert #2026-08</span>
+              <span className="text-[10px] text-[#6B7280] font-mono">IMD Alert #2026-08</span>
             </div>
-            <div className="pt-2 border-t border-emerald-900/80 space-y-1">
-              <p className="text-emerald-400 font-bold tracking-wider uppercase text-[10px]">💡 Agronomic Support Recommendation:</p>
-              <p className="text-emerald-100 text-sm font-semibold italic">
+            <div className="pt-2 border-t border-[#F1C40F]/30 space-y-1">
+              <p className="text-[#B45309] font-bold tracking-wider uppercase text-[10px]">💡 Agronomic Support Recommendation:</p>
+              <p className="text-[#374151] text-sm font-semibold italic">
                 "Ensure field drainage channels are clear and monitor waterlogging over the next few days."
               </p>
             </div>
@@ -232,51 +232,51 @@ export default function FarmerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link 
             href="/dashboard/farmer/farms"
-            className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg p-4 hover:border-green-500 hover:shadow-sm transition-all"
+            className="flex items-center gap-3 bg-white border border-[#E5EBE3] rounded-lg p-4 hover:border-[#2E7D32] hover:shadow-sm transition-all"
           >
-            <div className="w-10 h-10 bg-green-100 rounded-md flex items-center justify-center">
-              <Plus className="w-5 h-5 text-green-700" />
+            <div className="w-10 h-10 bg-[#E8F5E9] rounded-md flex items-center justify-center">
+              <Plus className="w-5 h-5 text-[#1B5E20]" />
             </div>
             <div>
-              <p className="font-medium text-slate-900">Register Farm</p>
+              <p className="font-medium text-[#1B5E20]">Register Farm</p>
               <p className="text-xs text-slate-500">Add new land parcel</p>
             </div>
           </Link>
 
           <Link 
             href="/dashboard/farmer/claims/new"
-            className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg p-4 hover:border-green-500 hover:shadow-sm transition-all"
+            className="flex items-center gap-3 bg-white border border-[#E5EBE3] rounded-lg p-4 hover:border-[#2E7D32] hover:shadow-sm transition-all"
           >
-            <div className="w-10 h-10 bg-green-100 rounded-md flex items-center justify-center">
-              <FileText className="w-5 h-5 text-green-700" />
+            <div className="w-10 h-10 bg-[#E8F5E9] rounded-md flex items-center justify-center">
+              <FileText className="w-5 h-5 text-[#1B5E20]" />
             </div>
             <div>
-              <p className="font-medium text-slate-900">File Claim</p>
+              <p className="font-medium text-[#1B5E20]">File Claim</p>
               <p className="text-xs text-slate-500">Submit damage report</p>
             </div>
           </Link>
 
           <Link 
             href="/dashboard/farmer/claims"
-            className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg p-4 hover:border-green-500 hover:shadow-sm transition-all"
+            className="flex items-center gap-3 bg-white border border-[#E5EBE3] rounded-lg p-4 hover:border-[#2E7D32] hover:shadow-sm transition-all"
           >
-            <div className="w-10 h-10 bg-green-100 rounded-md flex items-center justify-center">
-              <Clock className="w-5 h-5 text-green-700" />
+            <div className="w-10 h-10 bg-[#E8F5E9] rounded-md flex items-center justify-center">
+              <Clock className="w-5 h-5 text-[#1B5E20]" />
             </div>
             <div>
-              <p className="font-medium text-slate-900">My Claims</p>
+              <p className="font-medium text-[#1B5E20]">My Claims</p>
               <p className="text-xs text-slate-500">Track application status</p>
             </div>
           </Link>
         </div>
 
         {/* Recent Claims */}
-        <div className="bg-white border border-slate-200 rounded-lg">
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">Recent Claims</h2>
+        <div className="bg-white border border-[#E5EBE3] rounded-lg">
+          <div className="px-5 py-4 border-b border-[#E5EBE3] flex items-center justify-between">
+            <h2 className="font-semibold text-[#1B5E20]">Recent Claims</h2>
             <Link 
               href="/dashboard/farmer/claims"
-              className="text-sm text-green-700 hover:text-green-800 font-medium flex items-center gap-1"
+              className="text-sm text-[#1B5E20] hover:text-green-800 font-medium flex items-center gap-1"
             >
               View All <ArrowRight className="w-4 h-4" />
             </Link>
@@ -287,18 +287,18 @@ export default function FarmerDashboard() {
               <p className="text-sm text-slate-500">No claims filed yet.</p>
               <Link 
                 href="/dashboard/farmer/claims/new"
-                className="inline-flex items-center gap-2 mt-3 text-sm text-green-700 hover:text-green-800 font-medium"
+                className="inline-flex items-center gap-2 mt-3 text-sm text-[#1B5E20] hover:text-green-800 font-medium"
               >
                 File your first claim <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-[#EEF2EE]">
               {recentClaims.map((claim) => (
                 <div key={claim.id} className="px-5 py-4 flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900">#{claim.id}</span>
+                      <span className="font-medium text-[#1B5E20]">#{claim.id}</span>
                       <span className="text-sm text-slate-500 capitalize">{claim.claim_type}</span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
@@ -307,7 +307,7 @@ export default function FarmerDashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     {claim.ai_score !== null && (
-                      <span className="text-xs font-medium text-slate-600">
+                      <span className="text-xs font-medium text-[#374151]">
                         AI Score: {claim.ai_score}
                       </span>
                     )}
@@ -325,11 +325,11 @@ export default function FarmerDashboard() {
 
 function StatCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: string | number; bg: string }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-4">
+    <div className="bg-white border border-[#E5EBE3] rounded-lg p-4">
       <div className={`w-8 h-8 ${bg} rounded-md flex items-center justify-center mb-3`}>
         {icon}
       </div>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
+      <p className="text-2xl font-bold text-[#1B5E20]">{value}</p>
       <p className="text-xs text-slate-500 mt-0.5">{label}</p>
     </div>
   );
@@ -339,7 +339,7 @@ function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     submitted: "bg-blue-50 text-blue-700 border-blue-200",
     under_review: "bg-amber-50 text-amber-700 border-amber-200",
-    approved: "bg-green-50 text-green-700 border-green-200",
+    approved: "bg-green-50 text-[#1B5E20] border-green-200",
     rejected: "bg-red-50 text-red-700 border-red-200",
   };
   

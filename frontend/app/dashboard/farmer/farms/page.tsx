@@ -46,8 +46,8 @@ import {
 const MapComponent = dynamic(() => import("@/components/MapComponent"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[480px] bg-slate-900 animate-pulse border border-emerald-800 rounded-xl flex items-center justify-center">
-      <span className="text-emerald-400 font-medium text-sm flex items-center gap-2">
+    <div className="w-full h-[480px] bg-slate-100 animate-pulse border border-[#E5EBE3] rounded-xl flex items-center justify-center">
+      <span className="text-[#1B5E20] font-medium text-sm flex items-center gap-2">
         <LandPlot className="w-5 h-5 animate-spin" /> Loading Satellite Imagery...
       </span>
     </div>
@@ -443,14 +443,14 @@ function DashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#061406] text-[#e2ebd5] p-4 md:p-8 space-y-8 font-sans">
+    <div className="min-h-screen bg-[#F7F9F5] text-[#374151] p-4 md:p-8 space-y-8 font-sans">
       {/* Top Title Banner */}
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-emerald-800/60 pb-6">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#E5EBE3]/60 pb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-white flex items-center gap-3 tracking-tight">
-            <LandPlot className="w-9 h-9 text-emerald-400" /> Insured Land Registration
+            <LandPlot className="w-9 h-9 text-[#5B6B5B]" /> Insured Land Registration
           </h1>
-          <p className="text-emerald-400 text-sm mt-1">
+          <p className="text-[#5B6B5B] text-sm mt-1">
             Register your agricultural plot for crop insurance. You can register land even if you are away from the field.
           </p>
         </div>
@@ -458,7 +458,7 @@ function DashboardContent() {
 
       {/* FARMER-FIRST 7-STEP GUIDED PROGRESS BAR */}
       <div className="max-w-7xl mx-auto">
-        <div className="bg-[#0c240c]/90 border border-emerald-800/80 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+        <div className="bg-white border border-[#E5EBE3] rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
           <div className="grid grid-cols-6 gap-2 text-center">
             {[
               { step: 1, title: "1. Details" },
@@ -475,10 +475,10 @@ function DashboardContent() {
                   key={`step-nav-${s.step}`}
                   className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all ${
                     isActive
-                      ? "bg-emerald-600/30 border-2 border-emerald-400 text-white font-bold scale-105 shadow-lg"
+                      ? "bg-[#E8F5E9] border-2 border-[#2E7D32] text-white font-bold scale-105 shadow-lg"
                       : isCompleted
-                      ? "bg-emerald-950/60 border border-emerald-700/60 text-emerald-300"
-                      : "bg-[#071707] border border-emerald-900/40 text-emerald-700"
+                      ? "bg-[#E8F5E9] border border-[#2E7D32]/30 text-[#1B5E20]"
+                      : "bg-[#F7F9F5] border border-[#E5EBE3]/40 text-[#1B5E20]"
                   }`}
                 >
                   <span className="text-xs md:text-sm font-semibold">{s.title}</span>
@@ -500,40 +500,40 @@ function DashboardContent() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-[#0c240c] border border-emerald-500/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-2xl"
+              className="bg-white border border-[#E5EBE3] rounded-2xl p-6 md:p-8 space-y-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
             >
-              <div className="text-center space-y-3 border-b border-emerald-800/80 pb-6">
-                <div className="w-16 h-16 bg-emerald-600/30 border-2 border-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl">
+              <div className="text-center space-y-3 border-b border-[#E5EBE3]/80 pb-6">
+                <div className="w-16 h-16 bg-[#E8F5E9] border-2 border-[#2E7D32] rounded-full flex items-center justify-center mx-auto text-3xl">
                   🎉
                 </div>
                 <h2 className="text-2xl font-bold text-white">FARM REGISTERED</h2>
-                <p className="text-emerald-300 text-sm">Your insured farm has been successfully registered.</p>
+                <p className="text-[#1B5E20] text-sm">Your insured farm has been successfully registered.</p>
               </div>
 
-              <div className="bg-[#061406] border border-emerald-800 rounded-xl p-4 space-y-3 text-sm">
-                <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                  <span className="text-emerald-400">Farm:</span>
+              <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-4 space-y-3 text-sm">
+                <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                  <span className="text-[#5B6B5B]">Farm:</span>
                   <span className="font-bold text-white">{submittedFarmResult.name}</span>
                 </div>
-                <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                  <span className="text-emerald-400">Crop:</span>
+                <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                  <span className="text-[#5B6B5B]">Crop:</span>
                   <span className="text-emerald-200">{submittedFarmResult.crop_type}</span>
                 </div>
-                <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                  <span className="text-emerald-400">Area:</span>
-                  <span className="font-bold text-emerald-300">{submittedFarmResult.area_hectares} hectares</span>
+                <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                  <span className="text-[#5B6B5B]">Area:</span>
+                  <span className="font-bold text-[#1B5E20]">{submittedFarmResult.area_hectares} hectares</span>
                 </div>
-                <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                  <span className="text-emerald-400">Insurance Policy:</span>
+                <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                  <span className="text-[#5B6B5B]">Insurance Policy:</span>
                   <span className="text-emerald-200">{submittedFarmResult.insurance_policy_number}</span>
                 </div>
-                <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                  <span className="text-emerald-400">Land Record ID:</span>
+                <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                  <span className="text-[#5B6B5B]">Land Record ID:</span>
                   <span className="text-emerald-200">{submittedFarmResult.khasra_number}</span>
                 </div>
                 <div className="flex justify-between items-center pt-1">
-                  <span className="text-emerald-400">Land verification:</span>
-                  <span className="px-3 py-1 bg-amber-950/80 border border-amber-600/80 text-amber-300 text-xs font-semibold rounded-full flex items-center gap-1.5">
+                  <span className="text-[#5B6B5B]">Land verification:</span>
+                  <span className="px-3 py-1 bg-[#FFF8E7] border border-[#F1C40F] text-[#B45309] text-xs font-semibold rounded-full flex items-center gap-1.5">
                     🟡 Pending official verification
                   </span>
                 </div>
@@ -546,14 +546,14 @@ function DashboardContent() {
                     setSelectedFarm3D(submittedFarmResult);
                     setIs3DModalOpen(true);
                   }}
-                  className="flex-1 px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-emerald-600 text-white font-semibold rounded-xl transition flex items-center justify-center gap-2 shadow-lg"
+                  className="flex-1 px-4 py-3 bg-white hover:bg-[#F7F9F5] border border-[#2E7D32] text-[#1B5E20] font-semibold rounded-xl transition flex items-center justify-center gap-2 shadow-lg"
                 >
-                  <Eye className="w-4 h-4 text-emerald-400" /> View 3D Farm
+                  <Eye className="w-4 h-4 text-[#5B6B5B]" /> View 3D Farm
                 </button>
                 <button
                   type="button"
                   onClick={handleResetWorkflow}
-                  className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg"
+                  className="flex-1 px-4 py-3 bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg"
                 >
                   <RotateCcw className="w-4 h-4" /> Register Another Farm
                 </button>
@@ -564,31 +564,31 @@ function DashboardContent() {
           {/* STEP 1: FARM DETAILS */}
           {activeStep === 1 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="bg-[#0c240c] border border-emerald-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-emerald-800/80 pb-3">
-                  <FileText className="w-5 h-5 text-emerald-400" /> STEP 1 — FARM DETAILS
+              <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                  <FileText className="w-5 h-5 text-[#5B6B5B]" /> STEP 1 — FARM DETAILS
                 </h2>
 
                 <div className="space-y-4 text-sm">
                   {/* Farm Name */}
                   <div>
-                    <label className="block text-emerald-300 font-semibold mb-1">Farm Name</label>
+                    <label className="block text-[#1B5E20] font-semibold mb-1">Farm Name</label>
                     <input
                       {...register("name")}
                       placeholder="Example: My Paddy Field"
-                      className="w-full bg-[#061406] border border-emerald-700/80 rounded-xl px-4 py-2.5 text-white placeholder-emerald-700 focus:outline-none focus:border-emerald-400"
+                      className="w-full bg-white border border-[#E5EBE3] rounded-xl px-4 py-2.5 text-[#374151] placeholder-[#6B7280] focus:outline-none focus:border-[#2E7D32] bg-white"
                     />
-                    <p className="text-xs text-emerald-500 mt-1">Give a descriptive name for your plot.</p>
+                    <p className="text-xs text-[#2E7D32] mt-1">Give a descriptive name for your plot.</p>
                     {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>}
                   </div>
 
                   {/* Crop & Sowing Date */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-emerald-300 font-semibold mb-1">Crop Type</label>
+                      <label className="block text-[#1B5E20] font-semibold mb-1">Crop Type</label>
                       <select
                         {...register("crop_type")}
-                        className="w-full bg-[#061406] border border-emerald-700/80 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-emerald-400"
+                        className="w-full bg-white border border-[#E5EBE3] rounded-xl px-4 py-2.5 text-[#374151] focus:outline-none focus:border-[#2E7D32] bg-white"
                       >
                         {["Rice", "Wheat", "Cotton", "Sugarcane", "Maize", "Mustard", "Soybeans"].map((c) => (
                           <option key={c} value={c}>
@@ -599,48 +599,48 @@ function DashboardContent() {
                     </div>
 
                     <div>
-                      <label className="block text-emerald-300 font-semibold mb-1">Sowing Date</label>
+                      <label className="block text-[#1B5E20] font-semibold mb-1">Sowing Date</label>
                       <input
                         type="date"
                         {...register("sowing_date")}
-                        className="w-full bg-[#061406] border border-emerald-700/80 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-emerald-400"
+                        className="w-full bg-white border border-[#E5EBE3] rounded-xl px-4 py-2.5 text-[#374151] focus:outline-none focus:border-[#2E7D32] bg-white"
                       />
                     </div>
                   </div>
 
                   {/* Land Record / Khasra ID */}
                   <div>
-                    <label className="block text-emerald-300 font-semibold mb-1">Land Record / Khasra ID</label>
+                    <label className="block text-[#1B5E20] font-semibold mb-1">Land Record / Khasra ID</label>
                     <input
                       {...register("khasra_number")}
                       placeholder="e.g. 223/4"
-                      className="w-full bg-[#061406] border border-emerald-700/80 rounded-xl px-4 py-2.5 text-white placeholder-emerald-700 focus:outline-none focus:border-emerald-400 font-mono"
+                      className="w-full bg-white border border-[#E5EBE3] rounded-xl px-4 py-2.5 text-[#374151] placeholder-[#6B7280] focus:outline-none focus:border-[#2E7D32] bg-white font-mono"
                     />
-                    <p className="text-xs text-emerald-500 mt-1">Enter the number from your official land document.</p>
+                    <p className="text-xs text-[#2E7D32] mt-1">Enter the number from your official land document.</p>
                     {errors.khasra_number && <p className="text-red-400 text-xs mt-1">{errors.khasra_number.message}</p>}
                   </div>
 
                   {/* 🛡️ FARM INSURANCE SECTION */}
-                  <div className="bg-[#061406] border border-emerald-800/80 rounded-xl p-4 space-y-4">
-                    <div className="flex items-center justify-between border-b border-emerald-800/60 pb-2">
-                      <h3 className="text-xs font-bold text-emerald-400 tracking-wider uppercase flex items-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" /> 🛡️ Farm Insurance
+                  <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E5EBE3]/60 pb-2">
+                      <h3 className="text-xs font-bold text-[#5B6B5B] tracking-wider uppercase flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-[#5B6B5B]" /> 🛡️ Farm Insurance
                       </h3>
-                      <span className="text-[10px] font-semibold bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">
+                      <span className="text-[10px] font-semibold bg-[#E8F5E9] text-[#1B5E20] px-2 py-0.5 rounded border border-[#E5EBE3]">
                         Status: 🟢 Active
                       </span>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-emerald-300 mb-2">
+                      <label className="block text-xs font-bold text-[#1B5E20] mb-2">
                         Which insurance scheme covers this farm?
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <label
                           className={`p-3 rounded-xl border-2 cursor-pointer transition flex items-start gap-2.5 ${
                             watch("insurance_scheme") === "PMFBY"
-                              ? "bg-emerald-950/80 border-emerald-400"
-                              : "bg-[#0a1f0a] border-emerald-900 hover:border-emerald-700"
+                              ? "bg-[#E8F5E9] border-[#2E7D32]"
+                              : "bg-[#F7F9F5] border-[#E5EBE3] hover:border-[#E5EBE3]"
                           }`}
                         >
                           <input
@@ -651,15 +651,15 @@ function DashboardContent() {
                           />
                           <div>
                             <p className="text-sm font-bold text-white">PMFBY</p>
-                            <p className="text-xs text-emerald-400">Crop Insurance</p>
+                            <p className="text-xs text-[#5B6B5B]">Crop Insurance</p>
                           </div>
                         </label>
 
                         <label
                           className={`p-3 rounded-xl border-2 cursor-pointer transition flex items-start gap-2.5 ${
                             watch("insurance_scheme") === "RWBCIS"
-                              ? "bg-emerald-950/80 border-emerald-400"
-                              : "bg-[#0a1f0a] border-emerald-900 hover:border-emerald-700"
+                              ? "bg-[#E8F5E9] border-[#2E7D32]"
+                              : "bg-[#F7F9F5] border-[#E5EBE3] hover:border-[#E5EBE3]"
                           }`}
                         >
                           <input
@@ -670,7 +670,7 @@ function DashboardContent() {
                           />
                           <div>
                             <p className="text-sm font-bold text-white">RWBCIS</p>
-                            <p className="text-xs text-emerald-400">Weather-Based Insurance</p>
+                            <p className="text-xs text-[#5B6B5B]">Weather-Based Insurance</p>
                           </div>
                         </label>
                       </div>
@@ -678,11 +678,11 @@ function DashboardContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-emerald-300 mb-1">Insurance Policy Number</label>
+                        <label className="block text-xs text-[#1B5E20] mb-1">Insurance Policy Number</label>
                         <input
                           {...register("insurance_policy_number")}
                           placeholder="e.g. INS-772819"
-                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white placeholder-emerald-700 font-mono"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white placeholder-emerald-700 font-mono"
                         />
                         {errors.insurance_policy_number && (
                           <p className="text-red-400 text-[10px] mt-0.5">{errors.insurance_policy_number.message}</p>
@@ -690,10 +690,10 @@ function DashboardContent() {
                       </div>
 
                       <div>
-                        <label className="block text-xs text-emerald-300 mb-1">Season</label>
+                        <label className="block text-xs text-[#1B5E20] mb-1">Season</label>
                         <select
                           {...register("season")}
-                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
                         >
                           <option value="Kharif">Kharif (Monsoon)</option>
                           <option value="Rabi">Rabi (Winter)</option>
@@ -707,21 +707,21 @@ function DashboardContent() {
                       <button
                         type="button"
                         onClick={() => setShowInsuranceDetails(!showInsuranceDetails)}
-                        className="text-xs text-emerald-400 hover:text-emerald-200 underline flex items-center gap-1 font-semibold"
+                        className="text-xs text-[#5B6B5B] hover:text-emerald-200 underline flex items-center gap-1 font-semibold"
                       >
                         {showInsuranceDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         {showInsuranceDetails ? "Hide insurance details" : "View insurance details"}
                       </button>
 
                       {showInsuranceDetails && (
-                        <div className="mt-2.5 p-3 bg-[#061406] border border-emerald-800 rounded-lg text-xs space-y-1.5 text-emerald-300">
-                          <p><span className="text-emerald-500 font-bold">Scheme Selected:</span> {watch("insurance_scheme") === "PMFBY" ? "Pradhan Mantri Fasal Bima Yojana" : "Restructured Weather Based Crop Insurance Scheme"}</p>
-                          <p><span className="text-emerald-500 font-bold">Sum Insured Estimate:</span> ₹1,20,000 / hectare</p>
-                          <p><span className="text-emerald-500 font-bold">Coverage Period:</span> Kharif Season 2026 (Active)</p>
+                        <div className="mt-2.5 p-3 bg-[#F7F9F5] border border-[#E5EBE3] rounded-lg text-xs space-y-1.5 text-[#1B5E20]">
+                          <p><span className="text-[#2E7D32] font-bold">Scheme Selected:</span> {watch("insurance_scheme") === "PMFBY" ? "Pradhan Mantri Fasal Bima Yojana" : "Restructured Weather Based Crop Insurance Scheme"}</p>
+                          <p><span className="text-[#2E7D32] font-bold">Sum Insured Estimate:</span> ₹1,20,000 / hectare</p>
+                          <p><span className="text-[#2E7D32] font-bold">Coverage Period:</span> Kharif Season 2026 (Active)</p>
                           {watch("insurance_scheme") === "PMFBY" ? (
-                            <p><span className="text-emerald-500 font-bold">Coverage Provisions:</span> Standing Crop / Yield Loss, Prevented Sowing, Localized Calamity, Mid-Season Adversity, Post-Harvest Loss (Available during claim filing).</p>
+                            <p><span className="text-[#2E7D32] font-bold">Coverage Provisions:</span> Standing Crop / Yield Loss, Prevented Sowing, Localized Calamity, Mid-Season Adversity, Post-Harvest Loss (Available during claim filing).</p>
                           ) : (
-                            <p><span className="text-emerald-500 font-bold">Weather Protection:</span> Automatic weather-index monitoring active for rainfall, temperature, and wind anomalies.</p>
+                            <p><span className="text-[#2E7D32] font-bold">Weather Protection:</span> Automatic weather-index monitoring active for rainfall, temperature, and wind anomalies.</p>
                           )}
                         </div>
                       )}
@@ -729,16 +729,16 @@ function DashboardContent() {
                   </div>
 
                   {/* Cascading Location Selection */}
-                  <div className="bg-[#061406] border border-emerald-800/80 rounded-xl p-4 space-y-3">
-                    <h3 className="text-xs font-bold text-emerald-400 tracking-wider uppercase">Insured Land Location</h3>
+                  <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-4 space-y-3">
+                    <h3 className="text-xs font-bold text-[#5B6B5B] tracking-wider uppercase">Insured Land Location</h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-emerald-300 mb-1">State</label>
+                        <label className="block text-xs text-[#1B5E20] mb-1">State</label>
                         <select
                           value={stateVal}
                           onChange={handleStateChange}
-                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
                         >
                           {Object.keys(INDIA_LOCATION_DATA).map((st) => (
                             <option key={st} value={st}>
@@ -749,11 +749,11 @@ function DashboardContent() {
                       </div>
 
                       <div>
-                        <label className="block text-xs text-emerald-300 mb-1">District</label>
+                        <label className="block text-xs text-[#1B5E20] mb-1">District</label>
                         <select
                           value={districtVal}
                           onChange={handleDistrictChange}
-                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
                         >
                           {availableDistricts.map((d) => (
                             <option key={d} value={d}>
@@ -766,11 +766,11 @@ function DashboardContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-emerald-300 mb-1">Taluka / Tehsil</label>
+                        <label className="block text-xs text-[#1B5E20] mb-1">Taluka / Tehsil</label>
                         <select
                           value={talukaVal}
                           onChange={handleTalukaChange}
-                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
                         >
                           {availableTalukas.map((t) => (
                             <option key={t} value={t}>
@@ -781,11 +781,11 @@ function DashboardContent() {
                       </div>
 
                       <div>
-                        <label className="block text-xs text-emerald-300 mb-1">Village</label>
+                        <label className="block text-xs text-[#1B5E20] mb-1">Village</label>
                         <input
                           {...register("village")}
                           placeholder="e.g. Nagalur"
-                          className="w-full bg-[#0a1f0a] border border-emerald-700/80 rounded-lg px-3 py-2 text-xs text-white placeholder-emerald-700"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white placeholder-emerald-700"
                         />
                       </div>
                     </div>
@@ -799,7 +799,7 @@ function DashboardContent() {
                       const valid = await trigger();
                       if (valid) setActiveStep(2);
                     }}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
+                    className="w-full py-3 bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
                   >
                     NEXT: WHERE IS YOUR FIELD? <ArrowRight className="w-5 h-5" />
                   </button>
@@ -811,12 +811,12 @@ function DashboardContent() {
           {/* STEP 2: WHERE IS YOUR FIELD? (OPTION A vs OPTION B) */}
           {activeStep === 2 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="bg-[#0c240c] border border-emerald-800 rounded-2xl p-6 shadow-xl space-y-5">
-                <h2 className="text-xl font-bold text-white border-b border-emerald-800/80 pb-3">
+              <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-5">
+                <h2 className="text-xl font-bold text-white border-b border-[#E5EBE3]/80 pb-3">
                   WHERE IS YOUR FIELD?
                 </h2>
 
-                <p className="text-emerald-300 text-sm">
+                <p className="text-[#1B5E20] text-sm">
                   Select how you want to locate your field on satellite imagery.
                 </p>
 
@@ -826,16 +826,16 @@ function DashboardContent() {
                     type="button"
                     onClick={handleSelectAtFieldChoice}
                     disabled={gpsLoading}
-                    className="w-full p-5 bg-[#061406] hover:bg-[#0e2c0e] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
+                    className="w-full p-5 bg-[#F7F9F5] hover:bg-[#0e2c0e] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
                   >
                     <div className="p-3 bg-blue-600/30 border border-blue-400 rounded-xl text-2xl shrink-0">
                       📍
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition">
+                      <h3 className="text-base font-bold text-white group-hover:text-[#1B5E20] transition">
                         I'M AT MY FIELD
                       </h3>
-                      <p className="text-xs text-emerald-400">
+                      <p className="text-xs text-[#5B6B5B]">
                         Use your current GPS location to find your field on satellite imagery.
                       </p>
                     </div>
@@ -845,23 +845,23 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={handleSelectSomewhereElseChoice}
-                    className="w-full p-5 bg-[#061406] hover:bg-[#0e2c0e] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
+                    className="w-full p-5 bg-[#F7F9F5] hover:bg-[#0e2c0e] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
                   >
-                    <div className="p-3 bg-emerald-600/30 border border-emerald-400 rounded-xl text-2xl shrink-0">
+                    <div className="p-3 bg-[#E8F5E9] border border-[#2E7D32]/30 rounded-xl text-2xl shrink-0">
                       🗺️
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition">
+                      <h3 className="text-base font-bold text-white group-hover:text-[#1B5E20] transition">
                         MY FIELD IS SOMEWHERE ELSE
                       </h3>
-                      <p className="text-xs text-emerald-400">
+                      <p className="text-xs text-[#5B6B5B]">
                         Find your field by searching or navigating the map (no GPS required).
                       </p>
                     </div>
                   </button>
                 </div>
 
-                <div className="p-3 bg-[#061406] border border-emerald-800 rounded-xl text-xs text-emerald-400 italic">
+                <div className="p-3 bg-white border border-[#E5EBE3] rounded-xl text-xs text-[#5B6B5B] italic">
                   💡 You can register land even if you are not currently at the field.
                 </div>
 
@@ -876,7 +876,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(1)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-emerald-700 text-emerald-300 font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back to Details
                   </button>
@@ -888,20 +888,20 @@ function DashboardContent() {
           {/* STEP 3: FIND YOUR FIELD */}
           {activeStep === 3 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="bg-[#0c240c] border border-emerald-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-emerald-800/80 pb-3">
-                  <Globe className="w-5 h-5 text-emerald-400" /> STEP 3 — FIND YOUR FIELD
+              <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                  <Globe className="w-5 h-5 text-[#5B6B5B]" /> STEP 3 — FIND YOUR FIELD
                 </h2>
 
-                <p className="text-emerald-300 text-sm">
+                <p className="text-[#1B5E20] text-sm">
                   {locationChoice === "at_field"
                     ? "Your current GPS location has been loaded on the map."
                     : "Search or navigate the map to find your insured plot."}
                 </p>
 
-                <div className="p-4 bg-[#061406] border border-emerald-700/80 rounded-xl space-y-2 text-xs">
-                  <p className="text-emerald-300 font-bold">Location Summary:</p>
-                  <p className="text-emerald-400">Insured Area: {villageVal}, {districtVal}, {stateVal}</p>
+                <div className="p-4 bg-white border border-[#E5EBE3] rounded-xl space-y-2 text-xs">
+                  <p className="text-[#1B5E20] font-bold">Location Summary:</p>
+                  <p className="text-[#5B6B5B]">Insured Area: {villageVal}, {districtVal}, {stateVal}</p>
                   {farmerCurrentLocation && (
                     <p className="text-blue-300">
                       📍 Your Current Location: Captured ({farmerCurrentLocation.accuracy}m accuracy)
@@ -913,14 +913,14 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(2)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-emerald-700 text-emerald-300 font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveStep(4)}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
+                    className="flex-1 py-3 bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
                   >
                     NEXT: MARK & DRAW FIELD <ArrowRight className="w-5 h-5" />
                   </button>
@@ -932,14 +932,14 @@ function DashboardContent() {
           {/* STEP 4: MARK & DRAW FIELD */}
           {activeStep === 4 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="bg-[#0c240c] border border-emerald-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-emerald-800/80 pb-3">
-                  <LandPlot className="w-5 h-5 text-emerald-400" /> STEP 4 — MARK & DRAW FIELD
+              <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                  <LandPlot className="w-5 h-5 text-[#5B6B5B]" /> STEP 4 — MARK & DRAW FIELD
                 </h2>
 
-                <div className="bg-[#061406] border border-emerald-700/80 rounded-xl p-4 space-y-2">
+                <div className="bg-white border border-[#E5EBE3] rounded-xl p-4 space-y-2">
                   <p className="font-bold text-white text-base">📌 Is this your field?</p>
-                  <p className="text-emerald-300 text-xs">
+                  <p className="text-[#1B5E20] text-xs">
                     Tap around the edges of your field plot. The land center pin will be positioned automatically.
                   </p>
                 </div>
@@ -948,22 +948,22 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={handlePlacePinInsideField}
-                    className="py-3 px-4 bg-amber-950/80 hover:bg-amber-900 border border-amber-600/80 text-amber-200 font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm shadow"
+                    className="py-3 px-4 bg-[#FFF8E7] hover:bg-[#FFF3D6] border border-[#F1C40F] text-[#B45309] font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm shadow"
                   >
                     📌 PLACE PIN INSIDE FIELD
                   </button>
 
                   <button
                     type="button"
-                    className="py-3 px-4 bg-emerald-950/80 border border-emerald-600/80 text-emerald-300 font-bold rounded-xl flex items-center justify-center gap-2 text-sm shadow cursor-default"
+                    className="py-3 px-4 bg-emerald-950/80 border border-emerald-600/80 text-[#1B5E20] font-bold rounded-xl flex items-center justify-center gap-2 text-sm shadow cursor-default"
                   >
                     ✏️ TAP MAP TO DRAW
                   </button>
                 </div>
 
                 {/* Controls (Undo, Clear) */}
-                <div className="bg-[#061406] border border-emerald-800/80 rounded-xl p-4 space-y-3">
-                  <div className="text-xs text-emerald-400 font-semibold space-y-1">
+                <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-4 space-y-3">
+                  <div className="text-xs text-[#5B6B5B] font-semibold space-y-1">
                     <p>• Tap map once = add boundary point</p>
                     <p>• Drag point = move position</p>
                     <p>• Undo = remove last point</p>
@@ -974,7 +974,7 @@ function DashboardContent() {
                       type="button"
                       onClick={() => setPoints(points.slice(0, -1))}
                       disabled={points.length === 0}
-                      className="px-3 py-2 bg-[#133513] hover:bg-[#1b4f1b] disabled:opacity-40 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-700 transition flex items-center gap-1"
+                      className="px-3 py-2 bg-[#133513] hover:bg-[#1b4f1b] disabled:opacity-40 text-[#1B5E20] text-xs font-bold rounded-lg border border-[#E5EBE3] transition flex items-center gap-1"
                     >
                       <RotateCcw className="w-3.5 h-3.5" /> Undo
                     </button>
@@ -991,7 +991,7 @@ function DashboardContent() {
 
                 {/* Validation Prompts */}
                 {points.length > 0 && points.length < 3 && (
-                  <p className="text-amber-400 text-xs bg-amber-950/60 p-2.5 rounded-lg border border-amber-800/60">
+                  <p className="text-amber-400 text-xs bg-[#FFF8E7] p-2.5 rounded-lg border border-[#F1C40F]">
                     Please mark at least 3 points around your field.
                   </p>
                 )}
@@ -1006,7 +1006,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(3)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-emerald-700 text-emerald-300 font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back
                   </button>
@@ -1014,7 +1014,7 @@ function DashboardContent() {
                     type="button"
                     disabled={points.length < 3 || isSelfIntersecting}
                     onClick={handleProceedToLandCheck}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
+                    className="flex-1 py-3 bg-[#2E7D32] hover:bg-[#1B5E20] disabled:opacity-40 text-white font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
                   >
                     ✓ DONE <ArrowRight className="w-5 h-5" />
                   </button>
@@ -1026,24 +1026,24 @@ function DashboardContent() {
           {/* STEP 5: AUTOMATIC LAND CHECK */}
           {activeStep === 5 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="bg-[#0c240c] border border-emerald-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-emerald-800/80 pb-3">
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" /> STEP 5 — AUTOMATIC LAND CHECK
+              <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                  <ShieldCheck className="w-5 h-5 text-[#5B6B5B]" /> STEP 5 — AUTOMATIC LAND CHECK
                 </h2>
 
                 {/* Result Status Banner */}
                 {isLandCheckValid ? (
-                  <div className="bg-emerald-950/90 border-2 border-emerald-500 rounded-2xl p-5 space-y-3 shadow-xl">
-                    <div className="flex items-center gap-2 text-emerald-300 font-bold text-lg border-b border-emerald-800/80 pb-2">
-                      <CheckCircle2 className="w-6 h-6 text-emerald-400" /> YOUR FIELD LOOKS GOOD
+                  <div className="bg-[#E8F5E9] border-2 border-[#2E7D32] rounded-2xl p-5 space-y-3 shadow-xl">
+                    <div className="flex items-center gap-2 text-[#1B5E20] font-bold text-lg border-b border-[#E5EBE3]/80 pb-2">
+                      <CheckCircle2 className="w-6 h-6 text-[#5B6B5B]" /> YOUR FIELD LOOKS GOOD
                     </div>
 
                     <div className="space-y-1">
-                      <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">FIELD AREA</p>
+                      <p className="text-xs text-[#5B6B5B] font-bold uppercase tracking-wider">FIELD AREA</p>
                       <p className="text-3xl font-extrabold text-white">
-                        {calculatedArea} <span className="text-lg text-emerald-400 font-medium">hectares</span>
+                        {calculatedArea} <span className="text-lg text-[#5B6B5B] font-medium">hectares</span>
                       </p>
-                      <p className="text-emerald-300 text-sm font-medium">
+                      <p className="text-[#1B5E20] text-sm font-medium">
                         ({calculateAreaAcres(calculatedArea)} acres)
                       </p>
                     </div>
@@ -1056,15 +1056,15 @@ function DashboardContent() {
                     )}
 
                     {/* Simple Checklist */}
-                    <div className="pt-2 border-t border-emerald-800/80 space-y-2 text-xs text-emerald-200">
+                    <div className="pt-2 border-t border-[#E5EBE3]/80 space-y-2 text-xs text-emerald-200">
                       <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-400" /> Location found & mapped
+                        <Check className="w-4 h-4 text-[#5B6B5B]" /> Location found & mapped
                       </div>
                       <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-400" /> Field boundary added
+                        <Check className="w-4 h-4 text-[#5B6B5B]" /> Field boundary added
                       </div>
                       <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-400" /> No conflict with registered fields detected
+                        <Check className="w-4 h-4 text-[#5B6B5B]" /> No conflict with registered fields detected
                       </div>
 
                       <div className="pt-1 flex items-center justify-between text-amber-300">
@@ -1081,7 +1081,7 @@ function DashboardContent() {
                       </div>
 
                       {showWhyPending && (
-                        <div className="p-3 bg-[#061406] border border-amber-700/60 rounded-xl text-amber-200/90 text-xs leading-relaxed space-y-1">
+                        <div className="p-3 bg-[#FFF8E7] border border-[#F1C40F] rounded-xl text-amber-200/90 text-xs leading-relaxed space-y-1">
                           <p>
                             Your location and field boundary have been recorded. Official land ownership and parcel boundaries may need to be checked against government land records.
                           </p>
@@ -1105,14 +1105,14 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-                    className="text-xs text-emerald-400 hover:text-emerald-200 underline flex items-center gap-1 font-semibold"
+                    className="text-xs text-[#5B6B5B] hover:text-emerald-200 underline flex items-center gap-1 font-semibold"
                   >
                     {showTechnicalDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     {showTechnicalDetails ? "Hide technical details" : "View technical details"}
                   </button>
 
                   {showTechnicalDetails && (
-                    <div className="mt-3 p-4 bg-[#061406] border border-emerald-800 rounded-xl text-xs space-y-2 font-mono text-emerald-400">
+                    <div className="mt-3 p-4 bg-white border border-[#E5EBE3] rounded-xl text-xs space-y-2 font-mono text-[#5B6B5B]">
                       <p>Farmer Current GPS: {farmerCurrentLocation?.latitude ? `${farmerCurrentLocation.latitude.toFixed(6)}, ${farmerCurrentLocation.longitude?.toFixed(6)}` : "Not Captured / Away"}</p>
                       <p>Insured Farm Location: {insuredFarmLocation ? `${insuredFarmLocation[0].toFixed(6)}, ${insuredFarmLocation[1].toFixed(6)}` : "None"}</p>
                       <p>Boundary Points: {points.length}</p>
@@ -1126,7 +1126,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(4)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-emerald-700 text-emerald-300 font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Edit Boundary
                   </button>
@@ -1134,7 +1134,7 @@ function DashboardContent() {
                     type="button"
                     disabled={!isLandCheckValid}
                     onClick={() => setActiveStep(6)}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
+                    className="flex-1 py-3 bg-[#2E7D32] hover:bg-[#1B5E20] disabled:opacity-40 text-white font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
                   >
                     NEXT: REVIEW & SUBMIT <ArrowRight className="w-5 h-5" />
                   </button>
@@ -1146,56 +1146,56 @@ function DashboardContent() {
           {/* STEP 6: REVIEW & SUBMIT */}
           {activeStep === 6 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="bg-[#0c240c] border border-emerald-800 rounded-2xl p-6 shadow-xl space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-emerald-800/80 pb-3">
+              <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
                   🔍 REVIEW MY FARM
                 </h2>
 
-                <div className="bg-[#061406] border border-emerald-800 rounded-xl p-5 space-y-3 text-sm">
-                  <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                    <span className="text-emerald-400">Farm Name:</span>
+                <div className="bg-white border border-[#E5EBE3] rounded-xl p-5 space-y-3 text-sm">
+                  <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                    <span className="text-[#5B6B5B]">Farm Name:</span>
                     <span className="font-bold text-white">{watch("name")}</span>
                   </div>
-                  <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                    <span className="text-emerald-400">Crop:</span>
+                  <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                    <span className="text-[#5B6B5B]">Crop:</span>
                     <span className="text-emerald-200">{watch("crop_type")}</span>
                   </div>
-                  <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                    <span className="text-emerald-400">Sowing Date:</span>
+                  <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                    <span className="text-[#5B6B5B]">Sowing Date:</span>
                     <span className="text-emerald-200">{watch("sowing_date")}</span>
                   </div>
-                  <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                    <span className="text-emerald-400">Village:</span>
+                  <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                    <span className="text-[#5B6B5B]">Village:</span>
                     <span className="text-emerald-200">{villageVal}, {districtVal}</span>
                   </div>
-                  <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                    <span className="text-emerald-400">Land Record ID:</span>
-                    <span className="font-mono text-emerald-300">{watch("khasra_number")}</span>
+                  <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                    <span className="text-[#5B6B5B]">Land Record ID:</span>
+                    <span className="font-mono text-[#1B5E20]">{watch("khasra_number")}</span>
                   </div>
-                  <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                    <span className="text-emerald-400">Insurance Policy:</span>
-                    <span className="font-mono text-emerald-300">{watch("insurance_policy_number")}</span>
+                  <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                    <span className="text-[#5B6B5B]">Insurance Policy:</span>
+                    <span className="font-mono text-[#1B5E20]">{watch("insurance_policy_number")}</span>
                   </div>
-                  <div className="flex justify-between border-b border-emerald-900/60 pb-2">
-                    <span className="text-emerald-400">Field Area:</span>
-                    <span className="font-bold text-emerald-300">{calculatedArea} ha ({calculateAreaAcres(calculatedArea)} acres)</span>
-                  </div>
-
-                  <div className="pt-2 text-xs text-emerald-300 space-y-1">
-                    <p className="flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-400" /> Insured land location captured</p>
-                    <p className="flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-400" /> Field boundary captured</p>
-                    <p className="flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-400" /> Land check completed</p>
+                  <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
+                    <span className="text-[#5B6B5B]">Field Area:</span>
+                    <span className="font-bold text-[#1B5E20]">{calculatedArea} ha ({calculateAreaAcres(calculatedArea)} acres)</span>
                   </div>
 
-                  <div className="pt-2 flex justify-between items-center border-t border-emerald-800/80">
-                    <span className="text-emerald-400 text-xs">Status:</span>
-                    <span className="px-3 py-1 bg-amber-950/80 border border-amber-600/80 text-amber-300 text-xs font-semibold rounded-full">
+                  <div className="pt-2 text-xs text-[#1B5E20] space-y-1">
+                    <p className="flex items-center gap-1.5"><Check className="w-4 h-4 text-[#5B6B5B]" /> Insured land location captured</p>
+                    <p className="flex items-center gap-1.5"><Check className="w-4 h-4 text-[#5B6B5B]" /> Field boundary captured</p>
+                    <p className="flex items-center gap-1.5"><Check className="w-4 h-4 text-[#5B6B5B]" /> Land check completed</p>
+                  </div>
+
+                  <div className="pt-2 flex justify-between items-center border-t border-[#E5EBE3]/80">
+                    <span className="text-[#5B6B5B] text-xs">Status:</span>
+                    <span className="px-3 py-1 bg-[#FFF8E7] border border-[#F1C40F] text-[#B45309] text-xs font-semibold rounded-full">
                       🟡 Official verification pending
                     </span>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-emerald-500 italic bg-[#061406] p-3 rounded-lg border border-emerald-900/60">
+                <p className="text-[11px] text-[#2E7D32] italic bg-[#F7F9F5] p-3 rounded-lg border border-[#E5EBE3]/60">
                   "GPS and satellite imagery are used to identify the selected agricultural plot. Legal ownership and official parcel boundaries must be verified using applicable land records."
                 </p>
 
@@ -1203,7 +1203,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(5)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-emerald-700 text-emerald-300 font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     ← EDIT
                   </button>
@@ -1211,7 +1211,7 @@ function DashboardContent() {
                     type="button"
                     disabled={createFarmMutation.isPending}
                     onClick={onConfirmSubmit}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
+                    className="flex-1 py-3 bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg text-base"
                   >
                     {createFarmMutation.isPending ? "Submitting..." : "✓ SUBMIT FARM"}
                   </button>
@@ -1224,12 +1224,12 @@ function DashboardContent() {
 
         {/* RIGHT COLUMN: SATELLITE MAP INTERACTION VIEW */}
         <div className="lg:col-span-6 space-y-6">
-          <div className="bg-[#0c240c] border border-emerald-800 rounded-2xl p-4 shadow-xl space-y-3">
+          <div className="bg-white border border-[#E5EBE3] rounded-2xl p-4 shadow-xl space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <LandPlot className="w-4 h-4 text-emerald-400" /> Satellite Boundary View
+                <LandPlot className="w-4 h-4 text-[#5B6B5B]" /> Satellite Boundary View
               </h3>
-              <span className="text-xs text-emerald-400 font-mono">Esri Satellite</span>
+              <span className="text-xs text-[#5B6B5B] font-mono">Esri Satellite</span>
             </div>
 
             <MapComponent
@@ -1263,44 +1263,44 @@ function DashboardContent() {
             <motion.div
               key={`farm-card-${farm.id}`}
               whileHover={{ y: -4 }}
-              className="bg-[#0c240c] border border-emerald-800/80 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between"
+              className="bg-white border border-[#E5EBE3]/80 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between"
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
                     🌾 {farm.name}
                   </h3>
-                  <span className="px-2.5 py-0.5 bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs font-semibold rounded-full">
+                  <span className="px-2.5 py-0.5 bg-[#E8F5E9] border border-[#2E7D32]/30 text-[#1B5E20] text-xs font-semibold rounded-full">
                     {farm.crop_type}
                   </span>
                 </div>
 
-                <div className="space-y-1.5 text-xs text-emerald-300">
+                <div className="space-y-1.5 text-xs text-[#1B5E20]">
                   <p>📍 Location: <span className="text-white font-medium">{farm.village}, {farm.district}</span></p>
-                  <p>📐 Area: <span className="text-emerald-400 font-bold">{farm.area_hectares} hectares</span> ({calculateAreaAcres(farm.area_hectares || 0)} acres)</p>
+                  <p>📐 Area: <span className="text-[#5B6B5B] font-bold">{farm.area_hectares} hectares</span> ({calculateAreaAcres(farm.area_hectares || 0)} acres)</p>
                   <p>🧾 Land Record: <span className="font-mono text-white">{farm.khasra_number || "223/4"}</span></p>
                   <p>🛡 Insurance Scheme: <span className="font-bold text-white">{"insurance_scheme" in farm && farm.insurance_scheme ? farm.insurance_scheme : "PMFBY"}</span></p>
                   <p>📄 Policy Number: <span className="font-mono text-white">{farm.insurance_policy_number || "INS-772819"}</span></p>
                 </div>
 
                 <div className="pt-1 flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-950 border border-emerald-500 text-emerald-300 text-xs font-semibold rounded-full">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#E8F5E9] border border-[#2E7D32]/30 text-[#1B5E20] text-xs font-semibold rounded-full">
                     🟢 Active Policy
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-950/80 border border-amber-600/80 text-amber-300 text-xs font-semibold rounded-full">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#FFF8E7] border border-[#F1C40F] text-[#B45309] text-xs font-semibold rounded-full">
                     🟡 Pending Official Verification
                   </span>
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-emerald-900/60">
+              <div className="flex gap-2 pt-2 border-t border-[#E5EBE3]/60">
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedFarm3D(farm);
                     setIs3DModalOpen(true);
                   }}
-                  className="flex-1 py-2 bg-[#133513] hover:bg-[#1b4f1b] border border-emerald-700 text-emerald-300 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1"
+                  className="flex-1 py-2 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] text-xs font-bold rounded-lg transition flex items-center justify-center gap-1"
                 >
                   <Eye className="w-3.5 h-3.5" /> View Farm
                 </button>
@@ -1310,7 +1310,7 @@ function DashboardContent() {
                     setSelectedFarm3D(farm);
                     setIs3DModalOpen(true);
                   }}
-                  className="flex-1 py-2 bg-emerald-950 hover:bg-emerald-900 border border-emerald-600 text-emerald-400 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1"
+                  className="flex-1 py-2 bg-white hover:bg-[#F7F9F5] border border-[#2E7D32] text-[#1B5E20] text-xs font-bold rounded-lg transition flex items-center justify-center gap-1"
                 >
                   <Box className="w-3.5 h-3.5" /> View Evidence
                 </button>
@@ -1328,29 +1328,29 @@ function DashboardContent() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#0a1f0a] border border-emerald-600 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl"
+              className="bg-[#F7F9F5] border border-emerald-600 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl"
             >
-              <div className="flex items-center justify-between p-4 border-b border-emerald-800 bg-[#061406]">
+              <div className="flex items-center justify-between p-4 border-b border-[#E5EBE3] bg-[#F7F9F5]">
                 <div className="flex items-center gap-3">
-                  <Box className="w-6 h-6 text-emerald-400" />
+                  <Box className="w-6 h-6 text-[#5B6B5B]" />
                   <div>
                     <h3 className="text-lg font-bold text-white">{selectedFarm3D.name}</h3>
-                    <p className="text-xs text-emerald-400">{selectedFarm3D.crop_type} • {selectedFarm3D.area_hectares} ha</p>
+                    <p className="text-xs text-[#5B6B5B]">{selectedFarm3D.crop_type} • {selectedFarm3D.area_hectares} ha</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIs3DModalOpen(false)}
-                  className="p-2 hover:bg-emerald-900 rounded-lg text-emerald-400 transition"
+                  className="p-2 hover:bg-[#F7F9F5] rounded-lg text-[#5B6B5B] transition"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="flex gap-2 p-3 bg-[#061406] border-b border-emerald-900">
+              <div className="flex gap-2 p-3 bg-[#F7F9F5] border-b border-[#E5EBE3]">
                 <button
                   onClick={() => setModalTab("terrain")}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-                    modalTab === "terrain" ? "bg-emerald-600 text-slate-950" : "bg-[#133513] text-emerald-300"
+                    modalTab === "terrain" ? "bg-[#2E7D32] text-white" : "bg-white text-[#1B5E20] border border-[#E5EBE3]"
                   }`}
                 >
                   3D Extruded Terrain
@@ -1358,7 +1358,7 @@ function DashboardContent() {
                 <button
                   onClick={() => setModalTab("cube")}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-                    modalTab === "cube" ? "bg-emerald-600 text-slate-950" : "bg-[#133513] text-emerald-300"
+                    modalTab === "cube" ? "bg-[#2E7D32] text-white" : "bg-white text-[#1B5E20] border border-[#E5EBE3]"
                   }`}
                 >
                   3D Feature Cube

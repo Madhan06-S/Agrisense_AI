@@ -215,22 +215,22 @@ export default function FileClaimPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#061406] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+      <div className="min-h-screen bg-[#F7F9F5] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#5B6B5B]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#061406] text-[#e2ebd5]">
-      <div className="bg-[#0c240c] border-b border-emerald-800">
+    <div className="min-h-screen bg-[#F7F9F5] text-[#374151]">
+      <div className="bg-white border-b border-[#E5EBE3]">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center gap-3">
-          <Link href="/dashboard/farmer/claims" className="p-2 hover:bg-emerald-900 rounded-lg text-emerald-400">
+          <Link href="/dashboard/farmer/claims" className="p-2 hover:bg-[#F7F9F5] rounded-lg text-[#1B5E20]">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-base font-bold text-white">File New Insurance Claim</h1>
-            <p className="text-xs text-emerald-400">Step {step} of 4</p>
+            <h1 className="text-base font-bold text-[#1B5E20]">File New Insurance Claim</h1>
+            <p className="text-xs text-[#5B6B5B]">Step {step} of 4</p>
           </div>
         </div>
       </div>
@@ -242,23 +242,23 @@ export default function FileClaimPage() {
             <div 
               key={s}
               className={`h-2 flex-1 rounded-full ${
-                s < step ? "bg-emerald-500" : s === step ? "bg-emerald-400" : "bg-emerald-950 border border-emerald-800"
+                s < step ? "bg-[#2E7D32]" : s === step ? "bg-[#1B5E20]" : "bg-[#E5EBE3]"
               }`}
             />
           ))}
         </div>
 
-        <div className="bg-[#0c240c] border border-emerald-800/80 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
           {/* Step 1: Select Farm */}
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-white">1. SELECT INSURED FARM</h2>
-              <p className="text-xs text-emerald-400">Choose the insured farm parcel affected by crop loss</p>
+              <h2 className="text-lg font-bold text-[#1B5E20]">1. SELECT INSURED FARM</h2>
+              <p className="text-xs text-[#5B6B5B]">Choose the insured farm parcel affected by crop loss</p>
               
               {farms.length === 0 ? (
                 <div className="text-center py-8 border border-dashed border-emerald-700/60 rounded-xl">
-                  <p className="text-sm text-emerald-400">No farms registered.</p>
-                  <Link href="/dashboard/farmer/farms" className="text-sm text-emerald-300 underline mt-1 inline-block">
+                  <p className="text-sm text-[#5B6B5B]">No farms registered.</p>
+                  <Link href="/dashboard/farmer/farms" className="text-sm text-[#374151] underline mt-1 inline-block">
                     Register a farm first
                   </Link>
                 </div>
@@ -270,32 +270,32 @@ export default function FileClaimPage() {
                       onClick={() => handleSelectFarm(farm)}
                       className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
                         formData.farm_id === String(farm.id) 
-                          ? "border-emerald-400 bg-emerald-950/80 shadow-lg" 
-                          : "border-emerald-800/80 bg-[#061406] hover:border-emerald-600"
+                          ? "border-[#2E7D32] bg-[#E8F5E9]/50 shadow-sm" 
+                          : "border-[#E5EBE3] bg-white hover:border-[#2E7D32]"
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-emerald-600/30 border border-emerald-400 rounded-lg text-emerald-300">
+                          <div className="p-2.5 bg-[#E8F5E9] border border-[#2E7D32]/30 rounded-lg text-[#1B5E20]">
                             <MapPin className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="font-bold text-white text-base">{farm.name}</p>
-                            <p className="text-xs text-emerald-400">
+                            <p className="font-bold text-[#1B5E20] text-base">{farm.name}</p>
+                            <p className="text-xs text-[#5B6B5B]">
                               {farm.crop_type} • {farm.area_hectares} ha • Policy: {farm.insurance_policy_number || "INS-772819"}
                             </p>
                           </div>
                         </div>
                         {formData.farm_id === String(farm.id) && (
-                          <CheckCircle className="w-6 h-6 text-emerald-400" />
+                          <CheckCircle className="w-6 h-6 text-[#5B6B5B]" />
                         )}
                       </div>
 
                       {/* Snapshot Loaded Notice */}
                       {formData.farm_id === String(farm.id) && (
-                        <div className="mt-3 pt-3 border-t border-emerald-800/80 text-xs text-emerald-300 space-y-1">
-                          <p className="flex items-center gap-1 font-semibold text-emerald-400">
-                            <ShieldCheck className="w-4 h-4 text-emerald-400" /> Insured Parcel Snapshot Auto-Loaded
+                        <div className="mt-3 pt-3 border-t border-[#EEF2EE] text-xs text-[#374151] space-y-1">
+                          <p className="flex items-center gap-1 font-semibold text-[#5B6B5B]">
+                            <ShieldCheck className="w-4 h-4 text-[#5B6B5B]" /> Insured Parcel Snapshot Auto-Loaded
                           </p>
                           <p>Snapshot ID: SNAP-FARM{farm.id}-V1 (Boundary Version 1)</p>
                           <p>Insured Boundary Coords & Coverage: Active</p>
@@ -309,7 +309,7 @@ export default function FileClaimPage() {
               {/* Optional Field Presence Question */}
               {selectedFarm && (
                 <div className="pt-4 border-t border-emerald-800 space-y-3">
-                  <p className="text-sm font-bold text-white">Are you currently at the insured field?</p>
+                  <p className="text-sm font-bold text-[#1B5E20]">Are you currently at the insured field?</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
@@ -317,8 +317,8 @@ export default function FileClaimPage() {
                       onClick={handleCaptureClaimantGps}
                       className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
                         isAtFieldChoice === "yes"
-                          ? "bg-blue-600 text-white border-blue-400"
-                          : "bg-[#061406] text-blue-300 border-emerald-800 hover:border-emerald-600"
+                          ? "bg-[#2E7D32] text-white border-[#2E7D32]"
+                          : "bg-white text-[#374151] border-[#E5EBE3] hover:border-[#2E7D32]"
                       }`}
                     >
                       {gpsLoading ? "Capturing Location..." : "📍 YES, I'M AT THE FIELD"}
@@ -328,8 +328,8 @@ export default function FileClaimPage() {
                       onClick={() => setIsAtFieldChoice("no")}
                       className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
                         isAtFieldChoice === "no"
-                          ? "bg-emerald-600 text-slate-950 border-emerald-400 font-extrabold"
-                          : "bg-[#061406] text-emerald-300 border-emerald-800 hover:border-emerald-600"
+                          ? "bg-[#2E7D32] text-white border-[#2E7D32] font-extrabold"
+                          : "bg-[#061406] text-[#374151] border-emerald-800 hover:border-emerald-600"
                       }`}
                     >
                       🗺️ NO, I'M SOMEWHERE ELSE
@@ -337,7 +337,7 @@ export default function FileClaimPage() {
                   </div>
 
                   {isAtFieldChoice === "no" && (
-                    <p className="text-xs text-emerald-400 italic">
+                    <p className="text-xs text-[#5B6B5B] italic">
                       ℹ️ You can submit a claim even if you are not currently at the field.
                     </p>
                   )}
@@ -350,15 +350,15 @@ export default function FileClaimPage() {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-bold text-white">2. COVERAGE & DAMAGE DETAILS</h2>
-                <p className="text-xs text-emerald-400">Specify what happened and what caused the damage to your crop</p>
+                <h2 className="text-lg font-bold text-[#1B5E20]">2. COVERAGE & DAMAGE DETAILS</h2>
+                <p className="text-xs text-[#5B6B5B]">Specify what happened and what caused the damage to your crop</p>
               </div>
 
               {/* Question 1: What happened? (Coverage Situation) */}
-              <div className="bg-[#061406] border border-emerald-800 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-4 space-y-3">
+                <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-2">
                   <span>❓ What happened?</span>
-                  <span className="text-xs font-normal text-emerald-400">
+                  <span className="text-xs font-normal text-[#5B6B5B]">
                     (Insurance Scheme: {selectedFarm && "insurance_scheme" in selectedFarm && selectedFarm.insurance_scheme ? (selectedFarm as any).insurance_scheme : "PMFBY"})
                   </span>
                 </p>
@@ -381,8 +381,8 @@ export default function FileClaimPage() {
                         key={cov.id}
                         className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition ${
                           formData.description.includes(`Coverage: ${cov.id}`)
-                            ? "border-emerald-400 bg-emerald-950/80"
-                            : "border-emerald-900 bg-[#0a1f0a] hover:border-emerald-700"
+                            ? "border-[#2E7D32] bg-[#E8F5E9]/50"
+                            : "border-[#E5EBE3] bg-white hover:border-[#2E7D32]"
                         }`}
                         onClick={() => {
                           setFormData(prev => ({
@@ -396,11 +396,11 @@ export default function FileClaimPage() {
                           name="coverage_type"
                           value={cov.id}
                           defaultChecked={cov.id === "Standing Crop / Yield Loss"}
-                          className="mt-1 accent-emerald-500"
+                          className="mt-1 accent-[#2E7D32]"
                         />
                         <div>
-                          <p className="text-xs font-bold text-white">{cov.label}</p>
-                          <p className="text-[11px] text-emerald-400">{cov.desc}</p>
+                          <p className="text-xs font-bold text-[#1B5E20]">{cov.label}</p>
+                          <p className="text-[11px] text-[#5B6B5B]">{cov.desc}</p>
                         </div>
                       </label>
                     ))}
@@ -410,7 +410,7 @@ export default function FileClaimPage() {
 
               {/* Question 2: What caused the damage? */}
               <div className="space-y-3">
-                <p className="text-sm font-bold text-white">What caused the damage?</p>
+                <p className="text-sm font-bold text-[#1B5E20]">What caused the damage?</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     { id: "flood", label: "Flood / Heavy Rainfall", icon: <CloudRain className="w-5 h-5" /> },
@@ -425,14 +425,14 @@ export default function FileClaimPage() {
                       onClick={() => setFormData(prev => ({ ...prev, claim_type: type.id }))}
                       className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
                         formData.claim_type === type.id
-                          ? "border-emerald-400 bg-emerald-950/80"
-                          : "border-emerald-800/80 bg-[#061406] hover:border-emerald-600"
+                          ? "border-[#2E7D32] bg-[#E8F5E9]/50"
+                          : "border-[#E5EBE3] bg-white hover:border-[#2E7D32]"
                       }`}
                     >
-                      <div className="text-emerald-400">{type.icon}</div>
+                      <div className="text-[#5B6B5B]">{type.icon}</div>
                       <span className="text-xs font-semibold text-white">{type.label}</span>
                       {formData.claim_type === type.id && (
-                        <CheckCircle className="w-5 h-5 text-emerald-400 ml-auto" />
+                        <CheckCircle className="w-5 h-5 text-[#5B6B5B] ml-auto" />
                       )}
                     </div>
                   ))}
@@ -444,11 +444,11 @@ export default function FileClaimPage() {
           {/* Step 3: Evidence */}
           {step === 3 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-white">3. DAMAGE EVIDENCE & DESCRIPTION</h2>
-              <p className="text-xs text-emerald-400">Describe crop loss and upload photos</p>
+              <h2 className="text-lg font-bold text-[#1B5E20]">3. DAMAGE EVIDENCE & DESCRIPTION</h2>
+              <p className="text-xs text-[#5B6B5B]">Describe crop loss and upload photos</p>
               
               <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1.5">
+                <label className="block text-xs font-semibold text-[#374151] mb-1.5">
                   Damage Description <span className="text-emerald-600">(min 10 characters)</span>
                 </label>
                 <textarea
@@ -456,12 +456,12 @@ export default function FileClaimPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe the extent of damage, affected crop stage, etc."
                   rows={4}
-                  className="w-full px-4 py-2.5 bg-[#061406] border border-emerald-700/80 rounded-xl focus:outline-none focus:border-emerald-400 text-sm text-white placeholder-emerald-700"
+                  className="w-full px-4 py-2.5 bg-white border border-[#E5EBE3] rounded-xl focus:outline-none focus:border-[#2E7D32] text-sm text-[#374151] placeholder-[#6B7280]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1.5">
+                <label className="block text-xs font-semibold text-[#374151] mb-1.5">
                   Damage Photos <span className="text-emerald-600">(max 5)</span>
                 </label>
                 
@@ -472,7 +472,7 @@ export default function FileClaimPage() {
                 )}
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                   {previewUrls.map((url, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-emerald-700">
+                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-[#E5EBE3]">
                       <img src={url} alt="" className="w-full h-full object-cover" />
                       <button
                         onClick={() => removeImage(idx)}
@@ -484,9 +484,9 @@ export default function FileClaimPage() {
                   ))}
                   
                   {formData.images.length < 5 && (
-                    <label className="aspect-square rounded-xl border-2 border-dashed border-emerald-700 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-950/40 transition">
-                      <Upload className="w-5 h-5 text-emerald-400 mb-1" />
-                      <span className="text-[10px] text-emerald-400 font-bold">Add Photo</span>
+                    <label className="aspect-square rounded-xl border-2 border-dashed border-[#E5EBE3] flex flex-col items-center justify-center cursor-pointer hover:border-[#2E7D32] hover:bg-[#E8F5E9]/30 transition">
+                      <Upload className="w-5 h-5 text-[#5B6B5B] mb-1" />
+                      <span className="text-[10px] text-[#5B6B5B] font-bold">Add Photo</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -504,10 +504,10 @@ export default function FileClaimPage() {
           {/* Step 4: Review */}
           {step === 4 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-white">4. REVIEW & SUBMIT</h2>
-              <p className="text-xs text-emerald-400">Verify your claim details before submission</p>
+              <h2 className="text-lg font-bold text-[#1B5E20]">4. REVIEW & SUBMIT</h2>
+              <p className="text-xs text-[#5B6B5B]">Verify your claim details before submission</p>
               
-              <div className="bg-[#061406] border border-emerald-800 rounded-xl p-4 space-y-3 text-xs">
+              <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-4 space-y-3 text-xs">
                 <ReviewItem label="Insured Farm" value={selectedFarm?.name || "—"} />
                 <ReviewItem label="Crop" value={selectedFarm?.crop_type || "—"} />
                 <ReviewItem label="Insured Policy" value={selectedFarm?.insurance_policy_number || "INS-772819"} />
@@ -526,12 +526,12 @@ export default function FileClaimPage() {
             </div>
           )}
 
-          <div className="flex justify-between pt-4 border-t border-emerald-800/80">
+          <div className="flex justify-between pt-4 border-t border-[#EEF2EE]">
             {step > 1 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="px-4 py-2.5 text-xs font-bold text-emerald-300 hover:text-white bg-[#133513] border border-emerald-700 rounded-xl flex items-center gap-1"
+                className="px-4 py-2.5 text-xs font-bold text-[#374151] hover:text-white bg-[#133513] border border-[#E5EBE3] rounded-xl flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
@@ -544,7 +544,7 @@ export default function FileClaimPage() {
                 type="button"
                 onClick={() => setStep(step + 1)}
                 disabled={!canProceed()}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-slate-950 font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-lg"
+                className="px-5 py-2.5 bg-[#2E7D32] hover:bg-[#1B5E20] disabled:opacity-40 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors"
               >
                 Next <ArrowRight className="w-4 h-4" />
               </button>
@@ -553,7 +553,7 @@ export default function FileClaimPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-slate-950 font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-lg"
+                className="px-6 py-2.5 bg-[#2E7D32] hover:bg-[#1B5E20] disabled:opacity-40 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-sm transition-colors"
               >
                 {submitting ? (
                   <>
@@ -575,8 +575,8 @@ export default function FileClaimPage() {
 
 function ReviewItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between border-b border-emerald-900/60 pb-1.5">
-      <span className="text-emerald-400">{label}</span>
+    <div className="flex justify-between border-b border-[#EEF2EE] pb-1.5">
+      <span className="text-[#5B6B5B]">{label}</span>
       <span className="font-bold text-white text-right max-w-[65%]">{value}</span>
     </div>
   );

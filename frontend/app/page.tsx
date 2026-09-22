@@ -8,9 +8,9 @@ export default function HomePage() {
   const [lang, setLang] = useState<"en" | "hi">("en");
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col justify-between">
+    <div className="min-h-screen bg-[#F7F9F5] text-slate-800 font-sans flex flex-col justify-between">
       {/* 1. Official Government Header Bar */}
-      <div className="bg-[#1a4d2e] text-white text-xs px-6 py-2 flex justify-between items-center border-b border-[#166534]">
+      <div className="bg-[#E8F5E9] text-[#1B5E20] text-xs px-6 py-2 flex justify-between items-center border-b border-[#E5EBE3] font-medium">
         <div className="flex items-center gap-4">
           <span className="font-medium">भारत सरकार | Government of India</span>
           <span className="hidden md:inline text-slate-300">| Pradhan Mantri Fasal Bima Yojana (PMFBY) Portal</span>
@@ -22,7 +22,7 @@ export default function HomePage() {
           >
             English
           </button>
-          <span className="text-slate-500">|</span>
+          <span className="text-[#5B6B5B]">|</span>
           <button 
             onClick={() => setLang("hi")} 
             className={`hover:text-emerald-300 transition-colors ${lang === "hi" ? "font-bold text-emerald-400" : ""}`}
@@ -33,12 +33,12 @@ export default function HomePage() {
       </div>
 
       {/* 2. Main Portal Brand Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm py-4 px-6 md:px-12">
+      <header className="bg-white border-b border-[#E5EBE3] shadow-sm py-4 px-6 md:px-12">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4">
             {/* Ashoka Chakra SVG Icon */}
             <div className="shrink-0">
-              <svg className="w-12 h-12 text-[#166534]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="w-12 h-12 text-[#1B5E20]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="50" cy="50" r="45" strokeWidth="4" />
                 <circle cx="50" cy="50" r="10" fill="currentColor" />
                 {[...Array(24)].map((_, i) => {
@@ -58,10 +58,10 @@ export default function HomePage() {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#166534] tracking-tight leading-tight">
+              <h1 className="text-xl font-bold text-[#1B5E20] tracking-tight leading-tight">
                 AgriSense AI Portal
               </h1>
-              <p className="text-xs text-slate-500 font-semibold tracking-wide uppercase">
+              <p className="text-xs text-[#5B6B5B] font-semibold tracking-wide uppercase">
                 Pradhan Mantri Fasal Bima Yojana (PMFBY)
               </p>
               <p className="text-[10px] text-slate-400">
@@ -71,38 +71,38 @@ export default function HomePage() {
           </div>
           
           <div className="flex items-center gap-4 text-xs font-semibold">
-            <a href="#eligibility" className="text-slate-600 hover:text-[#166534]">Eligibility</a>
-            <a href="#documents" className="text-slate-600 hover:text-[#166534]">Required Documents</a>
-            <a href="#process" className="text-slate-600 hover:text-[#166534]">Assessment Process</a>
+            <a href="#eligibility" className="text-[#374151] hover:text-[#1B5E20]">Eligibility</a>
+            <a href="#documents" className="text-[#374151] hover:text-[#1B5E20]">Required Documents</a>
+            <a href="#process" className="text-[#374151] hover:text-[#1B5E20]">Assessment Process</a>
           </div>
         </div>
       </header>
 
       {/* 3. Hero Section (Left-aligned Clean Government Theme) */}
-      <section className="bg-white border-b border-slate-200 py-12 md:py-20 px-6 md:px-12">
+      <section className="bg-white border-b border-[#E5EBE3] py-12 md:py-20 px-6 md:px-12">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 bg-[#166534]/10 border border-[#166534]/30 px-3 py-1 rounded-full text-[#166534] text-xs font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 bg-[#2E7D32]/10 border border-[#166534]/30 px-3 py-1 rounded-full text-[#1B5E20] text-xs font-bold uppercase tracking-wider">
               Official e-Governance Service
             </div>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 leading-tight">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-[#1B5E20] leading-tight">
               PMFBY Digital Claim Settlement Portal
             </h2>
-            <p className="text-slate-600 text-base md:text-lg leading-relaxed max-w-xl">
+            <p className="text-[#374151] text-base md:text-lg leading-relaxed max-w-xl">
               AgriSense AI uses Sentinel-2 multispectral daily imagery, SAR flood indexing, and certified machine learning models to detect agricultural damage and process claims with audit trails.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <Link 
-                href="/login" 
-                className="bg-[#166534] hover:bg-emerald-800 text-white font-bold px-8 py-3.5 rounded-lg text-sm text-center shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                href="/login?role=farmer" 
+                className="bg-[#2E7D32] hover:bg-[#1B5E20] text-white font-bold px-8 py-3.5 rounded-lg text-sm text-center shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 Farmer Login
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link 
-                href="/login" 
-                className="border-2 border-[#166534] text-[#166534] hover:bg-[#166534]/5 font-bold px-8 py-3 rounded-lg text-sm text-center transition-all flex items-center justify-center gap-2"
+                href="/login?role=officer" 
+                className="border-2 border-[#166534] text-[#1B5E20] hover:bg-[#2E7D32]/5 font-bold px-8 py-3 rounded-lg text-sm text-center transition-all flex items-center justify-center gap-2"
               >
                 Officer Portal
                 <ArrowRight className="w-4 h-4" />
@@ -115,39 +115,117 @@ export default function HomePage() {
                 <div>
                   <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider">National Helpline Number</h4>
                   <p className="text-sm font-semibold text-slate-800 mt-0.5">
-                    For portal support or crop loss registration: <span className="text-[#166534] font-bold">1800-180-1551</span>
+                    For portal support or crop loss registration: <span className="text-[#1B5E20] font-bold">1800-180-1551</span>
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-2">
+          <div className="lg:col-span-5 bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-6 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-[#E5EBE3] pb-2">
               Notice Board & Quick Statistics
             </h3>
             <div className="space-y-3 text-xs">
-              <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-start gap-3">
+              <div className="p-3 bg-white border border-[#E5EBE3] rounded-lg flex items-start gap-3">
                 <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5" />
                 <div>
                   <span className="font-bold block text-slate-700">Daily Sentinel-2 Indexing</span>
-                  <span className="text-slate-500">Multispectral indices computed over active farms daily.</span>
+                  <span className="text-[#5B6B5B]">Multispectral indices computed over active farms daily.</span>
                 </div>
               </div>
-              <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-start gap-3">
+              <div className="p-3 bg-white border border-[#E5EBE3] rounded-lg flex items-start gap-3">
                 <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5" />
                 <div>
                   <span className="font-bold block text-slate-700">Parametric Insurance Triggers</span>
-                  <span className="text-slate-500">Automated payout scheduling triggered based on NDVI drop profiles.</span>
+                  <span className="text-[#5B6B5B]">Automated payout scheduling triggered based on NDVI drop profiles.</span>
                 </div>
               </div>
-              <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-start gap-3">
+              <div className="p-3 bg-white border border-[#E5EBE3] rounded-lg flex items-start gap-3">
                 <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5" />
                 <div>
                   <span className="font-bold block text-slate-700">Verification Time</span>
-                  <span className="text-slate-500">Evaluation pipeline completes within 5 minutes of imagery capture.</span>
+                  <span className="text-[#5B6B5B]">Evaluation pipeline completes within 5 minutes of imagery capture.</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3b. Role Portal Access Cards */}
+      <section className="bg-[#F7F9F5] border-b border-[#E5EBE3] py-10 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <h3 className="text-xl font-bold text-[#1B5E20]">Select Portal to Log In</h3>
+            <p className="text-xs text-[#5B6B5B] mt-1">Choose your designated role to enter the PMFBY AgriSense AI Portal</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Farmer Card */}
+            <div className="bg-white border border-[#E5EBE3] rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-12 h-12 bg-green-100 text-[#1B5E20] rounded-lg flex items-center justify-center font-bold text-xl">
+                  🌾
+                </div>
+                <h4 className="text-base font-bold text-[#1B5E20]">Farmer Portal</h4>
+                <p className="text-xs text-[#374151] leading-relaxed">
+                  File crop loss claims, track parametric satellite assessment, view XGBoost AI damage scores, and receive payouts via Aadhaar DBT.
+                </p>
+                <div className="text-[11px] font-mono text-slate-400 bg-[#F7F9F5] p-2 rounded border border-slate-100">
+                  Demo Mobile: <strong className="text-slate-700">9876543210</strong>
+                </div>
+              </div>
+              <Link
+                href="/login?role=farmer"
+                className="mt-6 w-full bg-[#2E7D32] hover:bg-[#1B5E20] text-white text-xs font-bold py-2.5 px-4 rounded-lg text-center transition-all flex items-center justify-center gap-2"
+              >
+                Farmer Login <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Officer Card */}
+            <div className="bg-white border border-[#E5EBE3] rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-12 h-12 bg-blue-100 text-blue-800 rounded-lg flex items-center justify-center font-bold text-xl">
+                  👮
+                </div>
+                <h4 className="text-base font-bold text-[#1B5E20]">Insurance Officer Portal</h4>
+                <p className="text-xs text-[#374151] leading-relaxed">
+                  Review claims queue, evaluate Traffic Light AI indicators (Red/Yellow/Green), inspect Sentinel-2 evidence, approve or reject claims.
+                </p>
+                <div className="text-[11px] font-mono text-slate-400 bg-[#F7F9F5] p-2 rounded border border-slate-100">
+                  Demo Mobile: <strong className="text-slate-700">9876543299</strong> | PIN: <strong className="text-slate-700">1234</strong>
+                </div>
+              </div>
+              <Link
+                href="/login?role=officer"
+                className="mt-6 w-full border-2 border-[#166534] text-[#1B5E20] hover:bg-[#2E7D32]/5 text-xs font-bold py-2 px-4 rounded-lg text-center transition-all flex items-center justify-center gap-2"
+              >
+                Officer Portal Login <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Collector Card */}
+            <div className="bg-white border border-[#E5EBE3] rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-lg flex items-center justify-center font-bold text-xl">
+                  🏛️
+                </div>
+                <h4 className="text-base font-bold text-[#1B5E20]">District Collector / Admin</h4>
+                <p className="text-xs text-[#374151] leading-relaxed">
+                  Monitor block-wise settlement metrics, audit log immutable compliance ledger, track disaster reconciliation statistics.
+                </p>
+                <div className="text-[11px] font-mono text-slate-400 bg-[#F7F9F5] p-2 rounded border border-slate-100">
+                  Demo Mobile: <strong className="text-slate-700">9876543211</strong> | PIN: <strong className="text-slate-700">1234</strong>
+                </div>
+              </div>
+              <Link
+                href="/login?role=officer"
+                className="mt-6 w-full border border-[#E5EBE3] text-slate-700 hover:bg-[#F7F9F5] text-xs font-bold py-2.5 px-4 rounded-lg text-center transition-all flex items-center justify-center gap-2"
+              >
+                Collector / Admin Sign In <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>
@@ -157,21 +235,21 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto py-12 px-6 grid grid-cols-1 md:grid-cols-2 gap-12">
         {/* Left: Eligibility */}
         <div id="eligibility" className="space-y-4">
-          <h3 className="text-lg font-bold text-[#166534] border-b border-slate-200 pb-2 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-[#1B5E20] border-b border-[#E5EBE3] pb-2 flex items-center gap-2">
             <Landmark className="w-5 h-5" />
             Scheme Eligibility & Details
           </h3>
-          <ul className="space-y-3 text-sm text-slate-600">
+          <ul className="space-y-3 text-sm text-[#374151]">
             <li className="flex items-start gap-2.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#166534] mt-2 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32] mt-2 shrink-0" />
               <span>All farmers including sharecroppers and tenant farmers growing notified crops in notified areas are eligible.</span>
             </li>
             <li className="flex items-start gap-2.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#166534] mt-2 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32] mt-2 shrink-0" />
               <span>Covers crop losses arising from non-preventable risks such as drought, dry spells, flood, inundation, pests, landslides, natural fire, lightning, storm, hailstorm, and cyclone.</span>
             </li>
             <li className="flex items-start gap-2.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#166534] mt-2 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32] mt-2 shrink-0" />
               <span>Parametric index triggers automatically verify crop loss based on geo-spatial boundaries without physical audit delay.</span>
             </li>
           </ul>
@@ -179,71 +257,71 @@ export default function HomePage() {
 
         {/* Right: Required Documents */}
         <div id="documents" className="space-y-4">
-          <h3 className="text-lg font-bold text-[#166534] border-b border-slate-200 pb-2 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-[#1B5E20] border-b border-[#E5EBE3] pb-2 flex items-center gap-2">
             <FileText className="w-5 h-5" />
             Required Documents for Registration
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+            <div className="p-3 bg-white border border-[#E5EBE3] rounded-lg">
               <span className="font-bold text-slate-700 block">Land Records</span>
-              <span className="text-slate-500">Land ownership document / Khasra number details.</span>
+              <span className="text-[#5B6B5B]">Land ownership document / Khasra number details.</span>
             </div>
-            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+            <div className="p-3 bg-white border border-[#E5EBE3] rounded-lg">
               <span className="font-bold text-slate-700 block">Aadhaar Card</span>
-              <span className="text-slate-500">Government identity verification linked with phone.</span>
+              <span className="text-[#5B6B5B]">Government identity verification linked with phone.</span>
             </div>
-            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+            <div className="p-3 bg-white border border-[#E5EBE3] rounded-lg">
               <span className="font-bold text-slate-700 block">Bank Passbook</span>
-              <span className="text-slate-500">Linked bank account details for direct benefit transfer (DBT).</span>
+              <span className="text-[#5B6B5B]">Linked bank account details for direct benefit transfer (DBT).</span>
             </div>
-            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+            <div className="p-3 bg-white border border-[#E5EBE3] rounded-lg">
               <span className="font-bold text-slate-700 block">Sowing Certificate</span>
-              <span className="text-slate-500">Official sowing certificate from Patwari or revenue officer.</span>
+              <span className="text-[#5B6B5B]">Official sowing certificate from Patwari or revenue officer.</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* 5. Process Pipeline Overview */}
-      <section id="process" className="bg-slate-100 border-t border-slate-200 py-12 px-6">
+      <section id="process" className="bg-[#F7F9F5] border-t border-[#E5EBE3] py-12 px-6">
         <div className="max-w-7xl mx-auto text-center space-y-8">
           <div>
             <h3 className="text-2xl font-bold text-slate-800">Satellite-Verified Parametric Evaluation</h3>
-            <p className="text-sm text-slate-500 mt-2">Transparent, automated claim assessment workflow</p>
+            <p className="text-sm text-[#5B6B5B] mt-2">Transparent, automated claim assessment workflow</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white border border-slate-200 p-6 rounded-xl text-center space-y-3">
+            <div className="bg-white border border-[#E5EBE3] p-6 rounded-xl text-center space-y-3">
               <div className="w-12 h-12 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center mx-auto">
                 <Satellite className="w-6 h-6" />
               </div>
               <h4 className="text-sm font-bold text-slate-800">1. Image Ingestion</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">Daily multispectral imagery from Sentinel-2 satellite is mapped onto registered farm boundaries.</p>
+              <p className="text-xs text-[#5B6B5B] leading-relaxed">Daily multispectral imagery from Sentinel-2 satellite is mapped onto registered farm boundaries.</p>
             </div>
-            <div className="bg-white border border-slate-200 p-6 rounded-xl text-center space-y-3">
+            <div className="bg-white border border-[#E5EBE3] p-6 rounded-xl text-center space-y-3">
               <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto">
                 <Shield className="w-6 h-6" />
               </div>
               <h4 className="text-sm font-bold text-slate-800">2. AI Scoring & Analytics</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">XGBoost models analyze vegetation drops (NDVI/VCI) and verify anomalies against regional weather records.</p>
+              <p className="text-xs text-[#5B6B5B] leading-relaxed">XGBoost models analyze vegetation drops (NDVI/VCI) and verify anomalies against regional weather records.</p>
             </div>
-            <div className="bg-white border border-slate-200 p-6 rounded-xl text-center space-y-3">
-              <div className="w-12 h-12 bg-emerald-100 text-[#166534] rounded-full flex items-center justify-center mx-auto">
+            <div className="bg-white border border-[#E5EBE3] p-6 rounded-xl text-center space-y-3">
+              <div className="w-12 h-12 bg-emerald-100 text-[#1B5E20] rounded-full flex items-center justify-center mx-auto">
                 <Landmark className="w-6 h-6" />
               </div>
               <h4 className="text-sm font-bold text-slate-800">3. Direct Wallet Transfer</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">Approved claim funds are disbursed via Aadhaar-enabled payment bridge straight to linked accounts.</p>
+              <p className="text-xs text-[#5B6B5B] leading-relaxed">Approved claim funds are disbursed via Aadhaar-enabled payment bridge straight to linked accounts.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* 6. Official Footer */}
-      <footer className="bg-white border-t border-slate-200 py-8 px-6 md:px-12 text-xs text-slate-500">
+      <footer className="bg-white border-t border-[#E5EBE3] py-8 px-6 md:px-12 text-xs text-[#5B6B5B]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-center border-b border-slate-100 pb-8 mb-6">
           <div className="space-y-2">
             <h4 className="font-bold text-slate-700">Ministry of Agriculture & Farmers Welfare</h4>
-            <p className="text-slate-500 leading-relaxed">
+            <p className="text-[#5B6B5B] leading-relaxed">
               Department of Agriculture & Farmers Welfare<br />
               Krishi Bhawan, New Delhi - 110001
             </p>
@@ -267,8 +345,8 @@ export default function HomePage() {
         
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-[#166534]" />
-            <span className="font-medium text-slate-600">AgriSense AI Portal — National e-Governance Division</span>
+            <Globe className="w-4 h-4 text-[#1B5E20]" />
+            <span className="font-medium text-[#374151]">AgriSense AI Portal — National e-Governance Division</span>
           </div>
           <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
             🇮🇳 Digital India | Nic Enabled

@@ -157,24 +157,24 @@ function CopilotDashboardContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 p-8 font-sans">
+    <div className="min-h-screen bg-[#F7F9F5] text-slate-800 p-8 font-sans">
       
       {/* Header */}
-      <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+      <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#E5EBE3] pb-4">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/farmer" className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-slate-600">
+          <Link href="/dashboard/farmer" className="p-2 bg-white border border-[#E5EBE3] rounded-lg hover:bg-slate-50 transition-colors text-[#374151]">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-lg font-bold text-slate-800">AgriSense AI Farmer Copilot</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Access personalized agronomy advice, crop health checks, and satellite credit limit estimates.</p>
+            <p className="text-xs text-[#6B7280] mt-0.5">Access personalized agronomy advice, crop health checks, and satellite credit limit estimates.</p>
           </div>
         </div>
         
         {/* Dropdown Selector */}
         {farms.length > 0 && (
           <div className="flex gap-2 items-center text-xs">
-            <span className="text-slate-500 font-semibold uppercase">Select Farm:</span>
+            <span className="text-[#6B7280] font-semibold uppercase">Select Farm:</span>
             <select
               value={selectedFarm?.id ?? ""}
               onChange={(e) => {
@@ -200,9 +200,9 @@ function CopilotDashboardContent() {
             
             {/* 3D Advisor Avatar */}
             {activeAdvisory && (
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#166534]" />
+              <div className="bg-white border border-[#E5EBE3] rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-[#E5EBE3] bg-slate-50 flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#1B5E20]" />
                   <span className="text-xs font-bold text-slate-700 uppercase">3D Agronomy Assistant</span>
                 </div>
                 <div className="h-[250px] relative bg-slate-50">
@@ -215,10 +215,10 @@ function CopilotDashboardContent() {
             )}
 
             {/* Daily Briefing Cards */}
-            <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
               <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                 <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Priority Crop Advisories</h3>
-                <span className="text-[10px] bg-[#166534]/10 text-[#166534] border border-[#166534]/20 px-2 py-0.5 rounded font-bold">
+                <span className="text-[10px] bg-[#2E7D32]/10 text-[#1B5E20] border border-[#166534]/20 px-2 py-0.5 rounded font-bold">
                   {advisoriesReport?.advisories?.length ?? 0} Recommendations Active
                 </span>
               </div>
@@ -229,21 +229,21 @@ function CopilotDashboardContent() {
                     key={idx}
                     onClick={() => setActiveAdvisoryIdx(idx)}
                     className={`p-4 rounded-lg border cursor-pointer transition flex justify-between items-center ${
-                      activeAdvisoryIdx === idx ? "bg-[#166534]/5 border-[#166534]/30" : "bg-white border-slate-200 hover:border-slate-300"
+                      activeAdvisoryIdx === idx ? "bg-[#2E7D32]/5 border-[#166534]/30" : "bg-white border-[#E5EBE3] hover:border-slate-300"
                     }`}
                   >
                     <div className="flex-grow pr-4">
                       <div className="flex gap-2 items-center mb-1">
-                        <Tractor className="w-4 h-4 text-[#166534]" />
+                        <Tractor className="w-4 h-4 text-[#1B5E20]" />
                         <h4 className="text-xs font-bold text-slate-800 capitalize">{adv.type} Advice</h4>
                       </div>
                       <p className="text-xs text-slate-700 leading-relaxed font-semibold">{adv.english}</p>
-                      <p className="text-xs text-slate-500 mt-1 font-semibold">{adv.hindi}</p>
+                      <p className="text-xs text-[#6B7280] mt-1 font-semibold">{adv.hindi}</p>
                     </div>
                     
                     <div>
                       {followedActions[adv.type] ? (
-                        <span className="flex gap-1 items-center px-2 py-1 rounded bg-emerald-50 text-[#166534] border border-[#166534]/20 text-[9px] font-bold uppercase whitespace-nowrap">
+                        <span className="flex gap-1 items-center px-2 py-1 rounded bg-emerald-50 text-[#1B5E20] border border-[#166534]/20 text-[9px] font-bold uppercase whitespace-nowrap">
                           <Check className="w-3.5 h-3.5" /> Applied
                         </span>
                       ) : (
@@ -252,7 +252,7 @@ function CopilotDashboardContent() {
                             e.stopPropagation();
                             handleFollowAction(adv.type);
                           }}
-                          className="py-1 px-3 rounded bg-[#166534] text-white text-[9px] font-bold uppercase hover:bg-emerald-800 transition"
+                          className="py-1 px-3 rounded bg-[#2E7D32] text-white text-[9px] font-bold uppercase hover:bg-[#1B5E20] transition"
                         >
                           Mark Applied
                         </button>
@@ -268,24 +268,24 @@ function CopilotDashboardContent() {
           <div className="lg:col-span-4 flex flex-col gap-6">
             
             {/* Interactive voice checker */}
-            <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2">
                 Voice Query Assistant
               </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-[#6B7280] leading-relaxed">
                 Click the microphone to speak a query in Hindi or English (simulated voice capture).
               </p>
               <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={handleVoiceQuery}
                   className={`w-14 h-14 rounded-full flex items-center justify-center transition-all border ${
-                    voiceActive ? "bg-red-500 border-red-600 text-white animate-pulse" : "bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600"
+                    voiceActive ? "bg-red-500 border-red-600 text-white animate-pulse" : "bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#374151]"
                   }`}
                 >
                   <Mic className="w-6 h-6" />
                 </button>
                 {voiceText && (
-                  <p className="text-xs leading-relaxed text-slate-600 font-mono text-center bg-slate-50 p-3 rounded-lg border border-slate-200 w-full">
+                  <p className="text-xs leading-relaxed text-[#374151] font-mono text-center bg-slate-50 p-3 rounded-lg border border-[#E5EBE3] w-full">
                     {voiceText}
                   </p>
                 )}
@@ -293,17 +293,17 @@ function CopilotDashboardContent() {
             </div>
 
             {/* Diagnostic leaf scan */}
-            <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-2">
-                <UploadCloud className="w-4 h-4 text-[#166534]" />
+                <UploadCloud className="w-4 h-4 text-[#1B5E20]" />
                 Leaf Disease Diagnostic
               </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-[#6B7280] leading-relaxed">
                 Upload a geo-tagged image of affected crop leaves to analyze pest/disease indicators.
               </p>
               <div className="flex flex-col items-center gap-3">
                 {leafPhoto ? (
-                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-slate-200">
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-[#E5EBE3]">
                     <img src={leafPhoto} alt="Uploaded Leaf" className="w-full h-full object-cover" />
                     <button onClick={() => { setLeafPhoto(null); setLeafResult(null); }} className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full">
                       <XAxis />
@@ -312,7 +312,7 @@ function CopilotDashboardContent() {
                 ) : (
                   <button
                     onClick={handleLeafUpload}
-                    className="w-full border-2 border-dashed border-slate-300 hover:border-slate-400 p-6 rounded-lg text-center text-xs text-slate-400 hover:text-slate-600 flex flex-col items-center gap-2"
+                    className="w-full border-2 border-dashed border-slate-300 hover:border-slate-400 p-6 rounded-lg text-center text-xs text-slate-400 hover:text-[#374151] flex flex-col items-center gap-2"
                   >
                     <UploadCloud className="w-6 h-6" />
                     <span>Upload Leaf Image</span>
@@ -329,9 +329,9 @@ function CopilotDashboardContent() {
 
             {/* 3D Credit Score */}
             {creditReport && (
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
-                  <Landmark className="w-4 h-4 text-[#166534]" />
+              <div className="bg-white border border-[#E5EBE3] rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-[#E5EBE3] bg-slate-50 flex items-center gap-2">
+                  <Landmark className="w-4 h-4 text-[#1B5E20]" />
                   <span className="text-xs font-bold text-slate-700 uppercase">Aadhaar Credit Rating</span>
                 </div>
                 <div className="h-[200px] relative bg-slate-50">
@@ -340,7 +340,7 @@ function CopilotDashboardContent() {
                 <div className="p-4 bg-white border-t border-slate-100 text-xs space-y-2">
                   <div className="flex justify-between font-bold">
                     <span>Credit Tier:</span>
-                    <span className="text-[#166534]">{creditReport.score_report.tier}</span>
+                    <span className="text-[#1B5E20]">{creditReport.score_report.tier}</span>
                   </div>
                   <div className="flex justify-between font-bold">
                     <span>Eligible Kisan Credit Loan:</span>
@@ -355,7 +355,7 @@ function CopilotDashboardContent() {
             )}
 
             {/* Mandi Prices */}
-            <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4">
+            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2">
                 Wheat Mandi Rates (Per Quintal)
               </h3>
