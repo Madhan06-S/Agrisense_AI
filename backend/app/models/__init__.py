@@ -15,6 +15,7 @@ from app.models.insurance_models import (
     PolicyCoverage,
     ParametricTriggerConfig,
 )
+from app.models.afii import GrazingZone, VCIReading, AFIIPolicy, AFIIPayout
 
 __all__ = [
     "User", "UserRole",
@@ -32,4 +33,8 @@ __all__ = [
     "InsurancePolicy",
     "PolicyCoverage",
     "ParametricTriggerConfig",
+    "GrazingZone",
+    "VCIReading",
+    "AFIIPolicy",
+    "AFIIPayout",
 ]

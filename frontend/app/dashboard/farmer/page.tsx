@@ -20,6 +20,7 @@ import {
   MapPin
 } from "lucide-react";
 import Link from "next/link";
+import AFIIPastoralInsurance from "@/components/AFIIPastoralInsurance";
 
 interface Claim {
   id: number;
@@ -592,6 +593,9 @@ export default function FarmerDashboard() {
             </div>
           </Link>
         </div>
+
+        {/* Pastoral Forage Index Insurance (AFII) */}
+        <AFIIPastoralInsurance />
 
         {/* Recent Claims */}
         <div className="bg-white border border-[#E5EBE3] rounded-lg">

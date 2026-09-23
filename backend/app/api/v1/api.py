@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import farms, claims, officer, satellite, catalog, quality, pipeline, preprocessing, timeseries, features, ml, decision, insurance, payments, compliance, copilot, credit, agronomy, auth, notifications
+from app.api.v1.endpoints import farms, claims, officer, satellite, catalog, quality, pipeline, preprocessing, timeseries, features, ml, decision, insurance, payments, compliance, copilot, credit, agronomy, auth, notifications, afii
 from app.pipeline.metrics import router as metrics_router
 
 api_router = APIRouter()
@@ -23,4 +23,5 @@ api_router.include_router(compliance.router, prefix="/compliance", tags=["compli
 api_router.include_router(copilot.router, prefix="/copilot", tags=["copilot"])
 api_router.include_router(credit.router, prefix="/credit", tags=["credit"])
 api_router.include_router(agronomy.router, prefix="/agronomy", tags=["agronomy"])
+api_router.include_router(afii.router, tags=["AFII Forage Insurance"])
 api_router.include_router(metrics_router, tags=["metrics"])

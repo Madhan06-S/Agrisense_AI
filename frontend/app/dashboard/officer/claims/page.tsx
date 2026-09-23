@@ -27,6 +27,33 @@ interface Claim {
   ai_score: number | null;
 }
 
+interface AFIIPayout {
+  id: number;
+  policy_id: number;
+  zone_id: number;
+  zone_name: string;
+  state: string;
+  district: string;
+  trigger_date: string;
+  vci_at_trigger: number;
+  payout_per_household: number;
+  total_payout: number;
+  households_covered: number;
+  status: string;
+  reference_id: string;
+}
+
+interface AFIIZone {
+  id: number;
+  name: string;
+  state: string;
+  district: string;
+  num_households: number;
+  livestock_count: number;
+  vci_score: number;
+  vci_status: string;
+}
+
 export default function OfficerClaimsQueue() {
   const router = useRouter();
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -34,6 +61,11 @@ export default function OfficerClaimsQueue() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+
+  // AFII Pastoral Forage Insurance States
+  const [afiiZones, setAfiiZones] = useState<AFIIZone[]>([]);
+  const [afiiPayouts, setAfiiPayouts] = useState<AFIIPayout[]>([]);
+  const [approvingPayoutId, setApprovingPayoutId] = useState<number | null>(null);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -45,7 +77,37 @@ export default function OfficerClaimsQueue() {
 
   useEffect(() => {
     fetchClaims();
+    fetchAFIIData();
   }, []);
+
+  async function fetchAFIIData() {
+    try {
+      const [zRes, pRes] = await Promise.all([
+        fetch("/api/v1/afii/zones"),
+        fetch("/api/v1/afii/payouts")
+      ]);
+      if (zRes.ok) setAfiiZones(await zRes.json());
+      if (pRes.ok) setAfiiPayouts(await pRes.json());
+    } catch (e) {
+      console.warn("Error fetching AFII data for officer:", e);
+    }
+  }
+
+  async function handleApproveAFIIPayout(payoutId: number) {
+    setApprovingPayoutId(payoutId);
+    try {
+      const res = await fetch(`/api/v1/afii/payouts/${payoutId}/approve`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        await fetchAFIIData();
+      }
+    } catch (e) {
+      console.error("Approve payout error:", e);
+    } finally {
+      setApprovingPayoutId(null);
+    }
+  }
 
   useEffect(() => {
     let result = claims;
@@ -273,6 +335,129 @@ export default function OfficerClaimsQueue() {
               </table>
             </div>
           )}
+        </div>
+
+        {/* 🌿 AFII (Area-Based Forage Index Insurance) Officer Queue */}
+        <div className="bg-white border border-[#E5EBE3] rounded-xl p-6 shadow-sm space-y-6">
+          <div className="border-b border-[#EEF2EE] pb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🌿</span>
+                <h2 className="text-base font-bold text-[#1B5E20]">AFII (Area-Based Forage Index Insurance) Queue</h2>
+                <span className="bg-[#E8F5E9] text-[#1B5E20] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-200">
+                  Parametric Index Engine
+                </span>
+              </div>
+              <p className="text-xs text-[#5B6B5B] mt-1">
+                Monitors satellite VCI for pastoralist grazing zones. Automatic parametric payout triggers when VCI drops below survival baseline (35%).
+              </p>
+            </div>
+          </div>
+
+          {/* AFII Payout Approvals Queue */}
+          <div>
+            <h3 className="text-sm font-semibold text-[#1B5E20] mb-3 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-[#1B5E20]" />
+              Payout Disburse Queue ({afiiPayouts.filter(p => p.status === "triggered").length} Pending Confirmation)
+            </h3>
+
+            {afiiPayouts.length === 0 ? (
+              <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-lg p-6 text-center text-xs text-[#5B6B5B]">
+                No AFII parametric payouts have been triggered yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-[#E5EBE3] rounded-lg">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#F7F9F5] border-b border-[#E5EBE3] text-left text-[#1B5E20]">
+                      <th className="p-3 font-semibold">Payout ID</th>
+                      <th className="p-3 font-semibold">Grazing Zone</th>
+                      <th className="p-3 font-semibold">Location</th>
+                      <th className="p-3 font-semibold">VCI at Trigger</th>
+                      <th className="p-3 font-semibold">Households</th>
+                      <th className="p-3 font-semibold">Total Payout</th>
+                      <th className="p-3 font-semibold">Status</th>
+                      <th className="p-3 font-semibold">Action / Audit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EEF2EE]">
+                    {afiiPayouts.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-50">
+                        <td className="p-3 font-mono font-bold text-[#1B5E20]">#{p.id}</td>
+                        <td className="p-3 font-medium text-[#1B5E20]">{p.zone_name}</td>
+                        <td className="p-3 text-slate-600">{p.district}, {p.state}</td>
+                        <td className="p-3 font-bold text-red-600">{p.vci_at_trigger}% (Baseline 35%)</td>
+                        <td className="p-3 text-slate-700">{p.households_covered}</td>
+                        <td className="p-3 font-bold text-[#1B5E20]">₹{p.total_payout.toLocaleString("en-IN")}</td>
+                        <td className="p-3">
+                          {p.status === "triggered" ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                              Triggered (Awaiting Disburse)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-[#1B5E20] border border-green-300">
+                              Paid & Disbursed
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {p.status === "triggered" ? (
+                            <button
+                              onClick={() => handleApproveAFIIPayout(p.id)}
+                              disabled={approvingPayoutId === p.id}
+                              className="px-3 py-1 bg-[#1B5E20] hover:bg-green-800 text-white rounded font-medium shadow-sm transition-colors flex items-center gap-1 text-xs"
+                            >
+                              {approvingPayoutId === p.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <CheckCircle className="w-3 h-3" />
+                              )}
+                              Confirm & Disburse
+                            </button>
+                          ) : (
+                            <span className="font-mono text-[10px] text-slate-500">
+                              Ref: {p.reference_id}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* AFII Grazing Zones List */}
+          <div>
+            <h3 className="text-sm font-semibold text-[#1B5E20] mb-3 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#1B5E20]" />
+              Monitored Pastoral Grazing Zones ({afiiZones.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {afiiZones.map((z) => (
+                <div key={z.id} className="border border-[#E5EBE3] rounded-lg p-4 bg-[#F7F9F5] space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-semibold text-xs text-[#1B5E20]">{z.name}</h4>
+                      <p className="text-[11px] text-slate-500">{z.district}, {z.state}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                      z.vci_status === "triggered" ? "bg-red-100 text-red-800 border-red-300" :
+                      z.vci_status === "watch" ? "bg-amber-100 text-amber-800 border-amber-300" :
+                      "bg-green-100 text-[#1B5E20] border-green-300"
+                    }`}>
+                      VCI: {z.vci_score}%
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 border-t border-[#E5EBE3] pt-2">
+                    <div>Households: <span className="font-semibold text-slate-800">{z.num_households}</span></div>
+                    <div>Livestock: <span className="font-semibold text-slate-800">{z.livestock_count}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </main>
     </div>
