@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import AFIIPastoralInsurance from "@/components/AFIIPastoralInsurance";
+import FloatingVoiceCopilot from "@/components/FloatingVoiceCopilot";
+import { translations, Language } from "@/lib/i18n";
 
 interface Claim {
   id: number;
@@ -65,6 +67,9 @@ interface EarlyWarning {
 
 export default function FarmerDashboard() {
   const router = useRouter();
+  const [lang, setLang] = useState<Language>("en");
+  const t = translations[lang];
+
   const [userName, setUserName] = useState("Farmer");
   const [claims, setClaims] = useState<Claim[]>([]);
   const [farms, setFarms] = useState<Farm[]>([]);
@@ -406,25 +411,98 @@ export default function FarmerDashboard() {
             <span className="font-semibold text-[#1B5E20]">AgriSense AI</span>
           </div>
           <div className="flex items-center gap-4 text-sm text-[#374151]">
-            <span>Welcome, <span className="font-medium text-[#1B5E20]">{userName}</span></span>
+            {/* Language Switcher */}
+            <div className="flex items-center gap-1 bg-[#F7F9F5] p-1 rounded-md border border-[#E5EBE3]">
+              <button
+                onClick={() => setLang("en")}
+                className={`px-2 py-0.5 rounded text-xs font-bold transition ${
+                  lang === "en" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
+                }`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLang("ta")}
+                className={`px-2 py-0.5 rounded text-xs font-bold transition ${
+                  lang === "ta" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
+                }`}
+              >
+                தமிழ்
+              </button>
+              <button
+                onClick={() => setLang("hi")}
+                className={`px-2 py-0.5 rounded text-xs font-bold transition ${
+                  lang === "hi" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
+                }`}
+              >
+                हिन्दी
+              </button>
+            </div>
+            <span>{t.welcome}, <span className="font-medium text-[#1B5E20]">{userName}</span></span>
             <button
               onClick={handleLogout}
               className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-[#E5EBE3] hover:bg-[#F7F9F5] hover:text-red-700 text-[#374151] rounded-md font-medium transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
-              Logout
+              {t.logout}
             </button>
           </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Welcome Banner */}
-        <div className="bg-white border border-[#E5EBE3] border-l-4 border-l-[#2E7D32] rounded-xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <h1 className="text-xl font-bold tracking-tight text-[#1B5E20]">AI-powered Agricultural Risk, Insurance & Agronomic Support Platform</h1>
-          <p className="text-sm text-[#5B6B5B] mt-1">
-            Identify insured farm land, monitor weather & crop risks, receive early warnings, and manage crop insurance claims.
-          </p>
+        {/* Welcome Banner with ONE Primary Action Above the Fold */}
+        <div className="bg-white border border-[#E5EBE3] border-l-4 border-l-[#2E7D32] rounded-xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-[#1B5E20]">{t.app_title} — {t.sub_title}</h1>
+            <p className="text-xs text-[#5B6B5B] mt-1">
+              Identify insured farm land, monitor weather & crop risks, receive early warnings, and manage crop insurance claims.
+            </p>
+          </div>
+          <div>
+            <Link
+              href={farms.length === 0 ? "/dashboard/farmer/farms" : "/dashboard/farmer/claims/new"}
+              className="inline-flex items-center justify-center gap-2 h-14 px-6 bg-[#1B5E20] hover:bg-green-800 text-white rounded-xl font-bold text-base shadow-md transition-all whitespace-nowrap min-w-[200px]"
+            >
+              {farms.length === 0 ? t.register_farm : t.file_claim}
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 4 Big Icon Cards Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link
+            href="/dashboard/farmer/farms"
+            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
+          >
+            <span className="text-3xl transition-transform group-hover:scale-110">🌾</span>
+            <span className="font-bold text-base text-[#1B5E20]">{t.my_farms}</span>
+          </Link>
+
+          <Link
+            href="/dashboard/farmer/claims"
+            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
+          >
+            <span className="text-3xl transition-transform group-hover:scale-110">📋</span>
+            <span className="font-bold text-base text-[#1B5E20]">{t.my_claims}</span>
+          </Link>
+
+          <Link
+            href="/dashboard/farmer/copilot"
+            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
+          >
+            <span className="text-3xl transition-transform group-hover:scale-110">🎙️</span>
+            <span className="font-bold text-base text-[#1B5E20]">{t.copilot}</span>
+          </Link>
+
+          <button
+            onClick={handleSendSMSAdvisory}
+            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
+          >
+            <span className="text-3xl transition-transform group-hover:scale-110">📱</span>
+            <span className="font-bold text-base text-[#1B5E20]">{t.sms_alerts}</span>
+          </button>
         </div>
 
         {/* 🌾 MY FARM RISK WIDGET (LIVE SATELLITE & WEATHER DATA) */}
@@ -726,6 +804,9 @@ export default function FarmerDashboard() {
             </div>
           </div>
         )}
+
+        {/* Floating Voice Copilot Button */}
+        <FloatingVoiceCopilot />
       </main>
     </div>
   );

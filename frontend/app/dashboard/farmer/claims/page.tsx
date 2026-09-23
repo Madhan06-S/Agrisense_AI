@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, FileText, Loader2, Plus, Shield, IndianRupee } from "lucide-react";
 import Link from "next/link";
+import FloatingVoiceCopilot from "@/components/FloatingVoiceCopilot";
 
 interface Claim {
   id: number;
@@ -181,7 +182,7 @@ export default function MyClaimsPage() {
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        <StatusBadge status={claim.status} />
+                        <StatusBadge status={claim.status} payoutAmount={claim.payout_amount} />
                         {claim.officer_remarks && (
                           <p className="text-[11px] text-[#374151] mt-1 bg-slate-50 p-1.5 rounded border border-slate-200">
                             <strong>Note:</strong> {claim.officer_remarks}
@@ -207,31 +208,36 @@ export default function MyClaimsPage() {
             </div>
           </div>
         )}
+
+        <FloatingVoiceCopilot />
       </main>
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, payoutAmount }: { status: string; payoutAmount?: number | null }) {
   const styles: Record<string, string> = {
-    submitted: "bg-blue-50 text-blue-700 border-blue-200",
-    under_review: "bg-amber-50 text-amber-700 border-amber-200",
-    approved: "bg-green-50 text-[#1B5E20] border-[#2E7D32]/30",
-    rejected: "bg-red-50 text-red-700 border-red-200",
-    payout_processed: "bg-blue-50 text-blue-700 border-blue-200",
+    submitted: "bg-amber-100 text-amber-800 border-amber-300",
+    under_review: "bg-blue-100 text-blue-800 border-blue-300",
+    approved: "bg-green-100 text-[#1B5E20] border-green-300",
+    payout_processed: "bg-green-100 text-[#1B5E20] border-green-300",
+    paid: "bg-green-100 text-[#1B5E20] border-green-300",
+    rejected: "bg-red-100 text-red-800 border-red-300",
   };
   
-  const labels: Record<string, string> = {
-    submitted: "Submitted",
-    under_review: "Under Review",
-    approved: "Approved",
-    rejected: "Rejected",
-    payout_processed: "Paid",
+  const getLabel = () => {
+    if (status === "approved" || status === "payout_processed" || status === "paid") {
+      return payoutAmount ? `✅ Paid ₹${payoutAmount.toLocaleString("en-IN")}` : "✅ Approved (Payout Ready)";
+    }
+    if (status === "submitted") return "⏳ Officer is checking";
+    if (status === "under_review") return "📋 Need more photos / Info";
+    if (status === "rejected") return "❌ Claim Rejected";
+    return status;
   };
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${styles[status] || styles.submitted}`}>
-      {labels[status] || status}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${styles[status] || styles.submitted}`}>
+      {getLabel()}
     </span>
   );
 }
