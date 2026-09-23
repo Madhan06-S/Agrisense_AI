@@ -24,6 +24,7 @@ def get_farm_weather(lat: float, lon: float) -> Dict:
         res = requests.get(url, timeout=10)
         res.raise_for_status()
         data = res.json()
+        print(f"[OPEN-METEO LIVE RESPONSE] lat={lat}, lon={lon} => {data.get('current')}")
 
         current = data.get("current", {})
         temp = current.get("temperature_2m", 30.0)

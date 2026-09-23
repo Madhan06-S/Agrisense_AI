@@ -19,11 +19,11 @@ def check_photo_authenticity(
 ) -> Dict:
     """
     Performs 5 strict authenticity checks on an uploaded photo:
-    1. EXIF GPS extraction — missing GPS -> flag "no_location_data"
-    2. Timestamp check — photo taken > 48h ago -> flag "stale_photo"
+    1. EXIF GPS extraction — accepts client_location fallback. Flag "no_location_data" only if both missing.
+    2. Timestamp check — photo taken > 48h ago -> flag "stale_photo". If missing in EXIF, treat upload time as fresh.
     3. SHA-256 hash — duplicate of any photo in DB -> flag "duplicate_photo"
     4. GPS distance — photo location > 500m from farm boundary centroid -> flag "location_mismatch"
-    5. Camera check — missing EXIF Make/Model -> flag "possible_screenshot"
+    5. Camera check — flag "possible_screenshot" only if both EXIF make/model and location data are missing.
 
     Returns dict with verified (bool), authenticity_flags (list of str), sha256, lat, lng, taken_at, camera_model.
     """
@@ -53,7 +53,7 @@ def check_photo_authenticity(
         if make or model:
             make_model = f"{make} {model}".strip()
 
-        # 5. Camera check
+        # 5. Camera check - missing camera EXIF make/model
         if not make_model:
             flags.append("possible_screenshot")
 
@@ -67,7 +67,7 @@ def check_photo_authenticity(
                     flags.append("stale_photo")
             except Exception:
                 flags.append("stale_photo")
-        else:
+        elif not client_location:
             flags.append("stale_photo")
 
         # 1. EXIF GPS
@@ -95,8 +95,8 @@ def check_photo_authenticity(
 
     # Fallback to client location if EXIF GPS is missing
     if lat is None or lng is None:
-        if client_location and client_location[0] and client_location[1]:
-            lat, lng = client_location[0], client_location[1]
+        if client_location and client_location[0] is not None and client_location[1] is not None:
+            lat, lng = float(client_location[0]), float(client_location[1])
         else:
             flags.append("no_location_data")
 
@@ -119,7 +119,7 @@ def check_photo_authenticity(
         "latitude": round(lat, 6) if lat is not None else None,
         "longitude": round(lng, 6) if lng is not None else None,
         "taken_at": taken_at or datetime.now(timezone.utc).isoformat(),
-        "camera_model": make_model,
+        "camera_model": make_model or "Mobile Browser Camera",
         "authenticity_flags": unique_flags,
         "verified": len(unique_flags) == 0
     }

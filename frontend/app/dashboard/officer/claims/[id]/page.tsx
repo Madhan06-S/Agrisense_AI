@@ -506,7 +506,7 @@ export default function OfficerClaimDetail() {
                   <CloudRain className="w-4 h-4 text-cyan-600" />
                   <p className="text-xs font-semibold text-[#1B5E20]">Weather Validation (Open-Meteo)</p>
                   <span className="text-[10px] bg-green-100 text-[#1B5E20] px-1.5 py-0.5 rounded border border-green-200 font-medium">
-                    LIVE API
+                    {claim.weather?.status === "live" ? "LIVE API" : "ESTIMATE"}
                   </span>
                 </div>
                 
@@ -514,28 +514,28 @@ export default function OfficerClaimDetail() {
                   <WeatherRow 
                     icon={<CloudRain className="w-3.5 h-3.5" />} 
                     label="Rainfall (48h)" 
-                    value={`${claim.weather?.rainfall_48h ?? 118}mm`}
+                    value={claim.weather?.rainfall_48h !== undefined ? `${claim.weather.rainfall_48h}mm` : "0mm"}
                   />
                   <WeatherRow 
                     icon={<Wind className="w-3.5 h-3.5" />} 
                     label="Wind Speed" 
-                    value={`${claim.weather?.wind_speed ?? 42} km/h`}
+                    value={claim.weather?.wind_speed !== undefined ? `${claim.weather.wind_speed} km/h` : "0 km/h"}
                   />
                   <WeatherRow 
                     icon={<Thermometer className="w-3.5 h-3.5" />} 
                     label="Temperature" 
-                    value={`${claim.weather?.temperature ?? 32}°C`}
+                    value={claim.weather?.temperature !== undefined ? `${claim.weather.temperature}°C` : "0°C"}
                   />
                   <WeatherRow 
                     icon={<Droplets className="w-3.5 h-3.5" />} 
                     label="Humidity" 
-                    value={`${claim.weather?.humidity ?? 68}%`}
+                    value={claim.weather?.humidity !== undefined ? `${claim.weather.humidity}%` : "0%"}
                   />
                 </div>
                 
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-[#5B6B5B]">
-                    Source: Open-Meteo Historical & Realtime API
+                    Source: {claim.weather?.source || "Open-Meteo Realtime API"}
                   </p>
                   <p className="text-xs font-bold text-[#1B5E20]">
                     Score: {assessment?.weather_score || 90}/100

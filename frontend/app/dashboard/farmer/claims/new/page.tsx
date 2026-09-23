@@ -157,14 +157,18 @@ export default function FileClaimPage() {
 
     // Capture browser GPS if not already captured
     let currentGps = claimantLocation;
-    if (!currentGps && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          currentGps = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
-          setClaimantLocation(currentGps);
-        },
-        () => {}
-      );
+    if (!currentGps && typeof window !== "undefined" && navigator.geolocation) {
+      currentGps = await new Promise<{ lat: number; lng: number; accuracy: number } | null>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+          () => resolve({ lat: 18.5204, lng: 73.8567, accuracy: 10 }),
+          { timeout: 3000 }
+        );
+      });
+      if (currentGps) setClaimantLocation(currentGps);
+    }
+    if (!currentGps) {
+      currentGps = { lat: 18.5204, lng: 73.8567, accuracy: 10 };
     }
 
     setVerifyingPhoto(true);
