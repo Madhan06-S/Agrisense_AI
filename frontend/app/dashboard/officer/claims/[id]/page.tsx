@@ -562,7 +562,12 @@ export default function OfficerClaimDetail() {
                 </h3>
                 <div className="space-y-3">
                   <ScoreBar label="Satellite (NDVI)" score={decision.breakdown.satellite} color="blue" />
-                  <ScoreBar label="Image Evidence" score={decision.breakdown.image} color="purple" />
+                  <ScoreBar 
+                    label="Image Evidence" 
+                    score={claim.images.length > 0 ? decision.breakdown.image : 0} 
+                    displayValue={claim.images.length > 0 ? `${decision.breakdown.image}/100` : "0/N/A"}
+                    color="purple" 
+                  />
                   <ScoreBar label="Weather" score={decision.breakdown.weather} color="cyan" />
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-100">
@@ -750,7 +755,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function ScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
+function ScoreBar({ label, score, displayValue, color }: { label: string; score: number; displayValue?: string; color: string }) {
   const colorMap: Record<string, string> = {
     blue: "bg-blue-500",
     purple: "bg-purple-500",
@@ -761,7 +766,7 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
     <div>
       <div className="flex justify-between text-xs mb-1">
         <span className="text-[#374151]">{label}</span>
-        <span className="font-semibold text-[#1B5E20]">{score}/100</span>
+        <span className="font-semibold text-[#1B5E20]">{displayValue || `${score}/100`}</span>
       </div>
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
         <div 

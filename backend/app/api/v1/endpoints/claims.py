@@ -23,7 +23,7 @@ from app.models.damage_assessment import DamageAssessment
 from app.schemas.claim import ClaimCreate, ClaimOut, ClaimDetailOut
 from app.compliance.audit_chain import AuditChainEngine
 from app.ml.fusion_engine import run_fusion_pipeline
-from app.ml.image_validator import validate_farmer_photo, ImageValidationError
+from app.ml.image_validator import validate_farmer_photo, ImageValidationError, check_photo_authenticity
 from app.integrations.gee_service import get_farm_ndvi_data, generate_ndvi_image_bytes
 from app.decision.engine import apply_traffic_light_decision
 

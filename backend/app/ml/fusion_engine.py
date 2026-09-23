@@ -50,13 +50,22 @@ async def run_fusion_pipeline(claim_id: int, db: AsyncSession):
     weather = await anyio.to_thread.run_sync(fetch_weather)
     weather_score = calculate_weather_score(weather, claim.claim_type)
     
-    # --- IMAGE SCORE (mock CV until real model) ---
-    image_scores = {
-        "flood": 88, "drought": 45, "pest": 25,
-        "cyclone": 70, "hailstorm": 55
-    }
-    image_score = image_scores.get(claim.claim_type.lower(), 50)
-    
+    # --- IMAGE SCORE ---
+    from app.models.claim_image import ClaimImage
+    stmt_img = select(ClaimImage).where(ClaimImage.claim_id == claim_id)
+    res_img = await db.execute(stmt_img)
+    images = res_img.scalars().all()
+
+    has_verified = any(getattr(img, "verified", False) for img in images)
+    if not images or not has_verified:
+        image_score = 0
+    else:
+        image_scores = {
+            "flood": 88, "drought": 45, "pest": 25,
+            "cyclone": 70, "hailstorm": 55
+        }
+        image_score = image_scores.get(str(claim.claim_type).lower(), 50)
+
     # Combined: satellite 40%, image 35%, weather 25%
     combined = int(satellite_score * 0.40 + image_score * 0.35 + weather_score * 0.25)
     

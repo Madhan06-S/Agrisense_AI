@@ -11,54 +11,38 @@ class WeatherServiceError(Exception):
 
 def get_farm_weather(lat: float, lon: float) -> Dict:
     """
-    Fetch real weather data from OpenWeatherMap for a farm location.
-    Returns: {rainfall_48h, temperature, wind_speed, humidity, weather_score, source}
+    Fetch real weather data from Open-Meteo API for a farm location (no API key required).
+    Returns: {rainfall_48h, temperature, wind_speed, humidity, source, status}
     """
-    if not OPENWEATHER_API_KEY:
-        # Fallback to realistic mock if no API key
-        return _fallback_weather(lat, lon)
-    
     try:
-        # 1. Current weather
-        current_url = (
-            f"https://api.openweathermap.org/data/2.5/weather"
-            f"?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
+        url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}"
+            f"&current=temperature_2m,relative_humidity_2m,wind_speed_10m"
+            f"&past_days=2&hourly=precipitation"
         )
-        current_res = requests.get(current_url, timeout=10)
-        current_res.raise_for_status()
-        current = current_res.json()
-        
-        temp = current.get("main", {}).get("temp", 30)
-        humidity = current.get("main", {}).get("humidity", 60)
-        wind_speed = current.get("wind", {}).get("speed", 10) * 3.6  # m/s to km/h
-        
-        # 2. 5-day forecast for 48h rainfall accumulation
-        forecast_url = (
-            f"https://api.openweathermap.org/data/2.5/forecast"
-            f"?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
-        )
-        forecast_res = requests.get(forecast_url, timeout=10)
-        forecast_res.raise_for_status()
-        forecast = forecast_res.json()
-        
-        # Sum rainfall from first 16 intervals (48 hours = 16 × 3-hour blocks)
-        rainfall_48h = 0.0
-        intervals = forecast.get("list", [])[:16]
-        for interval in intervals:
-            rain = interval.get("rain", {}).get("3h", 0)
-            rainfall_48h += rain
-        
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+
+        current = data.get("current", {})
+        temp = current.get("temperature_2m", 30.0)
+        humidity = current.get("relative_humidity_2m", 60)
+        wind_speed = current.get("wind_speed_10m", 12.0)
+
+        hourly_precip = data.get("hourly", {}).get("precipitation", [])
+        rainfall_48h = sum(hourly_precip[-48:]) if hourly_precip else 0.0
+
         return {
             "rainfall_48h": round(rainfall_48h, 1),
             "temperature": round(temp, 1),
             "wind_speed": round(wind_speed, 1),
             "humidity": humidity,
-            "source": "OpenWeatherMap",
+            "source": "Open-Meteo API",
             "status": "live"
         }
-        
     except Exception as e:
-        print(f"Weather API error: {e}")
+        print(f"Open-Meteo API error: {e}")
         return _fallback_weather(lat, lon)
 
 def calculate_weather_score(weather: Dict, claim_type: str) -> int:
