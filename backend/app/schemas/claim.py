@@ -54,19 +54,21 @@ class ClaimOut(BaseModel):
     farm_id: int
     farmer_id: int
     claim_type: ClaimType
-    description: Optional[str]
+    description: Optional[str] = None
     status: ClaimStatus
-    ai_damage_score: Optional[float]
-    ai_decision: Optional[str]
-    officer_remarks: Optional[str]
-    submitted_at: datetime
-    reviewed_at: Optional[datetime]
-    resolved_at: Optional[datetime]
+    ai_damage_score: Optional[float] = None
+    ai_decision: Optional[str] = None
+    officer_remarks: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
 
 class ClaimDetailOut(ClaimOut):
+    farmer_name: Optional[str] = None
+    farm_name: Optional[str] = None
     images: List[ClaimImageOut] = []
     damage_assessment: Optional[DamageAssessmentOut] = None
     fraud_flags: List[FraudFlagOut] = []

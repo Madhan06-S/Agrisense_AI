@@ -1,4 +1,5 @@
 import enum
+from typing import Optional
 from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, Boolean
@@ -65,6 +66,12 @@ class Claim(Base):
     coverage_type = Column(String(100), nullable=True)  # Standing Crop / Yield Loss, Prevented Sowing, etc.
     damage_type = Column(String(100), nullable=True)  # Flood, Drought, Cyclone, Hailstorm, Heavy Rain, Pest/Disease, Other
 
+    # Timestamps
+    submitted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+
     # Relationships
     farm = relationship("Farm", back_populates="claims")
     policy = relationship("InsurancePolicy", back_populates="claims")
@@ -73,6 +80,18 @@ class Claim(Base):
     damage_assessment = relationship("DamageAssessment", back_populates="claim", uselist=False, lazy="select")
     fraud_flags = relationship("FraudFlag", back_populates="claim", lazy="select")
     audit_blocks = relationship("AuditBlock", back_populates="claim", lazy="select", cascade="all, delete-orphan")
+
+    @property
+    def farmer_name(self) -> Optional[str]:
+        if "farmer" in self.__dict__ and self.farmer:
+            return getattr(self.farmer, "full_name", None) or getattr(self.farmer, "name", None) or getattr(self.farmer, "email", None)
+        return None
+
+    @property
+    def farm_name(self) -> Optional[str]:
+        if "farm" in self.__dict__ and self.farm:
+            return getattr(self.farm, "name", None)
+        return None
 
     def __repr__(self):
         return f"<Claim id={self.id} status={self.status} score={self.ai_damage_score}>"

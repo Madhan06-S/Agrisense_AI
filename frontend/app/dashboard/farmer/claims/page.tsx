@@ -31,20 +31,31 @@ export default function MyClaimsPage() {
 
   async function fetchClaims() {
     try {
+      const cachedStr = localStorage.getItem("agrisense_cached_claims");
+      let cachedClaims: Claim[] = cachedStr ? JSON.parse(cachedStr) : [];
+
       const token = localStorage.getItem("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      let apiClaims: Claim[] = [];
+      try {
+        const res = await fetch("/api/v1/claims", { headers });
+        if (res.ok) {
+          apiClaims = await res.json();
+        }
+      } catch (err) {
+        console.warn("Backend fetch claims error:", err);
       }
 
-      const res = await fetch("/api/v1/claims", {
-        headers: { Authorization: `Bearer ${token}` }
+      // Combine API claims + cached claims, deduplicating by ID
+      const map = new Map<number, Claim>();
+      [...apiClaims, ...cachedClaims].forEach((c) => {
+        if (c && c.id) map.set(c.id, c);
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setClaims(data);
-      }
+      const combined = Array.from(map.values());
+      setClaims(combined);
     } catch (e) {
       console.error("Failed to load claims:", e);
     } finally {

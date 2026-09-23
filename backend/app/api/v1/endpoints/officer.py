@@ -44,7 +44,7 @@ async def list_all_claims(
             selectinload(Claim.farmer),
             selectinload(Claim.farm),
         )
-        .order_by(Claim.submitted_at.desc())
+        .order_by(Claim.id.desc())
     )
 
     filters = []

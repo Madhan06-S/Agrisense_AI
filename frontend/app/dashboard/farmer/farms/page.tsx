@@ -458,7 +458,7 @@ function DashboardContent() {
       {/* Top Title Banner */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#E5EBE3]/60 pb-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white flex items-center gap-3 tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#1B5E20] flex items-center gap-3 tracking-tight">
             <LandPlot className="w-9 h-9 text-[#5B6B5B]" /> Insured Land Registration
           </h1>
           <p className="text-[#5B6B5B] text-sm mt-1">
@@ -486,7 +486,7 @@ function DashboardContent() {
                   key={`step-nav-${s.step}`}
                   className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all ${
                     isActive
-                      ? "bg-[#E8F5E9] border-2 border-[#2E7D32] text-white font-bold scale-105 shadow-lg"
+                      ? "bg-[#E8F5E9] border-2 border-[#2E7D32] text-[#1B5E20] font-bold scale-105 shadow-lg"
                       : isCompleted
                       ? "bg-[#E8F5E9] border border-[#2E7D32]/30 text-[#1B5E20]"
                       : "bg-[#F7F9F5] border border-[#E5EBE3]/40 text-[#1B5E20]"
@@ -517,18 +517,18 @@ function DashboardContent() {
                 <div className="w-16 h-16 bg-[#E8F5E9] border-2 border-[#2E7D32] rounded-full flex items-center justify-center mx-auto text-3xl">
                   🎉
                 </div>
-                <h2 className="text-2xl font-bold text-white">FARM REGISTERED</h2>
+                <h2 className="text-2xl font-bold text-[#1B5E20]">FARM REGISTERED</h2>
                 <p className="text-[#1B5E20] text-sm">Your insured farm has been successfully registered.</p>
               </div>
 
               <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-xl p-4 space-y-3 text-sm">
                 <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                   <span className="text-[#5B6B5B]">Farm:</span>
-                  <span className="font-bold text-white">{submittedFarmResult.name}</span>
+                  <span className="font-bold text-[#1B5E20]">{submittedFarmResult.name}</span>
                 </div>
                 <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                   <span className="text-[#5B6B5B]">Crop:</span>
-                  <span className="text-emerald-200">{submittedFarmResult.crop_type}</span>
+                  <span className="text-[#1B5E20] font-medium">{submittedFarmResult.crop_type}</span>
                 </div>
                 <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                   <span className="text-[#5B6B5B]">Area:</span>
@@ -536,11 +536,11 @@ function DashboardContent() {
                 </div>
                 <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                   <span className="text-[#5B6B5B]">Insurance Policy:</span>
-                  <span className="text-emerald-200">{submittedFarmResult.insurance_policy_number}</span>
+                  <span className="text-[#1B5E20] font-mono">{submittedFarmResult.insurance_policy_number}</span>
                 </div>
                 <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                   <span className="text-[#5B6B5B]">Land Record ID:</span>
-                  <span className="text-emerald-200">{submittedFarmResult.khasra_number}</span>
+                  <span className="text-[#1B5E20] font-mono">{submittedFarmResult.khasra_number}</span>
                 </div>
                 <div className="flex justify-between items-center pt-1">
                   <span className="text-[#5B6B5B]">Land verification:</span>
@@ -576,7 +576,7 @@ function DashboardContent() {
           {activeStep === 1 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                <h2 className="text-xl font-bold text-[#1B5E20] flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
                   <FileText className="w-5 h-5 text-[#5B6B5B]" /> STEP 1 — FARM DETAILS
                 </h2>
 
@@ -661,7 +661,7 @@ function DashboardContent() {
                             className="mt-0.5 accent-emerald-500"
                           />
                           <div>
-                            <p className="text-sm font-bold text-white">PMFBY</p>
+                            <p className="text-sm font-bold text-[#1B5E20]">PMFBY</p>
                             <p className="text-xs text-[#5B6B5B]">Crop Insurance</p>
                           </div>
                         </label>
@@ -680,7 +680,7 @@ function DashboardContent() {
                             className="mt-0.5 accent-emerald-500"
                           />
                           <div>
-                            <p className="text-sm font-bold text-white">RWBCIS</p>
+                            <p className="text-sm font-bold text-[#1B5E20]">RWBCIS</p>
                             <p className="text-xs text-[#5B6B5B]">Weather-Based Insurance</p>
                           </div>
                         </label>
@@ -693,7 +693,7 @@ function DashboardContent() {
                         <input
                           {...register("insurance_policy_number")}
                           placeholder="e.g. INS-772819"
-                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white placeholder-emerald-700 font-mono"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-[#374151] placeholder-[#6B7280] font-mono"
                         />
                         {errors.insurance_policy_number && (
                           <p className="text-red-400 text-[10px] mt-0.5">{errors.insurance_policy_number.message}</p>
@@ -704,7 +704,7 @@ function DashboardContent() {
                         <label className="block text-xs text-[#1B5E20] mb-1">Season</label>
                         <select
                           {...register("season")}
-                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-[#374151]"
                         >
                           <option value="Kharif">Kharif (Monsoon)</option>
                           <option value="Rabi">Rabi (Winter)</option>
@@ -718,7 +718,7 @@ function DashboardContent() {
                       <button
                         type="button"
                         onClick={() => setShowInsuranceDetails(!showInsuranceDetails)}
-                        className="text-xs text-[#5B6B5B] hover:text-emerald-200 underline flex items-center gap-1 font-semibold"
+                        className="text-xs text-[#5B6B5B] hover:text-[#1B5E20] underline flex items-center gap-1 font-semibold"
                       >
                         {showInsuranceDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         {showInsuranceDetails ? "Hide insurance details" : "View insurance details"}
@@ -749,7 +749,7 @@ function DashboardContent() {
                         <select
                           value={stateVal}
                           onChange={handleStateChange}
-                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-[#374151]"
                         >
                           {Object.keys(INDIA_LOCATION_DATA).map((st) => (
                             <option key={st} value={st}>
@@ -764,7 +764,7 @@ function DashboardContent() {
                         <select
                           value={districtVal}
                           onChange={handleDistrictChange}
-                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-[#374151]"
                         >
                           {availableDistricts.map((d) => (
                             <option key={d} value={d}>
@@ -781,7 +781,7 @@ function DashboardContent() {
                         <select
                           value={talukaVal}
                           onChange={handleTalukaChange}
-                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-[#374151]"
                         >
                           {availableTalukas.map((t) => (
                             <option key={t} value={t}>
@@ -796,7 +796,7 @@ function DashboardContent() {
                         <input
                           {...register("village")}
                           placeholder="e.g. Nagalur"
-                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-white placeholder-emerald-700"
+                          className="w-full bg-[#F7F9F5] border border-[#E5EBE3]/80 rounded-lg px-3 py-2 text-xs text-[#374151] placeholder-[#6B7280]"
                         />
                       </div>
                     </div>
@@ -823,7 +823,7 @@ function DashboardContent() {
           {activeStep === 2 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-5">
-                <h2 className="text-xl font-bold text-white border-b border-[#E5EBE3]/80 pb-3">
+                <h2 className="text-xl font-bold text-[#1B5E20] border-b border-[#E5EBE3]/80 pb-3">
                   WHERE IS YOUR FIELD?
                 </h2>
 
@@ -837,13 +837,13 @@ function DashboardContent() {
                     type="button"
                     onClick={handleSelectAtFieldChoice}
                     disabled={gpsLoading}
-                    className="w-full p-5 bg-[#F7F9F5] hover:bg-[#0e2c0e] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
+                    className="w-full p-5 bg-[#F7F9F5] hover:bg-[#E8F5E9] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
                   >
                     <div className="p-3 bg-blue-600/30 border border-blue-400 rounded-xl text-2xl shrink-0">
                       📍
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-white group-hover:text-[#1B5E20] transition">
+                      <h3 className="text-base font-bold text-[#1B5E20] transition">
                         I'M AT MY FIELD
                       </h3>
                       <p className="text-xs text-[#5B6B5B]">
@@ -856,13 +856,13 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={handleSelectSomewhereElseChoice}
-                    className="w-full p-5 bg-[#F7F9F5] hover:bg-[#0e2c0e] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
+                    className="w-full p-5 bg-[#F7F9F5] hover:bg-[#E8F5E9] border-2 border-emerald-600 rounded-2xl text-left transition flex items-start gap-4 shadow-lg group"
                   >
                     <div className="p-3 bg-[#E8F5E9] border border-[#2E7D32]/30 rounded-xl text-2xl shrink-0">
                       🗺️
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-white group-hover:text-[#1B5E20] transition">
+                      <h3 className="text-base font-bold text-[#1B5E20] transition">
                         MY FIELD IS SOMEWHERE ELSE
                       </h3>
                       <p className="text-xs text-[#5B6B5B]">
@@ -887,7 +887,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(1)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-white hover:bg-[#F7F9F5] border border-[#E5EBE3] text-[#374151] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back to Details
                   </button>
@@ -900,7 +900,7 @@ function DashboardContent() {
           {activeStep === 3 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                <h2 className="text-xl font-bold text-[#1B5E20] flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
                   <Globe className="w-5 h-5 text-[#5B6B5B]" /> STEP 3 — FIND YOUR FIELD
                 </h2>
 
@@ -914,7 +914,7 @@ function DashboardContent() {
                   <p className="text-[#1B5E20] font-bold">Location Summary:</p>
                   <p className="text-[#5B6B5B]">Insured Area: {villageVal}, {districtVal}, {stateVal}</p>
                   {farmerCurrentLocation && (
-                    <p className="text-blue-300">
+                    <p className="text-blue-700">
                       📍 Your Current Location: Captured ({farmerCurrentLocation.accuracy}m accuracy)
                     </p>
                   )}
@@ -924,7 +924,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(2)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-white hover:bg-[#F7F9F5] border border-[#E5EBE3] text-[#374151] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back
                   </button>
@@ -944,12 +944,12 @@ function DashboardContent() {
           {activeStep === 4 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                <h2 className="text-xl font-bold text-[#1B5E20] flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
                   <LandPlot className="w-5 h-5 text-[#5B6B5B]" /> STEP 4 — MARK & DRAW FIELD
                 </h2>
 
                 <div className="bg-white border border-[#E5EBE3] rounded-xl p-4 space-y-2">
-                  <p className="font-bold text-white text-base">📌 Is this your field?</p>
+                  <p className="font-bold text-[#1B5E20] text-base">📌 Is this your field?</p>
                   <p className="text-[#1B5E20] text-xs">
                     Tap around the edges of your field plot. The land center pin will be positioned automatically.
                   </p>
@@ -966,7 +966,7 @@ function DashboardContent() {
 
                   <button
                     type="button"
-                    className="py-3 px-4 bg-emerald-950/80 border border-emerald-600/80 text-[#1B5E20] font-bold rounded-xl flex items-center justify-center gap-2 text-sm shadow cursor-default"
+                    className="py-3 px-4 bg-[#E8F5E9] border border-[#2E7D32]/30 text-[#1B5E20] font-bold rounded-xl flex items-center justify-center gap-2 text-sm shadow cursor-default"
                   >
                     ✏️ TAP MAP TO DRAW
                   </button>
@@ -985,7 +985,7 @@ function DashboardContent() {
                       type="button"
                       onClick={() => setPoints(points.slice(0, -1))}
                       disabled={points.length === 0}
-                      className="px-3 py-2 bg-[#133513] hover:bg-[#1b4f1b] disabled:opacity-40 text-[#1B5E20] text-xs font-bold rounded-lg border border-[#E5EBE3] transition flex items-center gap-1"
+                      className="px-3 py-2 bg-white hover:bg-[#F7F9F5] disabled:opacity-40 text-[#374151] text-xs font-bold rounded-lg border border-[#E5EBE3] transition flex items-center gap-1"
                     >
                       <RotateCcw className="w-3.5 h-3.5" /> Undo
                     </button>
@@ -993,7 +993,7 @@ function DashboardContent() {
                       type="button"
                       onClick={() => setPoints([])}
                       disabled={points.length === 0}
-                      className="px-3 py-2 bg-red-950 hover:bg-red-900 disabled:opacity-40 text-red-200 text-xs font-bold rounded-lg border border-red-800 transition flex items-center gap-1"
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 disabled:opacity-40 text-red-700 text-xs font-bold rounded-lg border border-red-200 transition flex items-center gap-1"
                     >
                       <Trash2 className="w-3.5 h-3.5" /> Clear
                     </button>
@@ -1002,13 +1002,13 @@ function DashboardContent() {
 
                 {/* Validation Prompts */}
                 {points.length > 0 && points.length < 3 && (
-                  <p className="text-amber-400 text-xs bg-[#FFF8E7] p-2.5 rounded-lg border border-[#F1C40F]">
+                  <p className="text-amber-800 text-xs bg-[#FFF8E7] p-2.5 rounded-lg border border-[#F1C40F]">
                     Please mark at least 3 points around your field.
                   </p>
                 )}
 
                 {isSelfIntersecting && (
-                  <p className="text-red-400 text-xs bg-red-950/80 p-2.5 rounded-lg border border-red-700">
+                  <p className="text-red-700 text-xs bg-red-50 p-2.5 rounded-lg border border-red-200">
                     ⚠️ Some boundary lines cross each other. Please adjust the points.
                   </p>
                 )}
@@ -1017,7 +1017,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(3)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-white hover:bg-[#F7F9F5] border border-[#E5EBE3] text-[#374151] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back
                   </button>
@@ -1038,7 +1038,7 @@ function DashboardContent() {
           {activeStep === 5 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                <h2 className="text-xl font-bold text-[#1B5E20] flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
                   <ShieldCheck className="w-5 h-5 text-[#5B6B5B]" /> STEP 5 — AUTOMATIC LAND CHECK
                 </h2>
 
@@ -1051,7 +1051,7 @@ function DashboardContent() {
 
                     <div className="space-y-1">
                       <p className="text-xs text-[#5B6B5B] font-bold uppercase tracking-wider">FIELD AREA</p>
-                      <p className="text-3xl font-extrabold text-white">
+                      <p className="text-3xl font-extrabold text-[#1B5E20]">
                         {calculatedArea} <span className="text-lg text-[#5B6B5B] font-medium">hectares</span>
                       </p>
                       <p className="text-[#1B5E20] text-sm font-medium">
@@ -1061,13 +1061,13 @@ function DashboardContent() {
 
                     {/* Distance Status Badge (Informative badge, DOES NOT block) */}
                     {distanceEval.isAway && (
-                      <div className="p-3 bg-blue-950/80 border border-blue-600/80 rounded-xl text-blue-200 text-xs flex items-center gap-2 font-medium">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs flex items-center gap-2 font-medium">
                         <span>{distanceEval.message}</span>
                       </div>
                     )}
 
                     {/* Simple Checklist */}
-                    <div className="pt-2 border-t border-[#E5EBE3]/80 space-y-2 text-xs text-emerald-200">
+                    <div className="pt-2 border-t border-[#E5EBE3]/80 space-y-2 text-xs text-[#1B5E20]">
                       <div className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-[#5B6B5B]" /> Location found & mapped
                       </div>
@@ -1078,21 +1078,21 @@ function DashboardContent() {
                         <Check className="w-4 h-4 text-[#5B6B5B]" /> No conflict with registered fields detected
                       </div>
 
-                      <div className="pt-1 flex items-center justify-between text-amber-300">
+                      <div className="pt-1 flex items-center justify-between text-amber-800">
                         <span className="flex items-center gap-1.5 font-semibold">
                           🟡 Official land record check may still be required
                         </span>
                         <button
                           type="button"
                           onClick={() => setShowWhyPending(!showWhyPending)}
-                          className="text-[11px] underline text-amber-400 hover:text-amber-200"
+                          className="text-[11px] underline text-amber-800 hover:text-amber-900"
                         >
                           Why is this pending?
                         </button>
                       </div>
 
                       {showWhyPending && (
-                        <div className="p-3 bg-[#FFF8E7] border border-[#F1C40F] rounded-xl text-amber-200/90 text-xs leading-relaxed space-y-1">
+                        <div className="p-3 bg-[#FFF8E7] border border-[#F1C40F] rounded-xl text-amber-900 text-xs leading-relaxed space-y-1">
                           <p>
                             Your location and field boundary have been recorded. Official land ownership and parcel boundaries may need to be checked against government land records.
                           </p>
@@ -1101,8 +1101,8 @@ function DashboardContent() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-red-950/80 border border-red-700 rounded-2xl p-5 space-y-2 text-red-200 text-xs">
-                    <p className="font-bold text-sm text-red-400 flex items-center gap-2">
+                  <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-2 text-red-700 text-xs">
+                    <p className="font-bold text-sm text-red-800 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" /> Please resolve the following land check issues:
                     </p>
                     {!isPolygonClosed && <p>• Please draw around the complete field (minimum 3 points).</p>}
@@ -1116,7 +1116,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-                    className="text-xs text-[#5B6B5B] hover:text-emerald-200 underline flex items-center gap-1 font-semibold"
+                    className="text-xs text-[#5B6B5B] hover:text-[#1B5E20] underline flex items-center gap-1 font-semibold"
                   >
                     {showTechnicalDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     {showTechnicalDetails ? "Hide technical details" : "View technical details"}
@@ -1137,7 +1137,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(4)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-white hover:bg-[#F7F9F5] border border-[#E5EBE3] text-[#374151] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     <ArrowLeft className="w-4 h-4" /> Edit Boundary
                   </button>
@@ -1158,26 +1158,26 @@ function DashboardContent() {
           {activeStep === 6 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
+                <h2 className="text-xl font-bold text-[#1B5E20] flex items-center gap-2 border-b border-[#E5EBE3]/80 pb-3">
                   🔍 REVIEW MY FARM
                 </h2>
 
                 <div className="bg-white border border-[#E5EBE3] rounded-xl p-5 space-y-3 text-sm">
                   <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                     <span className="text-[#5B6B5B]">Farm Name:</span>
-                    <span className="font-bold text-white">{watch("name")}</span>
+                    <span className="font-bold text-[#1B5E20]">{watch("name")}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                     <span className="text-[#5B6B5B]">Crop:</span>
-                    <span className="text-emerald-200">{watch("crop_type")}</span>
+                    <span className="text-[#1B5E20] font-medium">{watch("crop_type")}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                     <span className="text-[#5B6B5B]">Sowing Date:</span>
-                    <span className="text-emerald-200">{watch("sowing_date")}</span>
+                    <span className="text-[#1B5E20] font-medium">{watch("sowing_date")}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                     <span className="text-[#5B6B5B]">Village:</span>
-                    <span className="text-emerald-200">{villageVal}, {districtVal}</span>
+                    <span className="text-[#1B5E20] font-medium">{villageVal}, {districtVal}</span>
                   </div>
                   <div className="flex justify-between border-b border-[#E5EBE3]/60 pb-2">
                     <span className="text-[#5B6B5B]">Land Record ID:</span>
@@ -1214,7 +1214,7 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(5)}
-                    className="px-4 py-3 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] font-bold rounded-xl transition flex items-center gap-1"
+                    className="px-4 py-3 bg-white hover:bg-[#F7F9F5] border border-[#E5EBE3] text-[#374151] font-bold rounded-xl transition flex items-center gap-1"
                   >
                     ← EDIT
                   </button>
@@ -1237,7 +1237,7 @@ function DashboardContent() {
         <div className="lg:col-span-6 space-y-6">
           <div className="bg-white border border-[#E5EBE3] rounded-2xl p-4 shadow-xl space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#1B5E20] flex items-center gap-2">
                 <LandPlot className="w-4 h-4 text-[#5B6B5B]" /> Satellite Boundary View
               </h3>
               <span className="text-xs text-[#5B6B5B] font-mono">Esri Satellite</span>
@@ -1265,7 +1265,7 @@ function DashboardContent() {
 
       {/* REGISTERED FARM CARDS LIST */}
       <div className="max-w-7xl mx-auto space-y-4 pt-6">
-        <h2 className="text-2xl font-extrabold text-white flex items-center gap-2">
+        <h2 className="text-2xl font-extrabold text-[#1B5E20] flex items-center gap-2">
           🌾 Registered Farm Boundaries ({farmsList.length})
         </h2>
 
@@ -1278,7 +1278,7 @@ function DashboardContent() {
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-[#1B5E20] flex items-center gap-2">
                     🌾 {farm.name}
                   </h3>
                   <span className="px-2.5 py-0.5 bg-[#E8F5E9] border border-[#2E7D32]/30 text-[#1B5E20] text-xs font-semibold rounded-full">
@@ -1287,11 +1287,11 @@ function DashboardContent() {
                 </div>
 
                 <div className="space-y-1.5 text-xs text-[#1B5E20]">
-                  <p>📍 Location: <span className="text-white font-medium">{farm.village}, {farm.district}</span></p>
+                  <p>📍 Location: <span className="text-[#374151] font-medium">{farm.village}, {farm.district}</span></p>
                   <p>📐 Area: <span className="text-[#5B6B5B] font-bold">{farm.area_hectares} hectares</span> ({calculateAreaAcres(farm.area_hectares || 0)} acres)</p>
-                  <p>🧾 Land Record: <span className="font-mono text-white">{farm.khasra_number || "223/4"}</span></p>
-                  <p>🛡 Insurance Scheme: <span className="font-bold text-white">{"insurance_scheme" in farm && farm.insurance_scheme ? farm.insurance_scheme : "PMFBY"}</span></p>
-                  <p>📄 Policy Number: <span className="font-mono text-white">{farm.insurance_policy_number || "INS-772819"}</span></p>
+                  <p>🧾 Land Record: <span className="font-mono text-[#374151]">{farm.khasra_number || "223/4"}</span></p>
+                  <p>🛡 Insurance Scheme: <span className="font-bold text-[#374151]">{"insurance_scheme" in farm && farm.insurance_scheme ? farm.insurance_scheme : "PMFBY"}</span></p>
+                  <p>📄 Policy Number: <span className="font-mono text-[#374151]">{farm.insurance_policy_number || "INS-772819"}</span></p>
                 </div>
 
                 <div className="pt-1 flex flex-wrap gap-1.5">
@@ -1311,9 +1311,9 @@ function DashboardContent() {
                     setSelectedFarm3D(farm);
                     setIs3DModalOpen(true);
                   }}
-                  className="flex-1 py-2 bg-[#133513] hover:bg-[#1b4f1b] border border-[#E5EBE3] text-[#1B5E20] text-xs font-bold rounded-lg transition flex items-center justify-center gap-1"
+                  className="flex-1 py-2 bg-white hover:bg-[#F7F9F5] border border-[#E5EBE3] text-[#374151] text-xs font-bold rounded-lg transition flex items-center justify-center gap-1"
                 >
-                  <Eye className="w-3.5 h-3.5" /> View Farm
+                  <Eye className="w-3.5 h-3.5 text-[#5B6B5B]" /> View Farm
                 </button>
                 <button
                   type="button"
@@ -1345,7 +1345,7 @@ function DashboardContent() {
                 <div className="flex items-center gap-3">
                   <Box className="w-6 h-6 text-[#5B6B5B]" />
                   <div>
-                    <h3 className="text-lg font-bold text-white">{selectedFarm3D.name}</h3>
+                    <h3 className="text-lg font-bold text-[#1B5E20]">{selectedFarm3D.name}</h3>
                     <p className="text-xs text-[#5B6B5B]">{selectedFarm3D.crop_type} • {selectedFarm3D.area_hectares} ha</p>
                   </div>
                 </div>

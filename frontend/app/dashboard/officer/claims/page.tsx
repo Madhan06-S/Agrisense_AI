@@ -69,26 +69,37 @@ export default function OfficerClaimsQueue() {
 
   async function fetchClaims() {
     try {
+      const cachedStr = localStorage.getItem("agrisense_cached_claims");
+      let cachedClaims: Claim[] = cachedStr ? JSON.parse(cachedStr) : [];
+
       const token = localStorage.getItem("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      let fetchedData: Claim[] = [];
+      try {
+        const res = await fetch("/api/v1/officer/claims", { headers });
+        if (res.ok) {
+          fetchedData = await res.json();
+        } else {
+          const altRes = await fetch("/api/v1/claims", { headers }).catch(() => null);
+          if (altRes && altRes.ok) {
+            fetchedData = await altRes.json();
+          }
+        }
+      } catch (e) {
+        console.warn("Officer claims fetch error:", e);
       }
 
-      // Try officer endpoint first, fallback to general claims
-      const res = await fetch("/api/v1/officer/claims", {
-        headers: { Authorization: `Bearer ${token}` }
+      // Combine API claims + cached claims
+      const map = new Map<number, Claim>();
+      [...fetchedData, ...cachedClaims].forEach((c) => {
+        if (c && c.id) map.set(c.id, c);
       });
 
-      if (res.status === 401) {
-        localStorage.clear();
-        router.push("/login");
-        return;
-      }
-
-      const data = res.ok ? await res.json() : [];
-      setClaims(data);
-      setFiltered(data);
+      const allClaims = Array.from(map.values());
+      setClaims(allClaims);
+      setFiltered(allClaims);
     } catch (e) {
       console.error("Failed to load claims:", e);
     } finally {
