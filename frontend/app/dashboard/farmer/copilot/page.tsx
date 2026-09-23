@@ -34,7 +34,7 @@ function CopilotDashboardContent() {
   const [leafResult, setLeafResult] = useState<string | null>(null);
   
   // Voice Copilot Web Speech API States
-  const [selectedLang, setSelectedLang] = useState<"en-IN" | "hi-IN">("hi-IN");
+  const [selectedLang, setSelectedLang] = useState<"en-IN" | "hi-IN" | "ta-IN">("hi-IN");
   const [isListening, setIsListening] = useState(false);
   const [hasSpeechSupport, setHasSpeechSupport] = useState(true);
   const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
@@ -212,9 +212,10 @@ function CopilotDashboardContent() {
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = selectedLang;
 
-      // Select voice matching language
+      // Select voice matching language (ta, hi, en)
       const voices = window.speechSynthesis.getVoices();
-      const matchingVoice = voices.find(v => v.lang.includes(selectedLang === "hi-IN" ? "hi" : "en"));
+      const langPrefix = selectedLang.startsWith("ta") ? "ta" : selectedLang.startsWith("hi") ? "hi" : "en";
+      const matchingVoice = voices.find(v => v.lang.toLowerCase().includes(langPrefix));
       if (matchingVoice) utterance.voice = matchingVoice;
 
       window.speechSynthesis.speak(utterance);
@@ -242,7 +243,9 @@ function CopilotDashboardContent() {
       if (res.ok) {
         const data = await res.json();
         const topAdv = data?.advisories?.[0];
-        const spokenMsg = selectedLang === "hi-IN" 
+        const spokenMsg = selectedLang === "ta-IN"
+          ? (topAdv?.tamil || topAdv?.english || "பயிர் ஆரோக்கியம் நன்றாக உள்ளது. நீர் வடிகால் வசதியை சோதிக்கவும்.")
+          : selectedLang === "hi-IN" 
           ? (topAdv?.hindi || topAdv?.english || "आपकी फसल का स्वास्थ्य अच्छा है। खेत में नमी की निगरानी रखें।")
           : (topAdv?.english || "Crop health parameters evaluated. Field drainage is clear.");
 
@@ -250,7 +253,9 @@ function CopilotDashboardContent() {
         speakText(spokenMsg);
         refetchAdvisories();
       } else {
-        const fallbackMsg = selectedLang === "hi-IN" 
+        const fallbackMsg = selectedLang === "ta-IN"
+          ? "பயிர் வளர்ச்சி சிறப்பாக உள்ளது. வரவிருக்கும் மழையால் நீர் பாய்ச்சுவதை தள்ளி வைக்கவும்."
+          : selectedLang === "hi-IN" 
           ? "आपकी फसल का स्वास्थ्य उत्तम है। आगामी बारिश के कारण सिंचाई स्थगित रखें।"
           : "Crop vigor is good. Postpone scheduled irrigation due to incoming rainfall.";
         setVoiceText(`AI Response: ${fallbackMsg}`);
@@ -384,7 +389,8 @@ function CopilotDashboardContent() {
                         <h4 className="text-xs font-bold text-slate-800 capitalize">{adv.type} Advice</h4>
                       </div>
                       <p className="text-xs text-slate-700 leading-relaxed font-semibold">{adv.english}</p>
-                      <p className="text-xs text-[#5B6B5B] mt-1 font-semibold">{adv.hindi}</p>
+                      {adv.hindi && <p className="text-xs text-[#5B6B5B] mt-0.5 font-semibold">{adv.hindi}</p>}
+                      {adv.tamil && <p className="text-xs text-emerald-800 mt-0.5 font-semibold">{adv.tamil}</p>}
                     </div>
                     
                     <div>
@@ -425,6 +431,14 @@ function CopilotDashboardContent() {
                 <div className="flex items-center gap-1 bg-[#F7F9F5] p-1 rounded-md border border-[#E5EBE3]">
                   <Globe className="w-3 h-3 text-[#5B6B5B]" />
                   <button
+                    onClick={() => setSelectedLang("ta-IN")}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
+                      selectedLang === "ta-IN" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
+                    }`}
+                  >
+                    தமிழ்
+                  </button>
+                  <button
                     onClick={() => setSelectedLang("hi-IN")}
                     className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
                       selectedLang === "hi-IN" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
@@ -446,7 +460,7 @@ function CopilotDashboardContent() {
               {hasSpeechSupport ? (
                 <div className="flex flex-col items-center gap-3">
                   <p className="text-xs text-[#5B6B5B] text-center">
-                    Speak your crop question in {selectedLang === "hi-IN" ? "Hindi (हिन्दी)" : "English"}:
+                    Speak your crop question in {selectedLang === "ta-IN" ? "Tamil (தமிழ்)" : selectedLang === "hi-IN" ? "Hindi (हिन्दी)" : "English"}:
                   </p>
 
                   <div className="flex items-center gap-3">

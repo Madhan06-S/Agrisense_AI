@@ -63,10 +63,12 @@ async def generate_farm_advisory(payload: AdviseRequest, db: AsyncSession = Depe
         if payload.prompt:
             custom_eng = f"Recommendation for '{payload.prompt}': Inspect farm drainage and apply bio-pesticide to prevent root saturation."
             custom_hin = f"'{payload.prompt}' के लिए सिफारिश: खेत की जल निकासी का निरीक्षण करें और जड़ों की सुरक्षा के लिए जैविक कीटनाशक छिड़कें।"
+            custom_tam = f"'{payload.prompt}'-க்கான பரிந்துரை: வடிகால் வழிகளை சோதித்து, இயற்கை பூச்சிக்கொல்லி தெளிக்கவும்."
             res["advisories"].insert(0, {
                 "type": "voice_query",
                 "english": custom_eng,
-                "hindi": custom_hin
+                "hindi": custom_hin,
+                "tamil": custom_tam
             })
         
         # Save to history

@@ -84,17 +84,20 @@ class AgronomyAdvisor:
                 {
                     "type": "irrigation",
                     "english": "[HIGH] Delay scheduled irrigation. Heavy rain forecast in 2 days will saturate soil naturally. [Immediate]",
-                    "hindi": "[उच्च तीव्रता] सिंचाई स्थगित करें। २ दिनों में भारी वर्षा से मिट्टी प्राकृतिक रूप से सिंचित होगी। [तत्काल]"
+                    "hindi": "[उच्च तीव्रता] सिंचाई स्थगित करें। २ दिनों में भारी वर्षा से मिट्टी प्राकृतिक रूप से सिंचित होगी। [तत्काल]",
+                    "tamil": "[மிகவும் முக்கியம்] நீர் பாய்ச்சுவதை தள்ளிவைக்கவும். 2 நாட்களில் கனமழை மண்ணை இயற்கையாகவே நனைக்கும். [உடனடியாக]"
                 },
                 {
                     "type": "pest",
                     "english": "[MEDIUM] Apply neem-based pesticide spray. Mitigates brown plant hopper risk from high humidity. [Next 48 hours]",
-                    "hindi": "[मध्यम तीव्रता] नीम आधारित कीटनाशक का छिड़काव करें। उच्च आर्द्रता से हॉपर कीट के खतरे को कम करेगा। [अगले ४८ घंटे]"
+                    "hindi": "[मध्यम तीव्रता] नीम आधारित कीटनाशक का छिड़काव करें। उच्च आर्द्रता से हॉपर कीट के खतरे को कम करेगा। [अगले ४८ घंटे]",
+                    "tamil": "[நடுத்தர] வேப்ப எண்ணெய் பூச்சிக்கொல்லி தெளிக்கவும். அதிக ஈரப்பதத்தால் ஏற்படும் தண்டுப்பூச்சி அபாயத்தை குறைக்கும். [அடுத்த 48 மணி நேரத்தில்]"
                 },
                 {
                     "type": "fertilizer",
                     "english": "[LOW] Apply nitrogen-based urea top-dressing. Promotes crop canopy development. [Next 5 days]",
-                    "hindi": "[निम्न तीव्रता] नाइट्रोजन आधारित यूरिया का प्रयोग करें। फसल के शामियाना विकास को बढ़ावा देगा। [अगले ५ दिन]"
+                    "hindi": "[निम्न तीव्रता] नाइट्रोजन आधारित यूरिया का प्रयोग करें। फसल के शामियाना विकास को बढ़ावा देगा। [अगले ५ दिन]",
+                    "tamil": "[குறைந்த] நைட்ரஜன் யூரியா உரம் இடவும். பயிரின் தழை வளர்ச்சியை அதிகரிக்கும். [அடுத்த 5 நாட்களில்]"
                 }
             ]
         }
@@ -108,13 +111,15 @@ class AgronomyAdvisor:
             advisories.append({
                 "type": "irrigation",
                 "english": "[CRITICAL] Postpone all irrigation. High precipitation forecast in 48 hours will cause over-saturation.",
-                "hindi": "[गंभीर] सिंचाई स्थगित करें। अगले ४८ घंटों में भारी वर्षा से जलभराव हो सकता है।"
+                "hindi": "[गंभीर] सिंचाई स्थगित करें। अगले ४८ घंटों में भारी वर्षा से जलभराव हो सकता है।",
+                "tamil": "[மிகவும் முக்கியம்] பாசனத்தை தள்ளிவைக்கவும். அடுத்த 48 மணி நேரத்தில் கனமழை பெய்ய வாய்ப்புள்ளது."
             })
         else:
             advisories.append({
                 "type": "irrigation",
                 "english": "[LOW] Water fields in evening. Minimizes evaporation loss during hot midday hours.",
-                "hindi": "[कम] शाम के समय खेतों में पानी दें। गर्म दोपहर के दौरान वाष्पीकरण के नुकसान को कम करेगा।"
+                "hindi": "[कम] शाम के समय खेतों में पानी दें। गर्म दोपहर के दौरान वाष्पीकरण के नुकसान को कम करेगा।",
+                "tamil": "[குறைந்த] மாலை வேளையில் நீர் பாய்ச்சவும். நண்பகல் வெப்ப நீராவியாவதை தடுக்கும்."
             })
             
         # 2. Pest & Disease
@@ -122,13 +127,15 @@ class AgronomyAdvisor:
             advisories.append({
                 "type": "pest",
                 "english": "[HIGH] Monitor crop base for Brown Plant Hopper. High humidity increases infestation risk.",
-                "hindi": "[उच्च] फसल के तने में हॉपर कीट की निगरानी करें। अत्यधिक नमी कीटों का खतरा बढ़ाती है।"
+                "hindi": "[उच्च] फसल के तने में हॉपर कीट की निगरानी करें। अत्यधिक नमी कीटों का खतरा बढ़ाती है।",
+                "tamil": "[அதிக] பயிரின் அடிப்பகுதியில் தண்டுப்பூச்சி தாக்குதலை கண்காணிக்கவும். ஈரப்பதம் பூச்சி அபாயத்தை அதிகரிக்கும்."
             })
         else:
             advisories.append({
                 "type": "pest",
                 "english": "[MEDIUM] Spray bio-pesticides. Prevents early-stage leaf folder infestation.",
-                "hindi": "[मध्यम] जैविक कीटनाशकों का छिड़काव करें। शुरुआती पत्तियों के फटने को रोकता है।"
+                "hindi": "[मध्यम] जैविक कीटनाशकों का छिड़काव करें। शुरुआती पत्तियों के फटने को रोकता है।",
+                "tamil": "[நடுத்தர] இயற்கை பூச்சிக்கொல்லி தெளிக்கவும். இலை சுருட்டு புழு தாக்குதலை தடுக்கும்."
             })
             
         # 3. Fertilizer
@@ -136,13 +143,15 @@ class AgronomyAdvisor:
             advisories.append({
                 "type": "fertilizer",
                 "english": "[MEDIUM] Nitrogen deficiency detected. Apply 45kg nitrogen fertilizer top-dressing. [Next 3 days]",
-                "hindi": "[मध्यम] नाइट्रोजन की कमी पाई गई। ४५ किलोग्राम नाइट्रोजन उर्वरक डालें। [अगले ३ दिन]"
+                "hindi": "[मध्यम] नाइट्रोजन की कमी पाई गई। ४५ किलोग्राम नाइट्रोजन उर्वरक डालें। [अगले ३ दिन]",
+                "tamil": "[நடுத்தர] நைட்ரஜன் குறைபாடு கண்டறியப்பட்டது. 45 கிலோ யூரியா உரம் இடவும். [அடுத்த 3 நாட்கள்]"
             })
         else:
             advisories.append({
                 "type": "fertilizer",
                 "english": "[LOW] Crop vigor is adequate. Maintain regular weeding to prevent nutrient loss.",
-                "hindi": "[निम्न] फसल का स्वास्थ्य उत्तम है। खरपतवार नियंत्रण जारी रखें ताकि पोषण बना रहे।"
+                "hindi": "[निम्न] फसल का स्वास्थ्य उत्तम है। खरपतवार नियंत्रण जारी रखें ताकि पोषण बना रहे।",
+                "tamil": "[குறைந்த] பயிர் வளர்ச்சி நன்றாக உள்ளது. களைகளை அகற்றி ஊட்டச்சத்து இழப்பை தடுக்கவும்."
             })
             
         return {

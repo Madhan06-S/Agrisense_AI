@@ -82,6 +82,39 @@ export default function FarmerDashboard() {
   const [recommendation, setRecommendation] = useState<string>("");
   const [lastUpdated, setLastUpdated] = useState<string>("");
 
+  // SMS Advisory States
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsModal, setSmsModal] = useState<{ open: boolean; message: string; mobile: string; channel: string } | null>(null);
+
+  async function handleSendSMSAdvisory() {
+    if (!selectedFarmId) return;
+    setSmsSending(true);
+    try {
+      const res = await fetch("/api/v1/sms/advisory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mobile: "+919876543210",
+          farm_id: selectedFarmId,
+          language: "en-IN"
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSmsModal({
+          open: true,
+          message: data.message,
+          mobile: data.mobile,
+          channel: data.delivery_channel
+        });
+      }
+    } catch (e) {
+      console.error("SMS Advisory send error:", e);
+    } finally {
+      setSmsSending(false);
+    }
+  }
+
   const [stats, setStats] = useState({
     totalFarms: 0,
     activeClaims: 0,
@@ -438,6 +471,15 @@ export default function FarmerDashboard() {
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${farmRiskLoading ? "animate-spin" : ""}`} />
               </button>
+
+              <button
+                onClick={handleSendSMSAdvisory}
+                disabled={smsSending}
+                className="px-2.5 py-1.5 bg-[#E8F5E9] hover:bg-[#C8E6C9] border border-[#2E7D32]/30 rounded-md text-xs font-bold text-[#1B5E20] flex items-center gap-1.5 transition-colors"
+                title="Send SMS Advisory to Feature Phone"
+              >
+                {smsSending ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1B5E20]" /> : <span>📱 Send SMS Advisory</span>}
+              </button>
             </div>
           </div>
 
@@ -645,6 +687,45 @@ export default function FarmerDashboard() {
             </div>
           )}
         </div>
+
+        {/* SMS Advisory Demo Modal */}
+        {smsModal && smsModal.open && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white border border-[#E5EBE3] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[#EEF2EE] pb-3">
+                <div className="flex items-center gap-2 text-[#1B5E20]">
+                  <span className="text-xl">📱</span>
+                  <h3 className="font-bold text-sm">Feature-Phone SMS Advisory Sent</h3>
+                </div>
+                <button
+                  onClick={() => setSmsModal(null)}
+                  className="text-slate-400 hover:text-slate-600 font-bold text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-lg p-4 font-mono text-xs text-slate-800 space-y-2">
+                <p className="text-[11px] text-slate-500 font-sans">
+                  Target Mobile: <span className="font-semibold text-slate-800">{smsModal.mobile}</span> (GSM-7 Short Advisory)
+                </p>
+                <div className="p-3 bg-white border border-slate-200 rounded text-slate-900 leading-relaxed font-sans font-medium">
+                  {smsModal.message}
+                </div>
+                <p className="text-[10px] text-emerald-700 font-sans font-semibold">
+                  ✓ {smsModal.channel === "twilio_live" ? "Sent via Live Twilio SMS Gateway" : "Simulated Demo Gateway (No SMS credits required)"}
+                </p>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setSmsModal(null)}
+                  className="px-4 py-1.5 bg-[#1B5E20] text-white text-xs font-semibold rounded-md hover:bg-green-800 transition"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

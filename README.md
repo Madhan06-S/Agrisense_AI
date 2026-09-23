@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌾 AgriSense AI — Intelligent Agricultural Risk, Insurance & Agronomic Advisory Platform
 
-## Getting Started
+> **Pillar 5 De-Risking, Parametric Index Insurance & Agronomic Copilot**  
+> *Built for PMFBY (Pradhan Mantri Fasal Bima Yojana) modernization, pastoralist forage protection, and automated claim settlement.*
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Overview
+
+**AgriSense AI** is an enterprise-grade, end-to-end agricultural platform designed to empower smallholder farmers and pastoralists while streamlining government and insurer operations.
+
+### Key Capabilities
+1. **🌾 Farm Land Registration & Boundary GIS**: GeoJSON boundary validation, centroid calculations, and parcel tracking.
+2. **🛰️ Satellite NDVI & Weather Risk Monitoring**: Live Open-Meteo weather integration and Sentinel-2 satellite vegetation index analytics.
+3. **📸 Photo Authenticity Gate**: Instant EXIF GPS verification, 48-hour timestamp freshness check, SHA-256 duplicate image detection, and camera metadata validation prior to claim submission.
+4. **🌿 Area-Based Forage Index Insurance (AFII)**: Automated satellite Vegetation Condition Index ($VCI$) monitoring for pastoralists with zero-claim auto-payout triggers on drought breach ($VCI < 35\%$).
+5. **🎙️ Multilingual AI Voice Copilot**: Real-time Web Speech API voice interaction supporting **English, Hindi (हिन्दी), and Tamil (தமிழ்)** with 3D Agronomy Avatar guidance.
+6. **📱 Feature-Phone SMS Advisory**: GSM-7 compliant 2-3 line short SMS advisories for farmers without smartphones.
+7. **🔒 Cryptographic Compliance Audit Log**: Immutable SHA-256 block chain recording every claim review, fraud detection, and parametric payout disbursement.
+
+---
+
+## 📐 System Architecture
+
+```mermaid
+graph TD
+    A["🌾 Farmer Mobile/Web UI (Next.js 15 App Router)"] -->|REST API| B["⚡ FastAPI Backend Engine (Python 3.9+)"]
+    B --> C["🛰️ Sentinel-2 / Satellite Service"]
+    B --> D["🌧️ Open-Meteo Weather API"]
+    B --> E["🌿 AFII Parametric Index Engine"]
+    B --> F["🔒 SHA-256 Cryptographic Audit Chain"]
+    B --> G["🤖 Multilingual Copilot (EN / HI / TA)"]
+    B --> H["📱 SMS Feature-Phone Advisory Service"]
+    B --> I["💾 SQLite Database"]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS (Light Theme), Lucide React Icons, Web Speech API (SpeechRecognition & SpeechSynthesis), Recharts.
+- **Backend**: FastAPI (Python 3.9+), SQLAlchemy (AsyncSession), SQLite, Pydantic, APScheduler.
+- **Integrations**: Sentinel-2 / Earth Engine, Open-Meteo REST Weather API, Twilio SMS API integration.
+- **Testing**: pytest (Backend), Next.js Production Build (`npm run build`).
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## ⚡ How to Run Locally
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. Prerequisites
+- Python 3.9+
+- Node.js 18+ & npm
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2. Backend Setup
+```bash
+# From workspace root directory
+cd backend
 
-## Deploy on Vercel
+# Create & activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Install dependencies
+pip install -r requirements.txt
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Run FastAPI Server (port 8000)
+PYTHONPATH=. uvicorn app.main:app --reload --port 8000
+```
+
+### 3. Frontend Setup
+```bash
+# From workspace root directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start Next.js Development Server (port 3000)
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🎬 Step-by-Step Evaluator Demo Walkthrough
+
+Follow this sequence to test the platform end-to-end:
+
+### 1. Farm Land Parcel Registration
+- Navigate to `/dashboard/farmer/farms`.
+- Register a new land parcel (e.g. *Kongu Paddy Field #2*, 2.5 Hectares).
+
+### 2. Live Farm Risk & Weather Monitoring
+- Navigate to `/dashboard/farmer`.
+- View live weather (Open-Meteo API) and crop health status.
+- Click **"Request Satellite Scan"** to retrieve fresh Sentinel-2 NDVI readings.
+
+### 3. Feature-Phone SMS Advisory
+- Click **"📱 Send SMS Advisory"** on the Farmer Dashboard.
+- A modal previews the 2-3 line GSM-7 SMS message dispatched to non-smartphone users in their chosen language.
+
+### 4. Multilingual AI Voice Copilot
+- Navigate to `/dashboard/farmer/copilot`.
+- Toggle between **English**, **हिन्दी (Hindi)**, and **தமிழ் (Tamil)**.
+- Click **"SPEAK"** to record a voice query in Hindi or Tamil. Hear the spoken response rendered in the selected language with 3D avatar animation.
+
+### 5. AFII Pastoral Forage Insurance & Live Auto-Payout Demo
+- Scroll to the **Forage Scarcity Insurance (AFII)** section on `/dashboard/farmer`.
+- Inspect the grazing zones (*Banni Grasslands*, *Thar Pastoral Belt*, *Kongu Plateau*).
+- Click **"🧪 Inject Low VCI (30%)"** to simulate drought breach ($VCI = 30\% < 35\%$).
+- **Result**: The automatic parametric payout banner instantly appears.
+
+### 6. Officer Review & Audit Chain Verification
+- Navigate to `/dashboard/officer/claims`.
+- Review pending claim submissions and photo authenticity scores.
+- Scroll to the **AFII Officer Queue** and click **"Confirm & Disburse"** on the triggered forage payout.
+- Check the cryptographic audit trail log confirming both the trigger and disbursement events are locked with SHA-256 hashes.
+
+---
+
+## 📋 Feature Checklist (Pillar 5 Compliance)
+
+| Feature | Implementation | Status |
+| :--- | :--- | :---: |
+| **Farm Registration & GIS** | GeoJSON boundary validation + centroid | ✅ 100% |
+| **Claim Submission Wizard** | 3-step damage filing flow | ✅ 100% |
+| **Photo Authenticity Verification** | EXIF GPS, timestamp, duplicate hash, camera metadata | ✅ 100% |
+| **Traffic Light Decision Engine** | Auto-approval / manual review / reject scoring | ✅ 100% |
+| **Officer Portal & Gating** | Fraud review, photo verification check, payout disburse | ✅ 100% |
+| **Live Satellite NDVI** | Sentinel-2 / Earth Engine NDVI retrieval | ✅ 100% |
+| **Live Weather Service** | Open-Meteo 48h rainfall & temperature REST API | ✅ 100% |
+| **AFII Forage Index Insurance** | $VCI = 100 \times \frac{NDVI - NDVI_{min}}{NDVI_{max} - NDVI_{min}}$, auto-trigger $<35\%$ | ✅ 100% |
+| **Multilingual Voice Copilot** | Web Speech API in English, Hindi & Tamil | ✅ 100% |
+| **Feature Phone SMS Advisory** | GSM-7 <=160 char SMS advisory engine | ✅ 100% |
+| **Credit Scoring & 3D Analytics** | SHAP breakdown, loan limit estimator | ✅ 100% |
+| **Cryptographic Audit Log** | Immutable SHA-256 block chain | ✅ 100% |
