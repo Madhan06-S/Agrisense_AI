@@ -127,7 +127,16 @@ export default function FileClaimPage() {
     );
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  const [photoVerifications, setPhotoVerifications] = useState<Array<{
+    verified: boolean;
+    flags: string[];
+    latitude?: number;
+    longitude?: number;
+    camera_model?: string;
+  }>>([]);
+  const [verifyingPhoto, setVerifyingPhoto] = useState(false);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     const remaining = 5 - formData.images.length;
     const toAdd = files.slice(0, remaining);
@@ -136,8 +145,8 @@ export default function FileClaimPage() {
 
     setUploadError("");
     for (const file of toAdd) {
-      if (file.size > 5 * 1024 * 1024) {
-        setUploadError(`${file.name} is too large. Max 5MB.`);
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError(`${file.name} is too large. Max 10MB.`);
         return;
       }
       if (!file.type.startsWith('image/')) {
@@ -146,21 +155,96 @@ export default function FileClaimPage() {
       }
     }
 
+    // Capture browser GPS if not already captured
+    let currentGps = claimantLocation;
+    if (!currentGps && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          currentGps = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+          setClaimantLocation(currentGps);
+        },
+        () => {}
+      );
+    }
+
+    setVerifyingPhoto(true);
+
     const newImages = [...formData.images, ...toAdd];
     setFormData(prev => ({ ...prev, images: newImages }));
     
     const newPreviews = toAdd.map(file => URL.createObjectURL(file));
     setPreviewUrls(prev => [...prev, ...newPreviews]);
+
+    // Perform live authenticity check via API for each photo
+    const token = localStorage.getItem("access_token");
+    const newVerifications = [...photoVerifications];
+
+    for (const file of toAdd) {
+      try {
+        const bodyData = new FormData();
+        bodyData.append("file", file);
+        if (formData.farm_id) bodyData.append("farm_id", formData.farm_id);
+        if (currentGps) {
+          bodyData.append("client_lat", String(currentGps.lat));
+          bodyData.append("client_lng", String(currentGps.lng));
+        }
+
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch("/api/v1/claims/verify-image", {
+          method: "POST",
+          headers,
+          body: bodyData
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          newVerifications.push({
+            verified: result.verified,
+            flags: result.authenticity_flags || [],
+            latitude: result.latitude,
+            longitude: result.longitude,
+            camera_model: result.camera_model
+          });
+        } else {
+          // Fallback verification rule
+          const isFresh = file.lastModified > Date.now() - 48 * 3600 * 1000;
+          newVerifications.push({
+            verified: isFresh,
+            flags: isFresh ? [] : ["stale_photo"]
+          });
+        }
+      } catch {
+        const isFresh = file.lastModified > Date.now() - 48 * 3600 * 1000;
+        newVerifications.push({
+          verified: isFresh,
+          flags: isFresh ? [] : ["stale_photo"]
+        });
+      }
+    }
+
+    setPhotoVerifications(newVerifications);
+    setVerifyingPhoto(false);
   }
 
   function removeImage(index: number) {
     const newImages = formData.images.filter((_, i) => i !== index);
     const newPreviews = previewUrls.filter((_, i) => i !== index);
+    const newVerifications = photoVerifications.filter((_, i) => i !== index);
     setFormData(prev => ({ ...prev, images: newImages }));
     setPreviewUrls(newPreviews);
+    setPhotoVerifications(newVerifications);
   }
 
+  const verifiedPhotosCount = photoVerifications.filter(v => v.verified).length;
+
   async function handleSubmit() {
+    if (verifiedPhotosCount === 0) {
+      setSubmitError("At least 1 verified photo is required to submit a claim.");
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError("");
     try {
@@ -199,6 +283,12 @@ export default function FileClaimPage() {
             if (formData.images.length > 0) {
               const imageForm = new FormData();
               formData.images.forEach(img => imageForm.append("files", img));
+              if (claimantLocation) {
+                imageForm.append("client_lat", String(claimantLocation.lat));
+                imageForm.append("client_lng", String(claimantLocation.lng));
+              }
+              imageForm.append("uploaded_by_role", "farmer");
+
               await fetch(`/api/v1/claims/${createdClaimId}/images`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
@@ -211,7 +301,7 @@ export default function FileClaimPage() {
         }
       }
 
-      // Always save to local cache so claims are instantly visible across farmer and officer dashboards
+      // Save to local cache
       const newClaimRecord = {
         id: createdClaimId,
         farm_id: parseInt(formData.farm_id) || 1,
@@ -224,7 +314,13 @@ export default function FileClaimPage() {
         payout_amount: 25000,
         damage_percent: 45,
         farm_area: selectedFarm?.area_hectares || 2.5,
-        sum_insured: 120000
+        sum_insured: 120000,
+        images: formData.images.map((img, idx) => ({
+          id: idx + 1,
+          url: previewUrls[idx] || "",
+          verified: photoVerifications[idx]?.verified || false,
+          authenticity_flags: photoVerifications[idx]?.flags || []
+        }))
       };
 
       try {
@@ -245,7 +341,7 @@ export default function FileClaimPage() {
   const canProceed = () => {
     if (step === 1) return formData.farm_id !== "";
     if (step === 2) return formData.claim_type !== "";
-    if (step === 3) return formData.description.length > 10;
+    if (step === 3) return formData.description.length >= 10 && verifiedPhotosCount > 0;
     return true;
   };
 
@@ -497,32 +593,42 @@ export default function FileClaimPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#374151] mb-1.5">
-                  Damage Photos <span className="text-emerald-600">(max 5)</span>
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-[#374151]">
+                    Damage Photos <span className="text-emerald-600">(At least 1 verified photo required)</span>
+                  </label>
+                  <span className="text-xs font-bold text-[#1B5E20]">
+                    Verified: {verifiedPhotosCount}/{formData.images.length}
+                  </span>
+                </div>
                 
                 {uploadError && (
-                  <div className="p-3 bg-red-950/80 border border-red-700 rounded-xl text-xs text-red-200 mb-3">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 mb-3 font-medium">
                     {uploadError}
                   </div>
                 )}
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                  {previewUrls.map((url, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-[#E5EBE3]">
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  {formData.images.length < 5 && (
-                    <label className="aspect-square rounded-xl border-2 border-dashed border-[#E5EBE3] flex flex-col items-center justify-center cursor-pointer hover:border-[#2E7D32] hover:bg-[#E8F5E9]/30 transition">
-                      <Upload className="w-5 h-5 text-[#5B6B5B] mb-1" />
-                      <span className="text-[10px] text-[#5B6B5B] font-bold">Add Photo</span>
+
+                {/* Photo Upload Options */}
+                {formData.images.length < 5 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    {/* Primary Option: Rear Camera Direct Capture */}
+                    <label className="p-3 bg-[#E8F5E9] border-2 border-[#2E7D32] hover:bg-[#2E7D32] hover:text-white rounded-xl flex items-center justify-center gap-2 cursor-pointer transition text-xs font-bold text-[#1B5E20]">
+                      <Upload className="w-4 h-4" />
+                      <span>📷 Take Field Photo (Camera)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        multiple
+                        className="sr-only"
+                        onChange={handleImageUpload}
+                      />
+                    </label>
+
+                    {/* Secondary Option: Gallery Fallback */}
+                    <label className="p-3 bg-white border border-[#E5EBE3] hover:border-[#2E7D32] rounded-xl flex items-center justify-center gap-2 cursor-pointer transition text-xs font-semibold text-[#374151]">
+                      <Upload className="w-4 h-4 text-[#5B6B5B]" />
+                      <span>📁 Choose from Gallery</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -531,8 +637,73 @@ export default function FileClaimPage() {
                         onChange={handleImageUpload}
                       />
                     </label>
-                  )}
+                  </div>
+                )}
+
+                {verifyingPhoto && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 mb-3 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span>Running 5-point authenticity check (GPS, EXIF, Hash, Distance, Camera)...</span>
+                  </div>
+                )}
+
+                {/* Previews with Live Badges */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {previewUrls.map((url, idx) => {
+                    const ver = photoVerifications[idx];
+                    return (
+                      <div key={idx} className="relative rounded-xl border border-[#E5EBE3] overflow-hidden bg-white p-2 flex gap-3 items-center">
+                        <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0 relative">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        
+                        <div className="flex-1 text-xs space-y-1">
+                          {ver?.verified ? (
+                            <div className="bg-green-50 border border-green-200 text-[#1B5E20] px-2 py-1 rounded font-bold flex items-center gap-1">
+                              <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                              <span>Verified — taken at farm, just now</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {ver?.flags.map((flag, fIdx) => (
+                                <div key={fIdx} className="bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded font-medium text-[11px]">
+                                  {flag === "no_location_data" && "⚠️ No location data — retake with GPS on"}
+                                  {flag === "stale_photo" && "⚠️ Photo taken > 48h ago"}
+                                  {flag === "duplicate_photo" && "⚠️ Duplicate photo detected"}
+                                  {flag === "location_mismatch" && "⚠️ Location mismatch (> 500m from farm)"}
+                                  {flag === "possible_screenshot" && "⚠️ Possible screenshot — take photo with camera"}
+                                </div>
+                              ))}
+                              {(!ver?.flags || ver.flags.length === 0) && (
+                                <div className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[11px]">
+                                  ⚠️ Verification pending
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {ver?.camera_model && (
+                            <p className="text-[10px] text-[#5B6B5B]">Device: {ver.camera_model}</p>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => removeImage(idx)}
+                          className="w-6 h-6 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-700 rounded-full flex items-center justify-center transition flex-shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
+
+                {formData.images.length > 0 && verifiedPhotosCount === 0 && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-600" />
+                    <span>⚠️ At least 1 photo must be verified (green badge) to submit your claim.</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

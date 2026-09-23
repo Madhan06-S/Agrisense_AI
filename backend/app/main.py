@@ -104,6 +104,11 @@ async def startup_event():
                 ("farms", "village", "VARCHAR"),
                 ("farms", "verification_status", "VARCHAR DEFAULT 'PENDING_OFFICIAL_VERIFICATION'"),
                 ("farms", "boundary_geojson", "JSON"),
+                ("claim_images", "sha256_hash", "VARCHAR(64)"),
+                ("claim_images", "camera_model", "VARCHAR(255)"),
+                ("claim_images", "authenticity_flags", "JSON"),
+                ("claim_images", "verified", "BOOLEAN DEFAULT 0"),
+                ("claim_images", "uploaded_by_role", "VARCHAR(50) DEFAULT 'farmer'"),
             ]
             for tbl, col, col_type in columns_to_add:
                 try:

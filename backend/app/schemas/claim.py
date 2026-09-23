@@ -18,11 +18,16 @@ class ClaimCreate(BaseModel):
 class ClaimImageOut(BaseModel):
     id: int
     image_url: str
-    latitude: Optional[float]
-    longitude: Optional[float]
-    is_geo_tagged: bool
-    captured_at: Optional[datetime]
-    original_filename: Optional[str]
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    is_geo_tagged: bool = False
+    captured_at: Optional[datetime] = None
+    original_filename: Optional[str] = None
+    sha256_hash: Optional[str] = None
+    camera_model: Optional[str] = None
+    authenticity_flags: List[str] = []
+    verified: bool = False
+    uploaded_by_role: str = "farmer"
 
     model_config = {"from_attributes": True}
 

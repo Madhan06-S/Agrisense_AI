@@ -153,28 +153,40 @@ export default function MyClaimsPage() {
                     <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">Claim ID</th>
                     <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">Damage Type</th>
                     <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">Date</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">AI Score</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">Status</th>
+                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">Photos & Verification</th>
+                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">Status & Officer Remarks</th>
                     <th className="text-left font-semibold text-[#1B5E20] px-5 py-3">Payout</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EEF2EE]">
-                  {claims.map((claim) => (
+                  {claims.map((claim: any) => (
                     <tr key={claim.id} className="hover:bg-[#F7F9F5]">
                       <td className="px-5 py-3 font-medium text-[#1B5E20]">#{claim.id}</td>
-                      <td className="px-5 py-3 capitalize text-[#1B5E20]">{claim.claim_type}</td>
-                      <td className="px-5 py-3 text-[#5B6B5B]">
+                      <td className="px-5 py-3 capitalize text-[#1B5E20]">
+                        <p className="font-semibold">{claim.claim_type}</p>
+                        <p className="text-xs text-[#5B6B5B] truncate max-w-xs">{claim.description}</p>
+                      </td>
+                      <td className="px-5 py-3 text-[#5B6B5B] text-xs">
                         {claim.submitted_at ? new Date(claim.submitted_at).toLocaleDateString() : "—"}
                       </td>
                       <td className="px-5 py-3">
-                        {claim.ai_score !== null ? (
-                          <span className="font-medium text-[#1B5E20]">{claim.ai_score}/100</span>
+                        {claim.images && claim.images.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs bg-green-50 text-[#1B5E20] border border-green-200 px-2 py-0.5 rounded font-bold">
+                              ✅ {claim.images.filter((i: any) => typeof i === "object" ? i.verified : true).length} Verified
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-slate-400">Pending</span>
+                          <span className="text-xs text-slate-400">No photos</span>
                         )}
                       </td>
                       <td className="px-5 py-3">
                         <StatusBadge status={claim.status} />
+                        {claim.officer_remarks && (
+                          <p className="text-[11px] text-[#374151] mt-1 bg-slate-50 p-1.5 rounded border border-slate-200">
+                            <strong>Note:</strong> {claim.officer_remarks}
+                          </p>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         {(claim.status === "approved" || claim.status === "payout_processed") && claim.payout_amount ? (

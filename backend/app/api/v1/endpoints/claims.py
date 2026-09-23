@@ -237,8 +237,18 @@ async def get_claim(
     result_images = await db.execute(select(ClaimImage).where(ClaimImage.claim_id == claim_id))
     images = result_images.scalars().all()
 
-    image_urls = [
-        img.image_url if img.image_url.startswith("/uploads/") else f"/uploads/claims/{claim_id}/{img.image_url.split('/')[-1]}"
+    image_objs = [
+        {
+            "id": img.id,
+            "url": img.image_url if img.image_url.startswith("/uploads/") else f"/uploads/claims/{claim_id}/{img.image_url.split('/')[-1]}",
+            "image_url": img.image_url if img.image_url.startswith("/uploads/") else f"/uploads/claims/{claim_id}/{img.image_url.split('/')[-1]}",
+            "latitude": img.latitude,
+            "longitude": img.longitude,
+            "captured_at": img.captured_at.isoformat() if img.captured_at else None,
+            "authenticity_flags": img.authenticity_flags or [],
+            "verified": img.verified if img.verified is not None else (len(img.authenticity_flags or []) == 0),
+            "uploaded_by_role": getattr(img, "uploaded_by_role", "farmer") or "farmer"
+        }
         for img in images
     ]
 
@@ -265,7 +275,7 @@ async def get_claim(
         "submitted_at": claim.submitted_at.isoformat() if claim.submitted_at else None,
         "officer_remarks": claim.officer_remarks,
         "ai_damage_score": claim.ai_damage_score,
-        "images": image_urls,
+        "images": image_objs,
         "farmer_id": claim.farmer_id,
         "satellite_image": satellite_img,
         "ndvi_mean": ndvi_mean_val,
@@ -303,98 +313,184 @@ async def get_claim_satellite_image(
     return Response(content=image_bytes, media_type="image/png")
 
 
+@router.post("/verify-image")
+async def verify_image_preupload(
+    file: UploadFile = File(...),
+    farm_id: Optional[int] = Form(None),
+    client_lat: Optional[float] = Form(None),
+    client_lng: Optional[float] = Form(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Instant pre-upload photo authenticity check for farmer UI.
+    """
+    data = await file.read()
+    
+    farm_location = None
+    if farm_id:
+        stmt = select(Farm).where(Farm.id == farm_id)
+        res = await db.execute(stmt)
+        farm = res.scalars().first()
+        if farm and farm.boundary:
+            try:
+                from shapely.wkt import loads
+                poly = loads(farm.boundary)
+                farm_location = (poly.centroid.y, poly.centroid.x)
+            except Exception:
+                pass
+        if not farm_location:
+            farm_location = (18.5204, 73.8567)  # default Pune farm location for testing
+
+    client_loc = (client_lat, client_lng) if (client_lat and client_lng) else None
+
+    # Fetch existing hashes
+    res_hashes = await db.execute(select(ClaimImage.sha256_hash).where(ClaimImage.sha256_hash.isnot(None)))
+    existing_hashes = set(res_hashes.scalars().all())
+
+    auth_result = check_photo_authenticity(
+        file_bytes=data,
+        farm_location=farm_location,
+        client_location=client_loc,
+        existing_hashes=existing_hashes
+    )
+
+    return {
+        "filename": file.filename,
+        "verified": auth_result["verified"],
+        "authenticity_flags": auth_result["authenticity_flags"],
+        "latitude": auth_result["latitude"],
+        "longitude": auth_result["longitude"],
+        "taken_at": auth_result["taken_at"],
+        "camera_model": auth_result["camera_model"],
+        "sha256": auth_result["sha256"]
+    }
+
+
 @router.post("/{claim_id}/images", status_code=201)
 async def upload_images(
     claim_id: int,
     files: List[UploadFile] = File(...),
+    client_lat: Optional[float] = Form(None),
+    client_lng: Optional[float] = Form(None),
+    uploaded_by_role: Optional[str] = Form("farmer"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_farmer),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    current_user: User = Depends(get_current_user),
 ):
-    """Upload geo-tagged images for a claim."""
-    result = await db.execute(
-        select(Claim).where(Claim.id == claim_id, Claim.farmer_id == current_user.id)
-    )
+    """Upload photos for a claim with 5 strict authenticity checks."""
+    result = await db.execute(select(Claim).where(Claim.id == claim_id))
     claim = result.scalar_one_or_none()
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
 
+    if current_user.role == "farmer" and claim.farmer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     if len(files) > 10:
         raise HTTPException(status_code=400, detail="Maximum 10 images allowed")
 
-    # Create directory for this claim
-    claim_dir = f"uploads/claims/{claim_id}"
+    # Save to data/uploads/claims/{claim_id}
+    claim_dir = os.path.join("data", "uploads", "claims", str(claim_id))
     os.makedirs(claim_dir, exist_ok=True)
 
-    # Get farm location for geotag verification
+    # Get farm location for distance check
     stmt_farm = select(Farm).where(Farm.id == claim.farm_id)
     res_farm = await db.execute(stmt_farm)
     farm = res_farm.scalars().first()
-    expected_location = None
-    if farm:
-        boundary_wkt = getattr(farm, 'boundary', None)
-        if boundary_wkt:
-            try:
-                from shapely.wkt import loads
-                poly = loads(boundary_wkt)
-                expected_location = (poly.centroid.y, poly.centroid.x)  # (lat, lon)
-            except Exception as e:
-                print(f"Failed to parse expected farm location: {e}")
+    farm_location = None
+    if farm and getattr(farm, "boundary", None):
+        try:
+            from shapely.wkt import loads
+            poly = loads(farm.boundary)
+            farm_location = (poly.centroid.y, poly.centroid.x)
+        except Exception:
+            pass
+    if not farm_location:
+        farm_location = (18.5204, 73.8567)  # Fallback reference location
+
+    # Fetch existing SHA-256 hashes for duplicate detection
+    res_hashes = await db.execute(select(ClaimImage.sha256_hash).where(ClaimImage.sha256_hash.isnot(None)))
+    existing_hashes = set(res_hashes.scalars().all())
+
+    client_loc = (client_lat, client_lng) if (client_lat and client_lng) else None
+    role = uploaded_by_role or current_user.role
 
     saved_images = []
     for f in files:
         data = await f.read()
-        if len(data) > 10 * 1024 * 1024:  # 10MB
+        if len(data) > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail=f"{f.filename} exceeds 10MB limit")
 
-        # AI VALIDATION
-        try:
-            validation = validate_farmer_photo(data, expected_location)
-        except ImageValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+        # Run 5 authenticity checks
+        auth = check_photo_authenticity(
+            file_bytes=data,
+            farm_location=farm_location,
+            client_location=client_loc,
+            existing_hashes=existing_hashes
+        )
+        existing_hashes.add(auth["sha256"])
 
-        # Save file to uploads/claims/{claim_id}/{filename}
+        # Write image file
         file_path = os.path.join(claim_dir, f.filename)
         with open(file_path, "wb") as buffer:
             buffer.write(data)
 
         url = f"/uploads/claims/{claim_id}/{f.filename}"
 
-        # Extract EXIF
-        _, _, captured_at = _extract_exif_gps(data)
-        lat = validation["latitude"]
-        lng = validation["longitude"]
-        phash = _compute_phash(data)
-
         img_record = ClaimImage(
             claim_id=claim_id,
             image_url=url,
-            image_hash=phash,
-            latitude=lat,
-            longitude=lng,
-            is_geo_tagged=True,
-            captured_at=captured_at,
+            image_hash=_compute_phash(data),
+            sha256_hash=auth["sha256"],
+            latitude=auth["latitude"],
+            longitude=auth["longitude"],
+            is_geo_tagged=auth["latitude"] is not None,
+            captured_at=datetime.fromisoformat(auth["taken_at"]) if auth["taken_at"] else datetime.now(timezone.utc),
+            camera_model=auth["camera_model"],
+            authenticity_flags=auth["authenticity_flags"],
+            verified=auth["verified"],
+            uploaded_by_role=role,
             file_size_bytes=len(data),
             original_filename=f.filename,
         )
         db.add(img_record)
-        saved_images.append({"filename": f.filename, "url": url, "geo_tagged": lat is not None})
+        await db.flush()
 
-    # Update claim status to under_review once images uploaded
-    claim.status = ClaimStatus.under_review
+        # Compliance Audit Trail entry per verification event
+        audit_action = "PHOTO_VERIFIED" if auth["verified"] else "PHOTO_FLAGGED"
+        try:
+            await AuditChainEngine.add_block(
+                claim_id=claim_id,
+                action=audit_action,
+                actor_id=current_user.id,
+                actor_role=role.capitalize(),
+                actor_name=current_user.full_name,
+                db=db
+            )
+        except Exception as e:
+            print(f"Audit log exception: {e}")
+
+        saved_images.append({
+            "id": img_record.id,
+            "filename": f.filename,
+            "url": url,
+            "latitude": auth["latitude"],
+            "longitude": auth["longitude"],
+            "captured_at": auth["taken_at"],
+            "authenticity_flags": auth["authenticity_flags"],
+            "verified": auth["verified"],
+            "uploaded_by_role": role
+        })
+
+    # Update claim status
+    if claim.status == ClaimStatus.submitted:
+        claim.status = ClaimStatus.under_review
     await db.commit()
-    return {"status": "success", "uploaded": len(saved_images), "files": [img["filename"] for img in saved_images]}
 
-    await AuditChainEngine.add_block(
-        claim_id=claim_id,
-        action="UNDER_REVIEW",
-        actor_id=current_user.id,
-        actor_role="Farmer",
-        actor_name=current_user.full_name,
-        db=db,
-    )
-
-    return {"uploaded": len(saved_images), "images": saved_images}
+    return {
+        "status": "success",
+        "uploaded": len(saved_images),
+        "files": saved_images
+    }
 
 
 @router.get("/{claim_id}/weather")
