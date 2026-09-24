@@ -41,6 +41,11 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
+    if os.environ.get("OPENROUTER_API_KEY"):
+        logger.info("COPILOT: LLM provider ACTIVE (OpenRouter API key configured)")
+    else:
+        logger.info("COPILOT: LLM provider NOT configured — heuristic mode active (rule engine on real NDVI/weather data)")
+
     logger.info("Initializing Google Earth Engine on system startup...")
     try:
         await initialize_gee()
@@ -125,13 +130,27 @@ async def startup_event():
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    response = await call_next(request)
-    duration = time.time() - start_time
-    logger.info(
-        f"Method: {request.method} Path: {request.url.path} "
-        f"Status: {response.status_code} Duration: {duration:.4f}s"
-    )
-    return response
+    try:
+        response = await call_next(request)
+        duration = time.time() - start_time
+        log_msg = (
+            f"Method: {request.method} Path: {request.url.path} "
+            f"Status: {response.status_code} Duration: {duration:.4f}s"
+        )
+        if response.status_code >= 500:
+            logger.error(f"SERVER ERROR 5XX: {log_msg}")
+        elif response.status_code >= 400:
+            logger.warning(f"CLIENT ERROR 4XX: {log_msg}")
+        else:
+            logger.info(log_msg)
+        return response
+    except Exception as exc:
+        duration = time.time() - start_time
+        logger.error(
+            f"UNHANDLED EXCEPTION: Method: {request.method} Path: {request.url.path} "
+            f"Error: {exc} Duration: {duration:.4f}s"
+        )
+        raise exc
 
 # Custom GEE Exception Handlers
 @app.exception_handler(GEEAuthError)

@@ -67,6 +67,8 @@ export default function OfficerClaimsQueue() {
   const [afiiPayouts, setAfiiPayouts] = useState<AFIIPayout[]>([]);
   const [approvingPayoutId, setApprovingPayoutId] = useState<number | null>(null);
 
+  const [districtFilter, setDistrictFilter] = useState("all");
+
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
@@ -78,7 +80,7 @@ export default function OfficerClaimsQueue() {
   useEffect(() => {
     fetchClaims();
     fetchAFIIData();
-  }, []);
+  }, [districtFilter]);
 
   async function fetchAFIIData() {
     try {
@@ -113,7 +115,11 @@ export default function OfficerClaimsQueue() {
     let result = claims;
     
     if (filter !== "all") {
-      result = result.filter(c => c.status === filter);
+      if (filter === "pending") {
+        result = result.filter(c => ["submitted", "under_review", "field_visit_required", "pending_evidence"].includes(c.status));
+      } else {
+        result = result.filter(c => c.status === filter);
+      }
     }
     
     if (search.trim()) {
@@ -121,7 +127,7 @@ export default function OfficerClaimsQueue() {
       result = result.filter(c => 
         c.farmer_name?.toLowerCase().includes(q) ||
         c.farm_name?.toLowerCase().includes(q) ||
-        c.claim_type.toLowerCase().includes(q) ||
+        c.claim_type?.toLowerCase().includes(q) ||
         String(c.id).includes(q)
       );
     }
@@ -130,6 +136,7 @@ export default function OfficerClaimsQueue() {
   }, [claims, filter, search]);
 
   async function fetchClaims() {
+    setLoading(true);
     try {
       const cachedStr = localStorage.getItem("agrisense_cached_claims");
       let cachedClaims: Claim[] = cachedStr ? JSON.parse(cachedStr) : [];
@@ -138,9 +145,14 @@ export default function OfficerClaimsQueue() {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
+      let url = "/api/v1/officer/claims";
+      if (districtFilter !== "all") {
+        url += `?district=${encodeURIComponent(districtFilter)}`;
+      }
+
       let fetchedData: Claim[] = [];
       try {
-        const res = await fetch("/api/v1/officer/claims", { headers });
+        const res = await fetch(url, { headers });
         if (res.ok) {
           fetchedData = await res.json();
         } else {
@@ -171,15 +183,15 @@ export default function OfficerClaimsQueue() {
 
   const stats = {
     total: claims.length,
-    pending: claims.filter(c => ["submitted", "under_review"].includes(c.status)).length,
-    approved: claims.filter(c => c.status === "approved").length,
+    pending: claims.filter(c => ["submitted", "under_review", "field_visit_required", "pending_evidence"].includes(c.status)).length,
+    approved: claims.filter(c => ["approved", "payout_processed"].includes(c.status)).length,
     rejected: claims.filter(c => c.status === "rejected").length,
   };
 
   const filters = [
     { key: "all", label: "All Claims", count: claims.length },
-    { key: "submitted", label: "Submitted", count: claims.filter(c => c.status === "submitted").length },
-    { key: "under_review", label: "Under Review", count: claims.filter(c => c.status === "under_review").length },
+    { key: "pending", label: "Pending Action", count: stats.pending },
+    { key: "field_visit_required", label: "Field Visit Required", count: claims.filter(c => c.status === "field_visit_required").length },
     { key: "approved", label: "Approved", count: stats.approved },
     { key: "rejected", label: "Rejected", count: stats.rejected },
   ];
@@ -229,9 +241,9 @@ export default function OfficerClaimsQueue() {
         </div>
 
         {/* Filters & Search */}
-        <div className="bg-white border border-[#E5EBE3] rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row gap-3 justify-between">
-            <div className="flex flex-wrap gap-2">
+        <div className="bg-white border border-[#E5EBE3] rounded-lg p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+            <div className="flex flex-wrap gap-2 items-center">
               {filters.map(f => (
                 <button
                   key={f.key}
@@ -247,16 +259,40 @@ export default function OfficerClaimsQueue() {
               ))}
             </div>
             
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search claims..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-1.5 border border-[#E5EBE3] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-[#2E7D32] w-full sm:w-64"
-              />
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <select
+                value={districtFilter}
+                onChange={(e) => setDistrictFilter(e.target.value)}
+                className="text-xs border border-[#E5EBE3] rounded-md px-3 py-1.5 text-[#1B5E20] font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]"
+              >
+                <option value="all">Scope: All Districts</option>
+                <option value="Ahmednagar">District: Ahmednagar</option>
+                <option value="Latur">District: Latur</option>
+                <option value="Solapur">District: Solapur</option>
+              </select>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search claims..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 pr-4 py-1.5 border border-[#E5EBE3] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-[#2E7D32] w-full sm:w-56"
+                />
+              </div>
             </div>
+          </div>
+
+          <div className="flex justify-between items-center text-xs text-[#5B6B5B] pt-2 border-t border-[#F0F4EF]">
+            <span className="font-semibold text-[#1B5E20]">
+              Showing <span className="text-black font-bold">{filtered.length}</span> of <span className="text-black font-bold">{claims.length}</span> claims in current queue
+            </span>
+            {districtFilter !== "all" && (
+              <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200 text-[11px]">
+                Filtered by District: {districtFilter}
+              </span>
+            )}
           </div>
         </div>
 
@@ -480,20 +516,28 @@ function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     submitted: "bg-blue-50 text-blue-700 border-blue-200",
     under_review: "bg-amber-50 text-amber-700 border-amber-200",
+    field_visit_required: "bg-purple-50 text-purple-700 border-purple-200",
+    pending_evidence: "bg-orange-50 text-orange-700 border-orange-200",
     approved: "bg-green-50 text-[#1B5E20] border-green-200",
+    payout_processed: "bg-emerald-50 text-emerald-800 border-emerald-300",
     rejected: "bg-red-50 text-red-700 border-red-200",
+    closed_no_damage: "bg-slate-100 text-slate-700 border-slate-300",
   };
   
   const labels: Record<string, string> = {
     submitted: "Submitted",
     under_review: "Under Review",
+    field_visit_required: "Field Visit Required",
+    pending_evidence: "Pending Evidence",
     approved: "Approved",
+    payout_processed: "Payout Processed",
     rejected: "Rejected",
+    closed_no_damage: "Closed (No Damage)",
   };
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${styles[status] || styles.submitted}`}>
-      {labels[status] || status}
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${styles[status] || "bg-slate-100 text-slate-700 border-slate-300"}`}>
+      {labels[status] || status.replace(/_/g, " ")}
     </span>
   );
 }

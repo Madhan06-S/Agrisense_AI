@@ -79,6 +79,7 @@ class AgronomyAdvisor:
         # Simple parser for structured text lines
         return {
             "source": "LLM_ADVISOR",
+            "is_heuristic": False,
             "raw_text": text,
             "advisories": [
                 {
@@ -112,7 +113,7 @@ class AgronomyAdvisor:
                 "type": "irrigation",
                 "english": "[CRITICAL] Postpone all irrigation. High precipitation forecast in 48 hours will cause over-saturation.",
                 "hindi": "[गंभीर] सिंचाई स्थगित करें। अगले ४८ घंटों में भारी वर्षा से जलभराव हो सकता है।",
-                "tamil": "[மிகவும் முக்கியம்] பாசனத்தை தள்ளிவைக்கவும். அடுத்த 48 மணி நேரத்தில் கனமழை பெய்ய வாய்ப்புள்ளது."
+                "tamil": "[மிகவும் முக்கியம்] பாசனத்தை தள்ளிவைக்கவும். അടുത്ത 48 மணி நேரத்தில் கனமழை பெய்ய வாய்ப்புள்ளது."
             })
         else:
             advisories.append({
@@ -156,5 +157,6 @@ class AgronomyAdvisor:
             
         return {
             "source": "HEURISTIC_ADVISOR",
+            "is_heuristic": True,
             "advisories": advisories
         }

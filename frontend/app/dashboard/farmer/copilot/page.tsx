@@ -24,6 +24,8 @@ import CopilotAvatar3D from "@/components/copilot/CopilotAvatar3D";
 import CreditScore3D from "@/components/credit/CreditScore3D";
 import Link from "next/link";
 
+import { dispatchApiError } from "@/components/ToastProvider";
+
 const queryClient = new QueryClient();
 
 function CopilotDashboardContent() {
@@ -39,6 +41,7 @@ function CopilotDashboardContent() {
   const [hasSpeechSupport, setHasSpeechSupport] = useState(true);
   const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
   const [voiceText, setVoiceText] = useState("");
+  const [voiceResponseText, setVoiceResponseText] = useState("");
   const [manualQuery, setManualQuery] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -57,10 +60,15 @@ function CopilotDashboardContent() {
     queryKey: ["farms"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/v1/farms");
-        if (!res.ok) throw new Error("API Offline");
+        const token = localStorage.getItem("access_token");
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch("/api/v1/farms", { headers });
+        if (!res.ok) throw new Error(`Farm API Error (${res.status})`);
         return await res.json();
-      } catch (err) {
+      } catch (err: any) {
+        dispatchApiError(err.message || "Failed to load farms from API. Loaded cached profile.");
         const cached = localStorage.getItem("agrisense_cached_farms");
         return cached ? JSON.parse(cached) : [{ id: 1, name: "Patel Rice Farm #1", crop_type: "Rice" }];
       }
@@ -80,15 +88,30 @@ function CopilotDashboardContent() {
     queryFn: async () => {
       if (!selectedFarm) return null;
       try {
+        const token = localStorage.getItem("access_token");
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
         const res = await fetch("/api/v1/copilot/advise", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ farm_id: selectedFarm.id })
         });
-        return await res.json();
-      } catch {
+        if (!res.ok) {
+          const errDetail = await res.json().catch(() => ({ detail: "Advise failed" }));
+          throw new Error(errDetail.detail || `Copilot API status ${res.status}`);
+        }
+        const data = await res.json();
+        if (data?.advisories?.[0]?.english) {
+          setVoiceResponseText(data.advisories[0].english);
+        }
+        return data;
+      } catch (err: any) {
+        dispatchApiError(err.message || "Copilot advice fetch failed. Using local heuristic fallback.");
         return {
           advisory_id: `ADV-REAL-${selectedFarm.id}`,
+          source: "HEURISTIC_ADVISOR",
+          is_heuristic: true,
           advisories: [
             {
               type: "irrigation",
@@ -183,7 +206,11 @@ function CopilotDashboardContent() {
       recognition.onerror = (event: any) => {
         console.error("Speech recognition error:", event.error);
         setIsListening(false);
-        setVoiceText("Voice recognition ended. Try speaking again or type prompt below.");
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setVoiceText("⚠️ Microphone permission denied. Click the lock/camera icon in your address bar to allow mic access.");
+        } else {
+          setVoiceText("Voice recognition ended. Try speaking again or type prompt below.");
+        }
       };
 
       recognition.onend = () => {
@@ -230,9 +257,13 @@ function CopilotDashboardContent() {
     setVoiceText(`Analyzing: "${queryText}"...`);
 
     try {
+      const token = localStorage.getItem("access_token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch("/api/v1/copilot/advise", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           farm_id: selectedFarm.id,
           prompt: queryText,
@@ -250,20 +281,25 @@ function CopilotDashboardContent() {
           : (topAdv?.english || "Crop health parameters evaluated. Field drainage is clear.");
 
         setVoiceText(`AI Response: ${spokenMsg}`);
+        setVoiceResponseText(spokenMsg);
         speakText(spokenMsg);
         refetchAdvisories();
       } else {
+        dispatchApiError(`Copilot Voice Query error: status ${res.status}`);
         const fallbackMsg = selectedLang === "ta-IN"
           ? "பயிர் வளர்ச்சி சிறப்பாக உள்ளது. வரவிருக்கும் மழையால் நீர் பாய்ச்சுவதை தள்ளி வைக்கவும்."
           : selectedLang === "hi-IN" 
           ? "आपकी फसल का स्वास्थ्य उत्तम है। आगामी बारिश के कारण सिंचाई स्थगित रखें।"
           : "Crop vigor is good. Postpone scheduled irrigation due to incoming rainfall.";
         setVoiceText(`AI Response: ${fallbackMsg}`);
+        setVoiceResponseText(fallbackMsg);
         speakText(fallbackMsg);
       }
-    } catch {
+    } catch (err: any) {
+      dispatchApiError(err.message || "Network error submitting voice query");
       const fallbackMsg = "Foliage and soil moisture parameters checked. Maintain normal field monitoring.";
       setVoiceText(`AI Response: ${fallbackMsg}`);
+      setVoiceResponseText(fallbackMsg);
       speakText(fallbackMsg);
     } finally {
       setIsProcessing(false);
@@ -367,8 +403,19 @@ function CopilotDashboardContent() {
 
             {/* Daily Briefing Cards */}
             <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider">Priority Crop Advisories</h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider">Priority Crop Advisories</h3>
+                  {advisoriesReport?.is_heuristic || advisoriesReport?.source === "HEURISTIC_ADVISOR" ? (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded font-bold">
+                      Offline Mode (Live Data Heuristics)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-emerald-100 text-[#1B5E20] border border-emerald-300 px-2 py-0.5 rounded font-bold">
+                      LLM AI Online
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] bg-[#E8F5E9] text-[#1B5E20] border border-[#2E7D32]/20 px-2 py-0.5 rounded font-bold">
                   {advisoriesReport?.advisories?.length ?? 0} Recommendations Active
                 </span>

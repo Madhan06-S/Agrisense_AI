@@ -16,6 +16,7 @@ from app.models.insurance_models import (
     ParametricTriggerConfig,
 )
 from app.models.afii import GrazingZone, VCIReading, AFIIPolicy, AFIIPayout
+from app.models.models import DataPipelineRun, SatelliteImage, FeatureVector, DatasetVersion
 
 __all__ = [
     "User", "UserRole",
@@ -37,4 +38,8 @@ __all__ = [
     "VCIReading",
     "AFIIPolicy",
     "AFIIPayout",
+    "DataPipelineRun",
+    "SatelliteImage",
+    "FeatureVector",
+    "DatasetVersion",
 ]

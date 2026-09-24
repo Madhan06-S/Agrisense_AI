@@ -3,77 +3,9 @@ from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 
-Base = declarative_base()
-
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, nullable=False)
-    phone = Column(String, unique=True, nullable=False)
-    aadhaar_number = Column(String, unique=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    password_reset_token = Column(String, nullable=True)
-    last_login = Column(DateTime, nullable=True)
-    login_attempts = Column(Integer, default=0, nullable=False)
-    role = Column(String, default="farmer", nullable=False)
-    pin = Column(String, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    
-    # Relationships
-    farms = relationship("Farm", back_populates="owner")
-
-    __table_args__ = (
-        Index("idx_users_email", "email"),
-        Index("idx_users_phone", "phone"),
-        Index("idx_users_aadhaar", "aadhaar_number"),
-    )
-
-
-class Farm(Base):
-    __tablename__ = "farms"
-
-    id = Column(Integer, primary_key=True, index=True)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
-    crop_type = Column(String, nullable=False)
-    sowing_date = Column(Date, nullable=False)
-    area_hectares = Column(Float, nullable=False)
-    insurance_policy_number = Column(String, nullable=False)
-    
-    # Spatial boundary (PostGIS Geometry)
-    boundary = Column(Geometry(geometry_type="POLYGON", srid=4326), nullable=False)
-    
-    # Government reporting fields
-    state = Column(String, nullable=False)
-    district = Column(String, nullable=False)
-    taluka = Column(String, nullable=False)
-    village = Column(String, nullable=False)
-    
-    # Soil attributes (NBSS & LUP)
-    soil_ph = Column(Float, nullable=True)
-    soil_moisture = Column(Float, nullable=True)
-    soil_type = Column(String, nullable=True)
-    
-    # Indian Land Record ID
-    khasra_number = Column(String, nullable=False)
-    
-    # Soft delete
-    is_deleted = Column(Boolean, default=False, nullable=False)
-    
-    # Metadata properties
-    extra_metadata = Column(JSON, nullable=True)
-
-    owner = relationship("User", back_populates="farms")
-    images = relationship("SatelliteImage", back_populates="farm")
-    features = relationship("FeatureVector", back_populates="farm")
-    pipeline_runs = relationship("DataPipelineRun", back_populates="farm")
-
-    __table_args__ = (
-        Index("idx_farms_owner", "owner_id"),
-        Index("idx_farms_crop", "crop_type"),
-        Index("idx_farms_district", "district"),
-    )
+from app.core.database import Base
+from app.models.user import User
+from app.models.farm import Farm
 
 
 class SatelliteImage(Base):
@@ -194,28 +126,5 @@ class DatasetVersion(Base):
 
 
 
-class Claim(Base):
-    __tablename__ = "claims"
-    id = Column(Integer, primary_key=True, index=True)
-    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
-    farmer_name = Column(String, nullable=True)
-    farm_name = Column(String, nullable=True)
-    claim_type = Column(String, nullable=False) # "flood", "drought", "pest"
-    description = Column(String, nullable=True)
-    status = Column(String, default="submitted", nullable=False) # "submitted", "under_review", "approved", "rejected"
-    officer_remarks = Column(String, nullable=True)
-    submitted_at = Column(String, nullable=True)
-    reviewed_at = Column(DateTime, nullable=True)
-    officer_id = Column(Integer, nullable=True)
-    ai_damage_score = Column(Float, nullable=True)
-
-class DamageAssessment(Base):
-    __tablename__ = "damage_assessments"
-    id = Column(Integer, primary_key=True, index=True)
-    claim_id = Column(Integer, nullable=False)
-    satellite_score = Column(Float, nullable=False)
-    image_score = Column(Float, nullable=False)
-    weather_score = Column(Float, nullable=False)
-    combined_score = Column(Float, nullable=False)
-    confidence = Column(Float, default=0.92)
-    explanation_json = Column(JSON, nullable=True)
+from app.models.claim import Claim
+from app.models.damage_assessment import DamageAssessment

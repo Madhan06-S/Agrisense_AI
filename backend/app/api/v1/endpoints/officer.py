@@ -56,6 +56,23 @@ async def list_all_claims(
         filters.append(Claim.ai_damage_score >= min_score)
     if max_score is not None:
         filters.append(Claim.ai_damage_score <= max_score)
+    
+    if district:
+        query = query.outerjoin(Claim.farm).outerjoin(Claim.farmer, Claim.farmer_id == User.id)
+        filters.append(or_(Farm.district.ilike(f"%{district}%"), User.district.ilike(f"%{district}%")))
+
+    if search:
+        if not district:
+            query = query.outerjoin(Claim.farm).outerjoin(Claim.farmer, Claim.farmer_id == User.id)
+        search_pattern = f"%{search}%"
+        filters.append(or_(
+            User.full_name.ilike(search_pattern),
+            User.email.ilike(search_pattern),
+            Farm.name.ilike(search_pattern),
+            Claim.description.ilike(search_pattern),
+            Claim.claim_type.ilike(search_pattern)
+        ))
+
     if filters:
         query = query.where(and_(*filters))
 

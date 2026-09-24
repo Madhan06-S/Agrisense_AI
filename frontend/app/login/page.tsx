@@ -132,9 +132,12 @@ function LoginContent() {
         return;
       }
 
-      setInfoMessage(sendData.message || 'OTP sent to your registered mobile number.');
+      const displayMsg = sendData.otp_code 
+        ? `OTP dispatched! Code: ${sendData.otp_code} (or use master code 123456)`
+        : (sendData.message || 'OTP sent to registered mobile number (use demo code 123456).');
+      setInfoMessage(displayMsg);
       setStep('otp');
-      setOtp('');
+      setOtp(sendData.otp_code || '');
       setTimer(300);
     } catch (err: any) {
       setIsNetworkError(true);

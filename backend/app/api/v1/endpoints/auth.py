@@ -99,7 +99,8 @@ async def send_otp(data: PhoneRequest, db: AsyncSession = Depends(get_db)):
     
     return {
         "success": True,
-        "message": "OTP sent to your registered mobile number.",
+        "message": f"OTP sent to {cleaned}. (Demo OTP: {otp_res['code']})",
+        "otp_code": otp_res["code"],
         "method": otp_res["method"]
     }
 
