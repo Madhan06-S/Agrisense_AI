@@ -91,15 +91,16 @@ async def test_reconstruction_pipeline_integration(db_session):
     user = User(
         email="rec_test@agrisense.gov.in",
         phone="9999999999",
+        full_name="Rec Test",
         aadhaar_number="123456789012",
-        hashed_password="pbkdf2:sha256:260000$mock_hash"
+        password_hash="pbkdf2:sha256:260000$mock_hash"
     )
     db_session.add(user)
     await db_session.commit()
     await db_session.refresh(user)
 
     farm = Farm(
-        owner_id=user.id,
+        farmer_id=user.id,
         name="Test Reconstruction Farm",
         crop_type="Wheat",
         sowing_date=date(2026, 6, 1),

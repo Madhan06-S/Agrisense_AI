@@ -254,7 +254,10 @@ function CopilotDashboardContent() {
   const handleSendVoiceQuery = async (queryText: string) => {
     if (!selectedFarm || !queryText.trim()) return;
     setIsProcessing(true);
-    setVoiceText(`Analyzing: "${queryText}"...`);
+    setVoiceText(`Analyzing: "${queryText}"... (Thinking / சிந்திக்கிறது / सोच रहा है)`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     try {
       const token = localStorage.getItem("access_token");
@@ -264,12 +267,14 @@ function CopilotDashboardContent() {
       const res = await fetch("/api/v1/copilot/advise", {
         method: "POST",
         headers,
+        signal: controller.signal,
         body: JSON.stringify({
           farm_id: selectedFarm.id,
           prompt: queryText,
           language: selectedLang
         })
       });
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();

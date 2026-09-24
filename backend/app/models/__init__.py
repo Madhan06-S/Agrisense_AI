@@ -17,6 +17,7 @@ from app.models.insurance_models import (
 )
 from app.models.afii import GrazingZone, VCIReading, AFIIPolicy, AFIIPayout
 from app.models.models import DataPipelineRun, SatelliteImage, FeatureVector, DatasetVersion
+from app.models.copilot_log import CopilotLog
 
 __all__ = [
     "User", "UserRole",
@@ -42,4 +43,5 @@ __all__ = [
     "SatelliteImage",
     "FeatureVector",
     "DatasetVersion",
+    "CopilotLog",
 ]

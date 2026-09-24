@@ -26,6 +26,13 @@ class Farm(Base):
 
     sowing_date = Column(Date, nullable=True)
     insurance_policy_number = Column(String(100), nullable=True)
+
+    # Location columns
+    state = Column(String(100), nullable=True)
+    district = Column(String(100), nullable=True)
+    taluka = Column(String(100), nullable=True)
+    village = Column(String(100), nullable=True)
+
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # Relationships
