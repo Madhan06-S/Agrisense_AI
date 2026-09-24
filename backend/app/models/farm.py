@@ -33,6 +33,9 @@ class Farm(Base):
     claims = relationship("Claim", back_populates="farm", lazy="select")
     satellite_records = relationship("SatelliteData", back_populates="farm", lazy="select")
     policies = relationship("InsurancePolicy", back_populates="farm", lazy="select")
+    images = relationship("SatelliteImage", back_populates="farm", lazy="select")
+    features = relationship("FeatureVector", back_populates="farm", lazy="select")
+    pipeline_runs = relationship("DataPipelineRun", back_populates="farm", lazy="select")
 
     def __repr__(self):
         return f"<Farm id={self.id} name={self.name} farmer_id={self.farmer_id}>"
