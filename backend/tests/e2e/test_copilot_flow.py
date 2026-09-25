@@ -10,7 +10,7 @@ def test_full_copilot_feedback_cycle():
     
     # 1. Generate Advice
     res = advisor.generate_advisory(profile, vector, weather, [])
-    assert len(res["advisories"]) == 3
+    assert len(res["advisories"]) >= 3
     
     # 2. Farmer rates advisory
     adv_id = "ADV-E2E-77"

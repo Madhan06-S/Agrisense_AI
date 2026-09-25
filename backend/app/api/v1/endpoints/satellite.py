@@ -26,7 +26,7 @@ async def trigger_satellite_fetch(
     Queues a Celery task and returns the pipeline run state.
     """
     # Verify farm exists
-    farm_result = await db.execute(select(Farm).where(Farm.id == farm_id, Farm.is_deleted == False))
+    farm_result = await db.execute(select(Farm).where(Farm.id == farm_id))
     farm = farm_result.scalars().first()
     if not farm:
         raise HTTPException(status_code=404, detail="Farm not found.")

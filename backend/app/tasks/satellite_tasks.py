@@ -82,9 +82,21 @@ def fetch_satellite_data(self, farm_id: int, start_date: str, end_date: str, run
                     raise InvalidDataError(f"Farm with ID {farm_id} not found.")
 
                 # Retrieve farm boundary
-                from shapely.geometry import mapping
-                from geoalchemy2.shape import to_shape
-                geojson = mapping(to_shape(farm.boundary))
+                if isinstance(farm.boundary, dict):
+                    geojson = farm.boundary
+                elif isinstance(farm.boundary, str):
+                    try:
+                        geojson = json.loads(farm.boundary)
+                    except Exception:
+                        from shapely.geometry import mapping
+                        from geoalchemy2.shape import to_shape
+                        geojson = mapping(to_shape(farm.boundary))
+                elif farm.boundary is not None:
+                    from shapely.geometry import mapping
+                    from geoalchemy2.shape import to_shape
+                    geojson = mapping(to_shape(farm.boundary))
+                else:
+                    geojson = {}
                 
                 # 3. Input Validation
                 val_ok, err_msg = validate_geojson(geojson)

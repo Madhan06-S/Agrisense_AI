@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import Optional, Any
 from datetime import date, datetime
 
@@ -13,6 +13,15 @@ class FarmCreate(BaseModel):
     season: Optional[str] = "Kharif"
     # GeoJSON polygon from Leaflet draw
     boundary_geojson: Optional[dict] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def accept_boundary_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "boundary" in data and "boundary_geojson" not in data:
+                data["boundary_geojson"] = data["boundary"]
+        return data
+
 
 
 class FarmUpdate(BaseModel):

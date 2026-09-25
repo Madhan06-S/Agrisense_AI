@@ -11,12 +11,20 @@ from app.catalog.versioning import create_version, rollback_to_version
 from app.catalog.metadata_store import query_images_metadata
 from sqlalchemy import select
 
+from app.core.security import get_current_user
+from app.models.user import User
+
 @pytest.mark.asyncio
 async def test_full_e2e_pipeline_and_catalog_flow(db_session):
-    # Override get_db to point to local testing session
+    # Override get_db and get_current_user to point to local testing session and test user
     async def override_get_db():
         yield db_session
+
+    async def override_get_current_user():
+        return User(id=1, phone="+919876543210", full_name="Test Farmer", role="farmer", password_hash="dummy")
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
 
     transport = httpx.ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

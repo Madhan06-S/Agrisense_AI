@@ -14,6 +14,7 @@ def setup_module(module):
     Programmatically exports a lightweight U-Net model to placeholder.onnx
     to enable real ONNX Runtime inference in tests.
     """
+    torch.set_num_threads(1)
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     model_path = os.path.join(base_dir, "app", "ml", "diffusion", "placeholder.onnx")
     
@@ -44,9 +45,11 @@ def setup_module(module):
         )
 
 def test_pytorch_unet_shape():
-    model = ConditionalUNet(in_channels=10, out_channels=4)
-    x = torch.randn(2, 10, 128, 128)
-    t = torch.randn(2, 1)
+    torch.set_num_threads(1)
+    device = torch.device("cpu")
+    model = ConditionalUNet(in_channels=10, out_channels=4).to(device)
+    x = torch.randn(2, 10, 128, 128, device=device)
+    t = torch.randn(2, 1, device=device)
     out = model(x, t)
     assert out.shape == (2, 4, 128, 128)
 

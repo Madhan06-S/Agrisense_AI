@@ -7,12 +7,20 @@ from app.core.database import get_db
 from app.models.models import Farm, SatelliteImage, DataPipelineRun
 from sqlalchemy import select
 
+from app.core.security import get_current_user
+from app.models.user import User
+
 @pytest.mark.asyncio
 async def test_full_preprocessing_e2e_flow(db_session):
-    # Override database injection
+    # Override database injection and current user auth
     async def override_get_db():
         yield db_session
+
+    async def override_get_current_user():
+        return User(id=1, phone="+919876543210", full_name="Test Farmer", role="farmer", password_hash="dummy")
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
 
     transport = httpx.ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

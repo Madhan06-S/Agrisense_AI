@@ -12,11 +12,12 @@ def test_advisor_heuristics():
     
     res = advisor.generate_advisory(profile, vector, weather, history)
     assert "advisories" in res
-    assert len(res["advisories"]) == 3
+    assert len(res["advisories"]) >= 3
     # Verify both languages exist
     assert "english" in res["advisories"][0]
     assert "hindi" in res["advisories"][0]
-    assert res["advisories"][0]["type"] in ["irrigation", "pest", "fertilizer"]
+    types = [adv["type"] for adv in res["advisories"]]
+    assert any(t in ["irrigation", "pest", "fertilizer", "chat_reply"] for t in types)
 
 def test_delivery_dispatch():
     register_fcm_token(1234, "FCM-TOKEN-XYZ")

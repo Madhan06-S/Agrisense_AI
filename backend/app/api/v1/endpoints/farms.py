@@ -38,6 +38,12 @@ def _parse_boundary_json(boundary_val) -> Optional[dict]:
     if isinstance(boundary_val, dict):
         return boundary_val
     try:
+        from geoalchemy2.shape import to_shape
+        from shapely.geometry import mapping
+        return mapping(to_shape(boundary_val))
+    except Exception:
+        pass
+    try:
         return json.loads(str(boundary_val))
     except Exception:
         return None
@@ -49,7 +55,15 @@ async def create_farm(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_farmer),
 ):
-    boundary_text = json.dumps(payload.boundary_geojson) if payload.boundary_geojson else None
+    boundary_geom = None
+    if payload.boundary_geojson:
+        try:
+            from geoalchemy2.shape import from_shape
+            poly = shape(payload.boundary_geojson)
+            boundary_geom = from_shape(poly, srid=4326)
+        except Exception:
+            boundary_geom = None
+
     calculated_area = _calculate_area_hectares(payload.boundary_geojson) if payload.boundary_geojson else None
 
     farm = Farm(
@@ -59,7 +73,7 @@ async def create_farm(
         sowing_date=payload.sowing_date,
         insurance_policy_number=payload.insurance_policy_number,
         khasra_number=payload.khasra_number,
-        boundary=boundary_text,
+        boundary=boundary_geom,
         area_hectares=calculated_area,
     )
 

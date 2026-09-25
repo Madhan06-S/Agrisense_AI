@@ -68,7 +68,7 @@ async def search_farms_catalog(
             farm_ids = [int(h["_id"]) for h in hits]
             
             if farm_ids:
-                stmt = select(Farm).where(Farm.id.in_(farm_ids), Farm.is_deleted == False)
+                stmt = select(Farm).where(Farm.id.in_(farm_ids))
                 db_res = await db.execute(stmt)
                 farms = db_res.scalars().all()
                 # Maintain Elasticsearch hit order
@@ -89,7 +89,7 @@ async def search_farms_catalog(
             logger.warning(f"Elasticsearch search failed: {e}. Falling back to PostgreSQL query.")
 
     # Fallback to database queries
-    stmt = select(Farm).where(Farm.is_deleted == False)
+    stmt = select(Farm)
     conditions = []
     
     if query_str:
