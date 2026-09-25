@@ -39,8 +39,8 @@ def test_pest_risk_forecast_matrix():
 
 
 def test_irrigation_scheduler():
-    # Heavy 7-day rain -> SKIP_IRRIGATION
-    skip_res = schedule_irrigation("Rice", soil_moisture_pct=40.0, rain_forecast_7day_mm=30.0)
+    # Rain forecast (30mm) >= Deficit (60 - (60% of 60) = 24mm) -> SKIP_IRRIGATION
+    skip_res = schedule_irrigation("Rice", soil_moisture_pct=60.0, rain_forecast_7day_mm=30.0)
     assert skip_res["action"] == "SKIP_IRRIGATION"
     assert skip_res["recommended_volume_l_per_ha"] == 0
 
@@ -68,3 +68,45 @@ def test_leaf_diagnose_fallback():
     assert "disease_name" in diag
     assert diag["confidence"] > 0.5
     assert "treatment_english" in diag
+
+
+def test_et0_penman_monteith_sanity_bounds():
+    from app.copilot.ml_models import et0_penman_monteith
+
+    # Typical Indian conditions: 25°C, 60% RH, 1.5 m/s wind, 14.0 MJ/m2/day solar rad
+    weather = {
+        "temp_c": 25.0,
+        "humidity_pct": 60.0,
+        "wind_speed_m_s": 1.5,
+        "solar_rad_mj_m2": 14.0
+    }
+    et0 = et0_penman_monteith(weather)
+    # FAO-56 worked example target range for typical conditions: 3.5 - 4.5 mm/day
+    assert 3.5 <= et0 <= 4.5, f"ET0 {et0} mm/day outside FAO-56 expected range 3.5-4.5"
+
+
+
+def test_crop_kc_lookup():
+    from app.copilot.ml_models import get_crop_kc
+    assert get_crop_kc("Rice", "vegetative") == 1.20
+    assert get_crop_kc("wheat", "flowering") == 1.15
+    assert get_crop_kc("Cotton", "maturity") == 0.70
+    assert get_crop_kc("unknown_crop", "vegetative") == 1.0
+
+
+def test_irrigation_decision_boundary():
+    from app.copilot.ml_models import schedule_irrigation
+
+    # Field capacity = 60mm.
+    # Deficit = 25.0mm -> moisture = 35mm -> moisture_pct = (35/60)*100 = 58.333%
+    # Deficit <= 25mm -> WAIT_WITH_ESTIMATE
+    res_wait = schedule_irrigation("Rice", soil_moisture_pct=58.333, rain_forecast_7day_mm=0.0)
+    assert res_wait["deficit_mm"] == 25.0
+    assert res_wait["action"] == "WAIT_WITH_ESTIMATE"
+
+    # Deficit = 25.1mm -> moisture = 34.9mm -> moisture_pct = (34.9/60)*100 = 58.167%
+    # Deficit > 25mm -> IRRIGATE_TODAY
+    res_irrigate = schedule_irrigation("Rice", soil_moisture_pct=58.167, rain_forecast_7day_mm=0.0)
+    assert res_irrigate["deficit_mm"] == 25.1
+    assert res_irrigate["action"] == "IRRIGATE_TODAY"
+

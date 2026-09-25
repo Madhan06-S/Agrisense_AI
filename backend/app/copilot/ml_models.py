@@ -1,6 +1,7 @@
 import logging
 import base64
 import json
+import math
 import os
 from typing import Dict, Any, List, Optional
 from openai import OpenAI
@@ -268,6 +269,60 @@ def forecast_pest_risk(
     }
 
 
+# Standard FAO-56 Crop Coefficient (Kc) Table
+FAO_KC_TABLE = {
+    "rice": {"initial": 1.05, "vegetative": 1.20, "flowering": 1.20, "maturity": 0.90},
+    "paddy": {"initial": 1.05, "vegetative": 1.20, "flowering": 1.20, "maturity": 0.90},
+    "wheat": {"initial": 0.40, "vegetative": 1.15, "flowering": 1.15, "maturity": 0.40},
+    "cotton": {"initial": 0.35, "vegetative": 1.15, "flowering": 1.15, "maturity": 0.70},
+    "maize": {"initial": 0.30, "vegetative": 1.20, "flowering": 1.20, "maturity": 0.60},
+    "sugarcane": {"initial": 0.40, "vegetative": 1.25, "flowering": 1.25, "maturity": 0.75},
+}
+
+
+def get_crop_kc(crop_type: str, growth_stage: str = "vegetative") -> float:
+    crop_lower = str(crop_type).lower()
+    stage_lower = str(growth_stage).lower()
+    crop_kc = FAO_KC_TABLE.get(crop_lower, {"initial": 0.5, "vegetative": 1.0, "flowering": 1.1, "maturity": 0.7})
+    return crop_kc.get(stage_lower, crop_kc.get("vegetative", 1.0))
+
+
+def et0_penman_monteith(weather_params: Dict[str, Any]) -> float:
+    """
+    FAO-56 Penman-Monteith Reference Evapotranspiration (ET0) equation in mm/day.
+    Formula:
+    ET0 = [0.408 * delta * (Rn - G) + gamma * (900 / (T + 273)) * u2 * (es - ea)] / [delta + gamma * (1 + 0.34 * u2)]
+    """
+    t = float(weather_params.get("temp_c", 28.0))
+    rh = normalize_moisture_humidity(weather_params.get("humidity_pct", 50.0))
+    u2 = float(weather_params.get("wind_speed_m_s", weather_params.get("wind_speed", 2.0)))
+    
+    # Solar radiation (MJ/m^2/day)
+    s_rad = weather_params.get("solar_rad_mj_m2")
+    if s_rad is None:
+        sw = weather_params.get("shortwave_radiation")
+        if sw is not None:
+            s_rad = float(sw) * 0.0864
+        else:
+            s_rad = 18.0  # typical solar radiation MJ/m^2/day
+    else:
+        s_rad = float(s_rad)
+
+    rn = 0.77 * s_rad
+    g = 0.0  # Soil heat flux for daily step
+
+    es = 0.6108 * math.exp((17.27 * t) / (t + 237.3))
+    ea = es * (rh / 100.0)
+    delta = (4098.0 * es) / ((t + 237.3) ** 2)
+    gamma = 0.066
+
+    num = 0.408 * delta * (rn - g) + gamma * (900.0 / (t + 273.0)) * u2 * (es - ea)
+    den = delta + gamma * (1.0 + 0.34 * u2)
+
+    et0 = num / den if den != 0 else 3.5
+    return round(max(0.5, min(15.0, et0)), 2)
+
+
 # ==========================================
 # 4. Evapotranspiration Irrigation Scheduler
 # ==========================================
@@ -275,36 +330,87 @@ def schedule_irrigation(
     crop_type: str,
     soil_moisture_pct: float,
     rain_forecast_7day_mm: float,
-    growth_stage: str = "vegetative"
+    growth_stage: str = "vegetative",
+    weather_params: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    Evapotranspiration & rainfall forecast based irrigation scheduler.
+    FAO-56 Penman-Monteith driven irrigation scheduler.
     """
-    moisture = normalize_moisture_humidity(soil_moisture_pct)
+    moisture_pct = normalize_moisture_humidity(soil_moisture_pct)
     rain_total = float(rain_forecast_7day_mm)
 
-    if rain_total >= 25.0:
+    if weather_params is None:
+        weather_params = {}
+    if "humidity_pct" not in weather_params:
+        weather_params["humidity_pct"] = moisture_pct
+
+    et0 = et0_penman_monteith(weather_params)
+    kc = get_crop_kc(crop_type, growth_stage)
+    etc = round(et0 * kc, 2)  # Crop evapotranspiration mm/day
+
+    # Soil moisture deficit (assume 60mm root zone capacity)
+    field_capacity_mm = 60.0
+    current_moisture_mm = (moisture_pct / 100.0) * field_capacity_mm
+    deficit_mm = round(field_capacity_mm - current_moisture_mm, 1)
+
+    # Decision Logic:
+    # if forecast rain >= deficit -> SKIP
+    # elif deficit > 25.0mm -> IRRIGATE_TODAY
+    # else -> WAIT_WITH_ESTIMATE
+    if rain_total >= deficit_mm and deficit_mm > 0:
         action = "SKIP_IRRIGATION"
-        recommendation_en = f"Skip irrigation. Heavy rainfall forecast ({rain_total:.1f}mm) over next 7 days will saturate root zone."
-        recommendation_hi = f"सिंचाई छोड़ें। अगले 7 दिनों में भारी वर्षा ({rain_total:.1f} मिमी) से पर्याप्त नमी मिलेगी।"
-        recommendation_ta = f"பாசனத்தைத் தவிர்க்கவும். அடுத்த 7 நாட்களில் பலத்த மழை ({rain_total:.1f}மிமீ) பெய்ய வாய்ப்புள்ளது."
+        recommendation_en = (
+            f"Skip irrigation. Heavy rainfall forecast ({rain_total:.1f}mm) covers the soil moisture deficit ({deficit_mm:.1f}mm). "
+            f"FAO-56 ET0: {et0:.2f} mm/day, Crop Kc: {kc:.2f}, ETc: {etc:.2f} mm/day."
+        )
+        recommendation_hi = (
+            f"सिंचाई छोड़ें। अनुमानित वर्षा ({rain_total:.1f}mm) मिट्टी की कमी ({deficit_mm:.1f}mm) को पूरा करती है। "
+            f"FAO-56 ET0: {et0:.2f} mm/day, Kc: {kc:.2f}."
+        )
+        recommendation_ta = (
+            f"பாசனத்தைத் தவிர்க்கவும். மழை ({rain_total:.1f}மிமீ) மண் ஈரப்பதம் பற்றாக்குறையை நிவர்த்தி செய்யும். "
+            f"ET0: {et0:.2f} mm/day, Kc: {kc:.2f}."
+        )
         water_req_liters_per_ha = 0
-    elif moisture < 35.0 and rain_total < 10.0:
+    elif deficit_mm > 25.0:
         action = "IRRIGATE_TODAY"
-        recommendation_en = f"Irrigate today. Soil moisture level is low ({moisture:.1f}%) with minimal expected rain ({rain_total:.1f}mm)."
-        recommendation_hi = f"आज ही सिंचाई करें। मिट्टी में नमी कम ({moisture:.1f}%) है और बारिश की संभावना कम है।"
-        recommendation_ta = f"இன்றே பாசனம் செய்யவும். மண் ஈரப்பதம் குறைவாக ({moisture:.1f}%) உள்ளது."
-        water_req_liters_per_ha = 45000
+        water_req_liters_per_ha = int(deficit_mm * 10000)
+        recommendation_en = (
+            f"Irrigate today. Soil moisture deficit is {deficit_mm:.1f}mm (> 25mm threshold). "
+            f"FAO-56 ET0: {et0:.2f} mm/day, Crop Kc ({crop_type}, {growth_stage}): {kc:.2f}, ETc: {etc:.2f} mm/day."
+        )
+        recommendation_hi = (
+            f"आज ही सिंचाई करें। मिट्टी में नमी की कमी {deficit_mm:.1f}mm है। "
+            f"FAO-56 ET0: {et0:.2f} mm/day, Crop Kc: {kc:.2f}."
+        )
+        recommendation_ta = (
+            f"இன்றே பாசனம் செய்யவும். மண் பற்றாக்குறை {deficit_mm:.1f}மிமீ. "
+            f"ET0: {et0:.2f} mm/day, Kc: {kc:.2f}."
+        )
     else:
-        action = "WAIT_3_DAYS"
-        recommendation_en = f"Wait 3 days before next watering. Current soil moisture ({moisture:.1f}%) is adequate."
-        recommendation_hi = f"अगली सिंचाई के लिए 3 दिन प्रतीक्षा करें। वर्तमान मिट्टी की नमी ({moisture:.1f}%) पर्याप्त है।"
-        recommendation_ta = f"அடுத்த பாசனத்திற்கு 3 நாட்கள் காத்திருக்கவும். தற்போதைய ஈரப்பதம் போதுமானது."
-        water_req_liters_per_ha = 20000
+        action = "WAIT_WITH_ESTIMATE"
+        days_until_deficit = max(1, round((25.0 - deficit_mm) / etc, 1)) if etc > 0 else 3.0
+        water_req_liters_per_ha = int(deficit_mm * 10000)
+        recommendation_en = (
+            f"Wait ~{days_until_deficit} days before next watering. Current moisture deficit is {deficit_mm:.1f}mm (≤ 25mm threshold). "
+            f"FAO-56 ET0: {et0:.2f} mm/day, Crop Kc: {kc:.2f}, daily water loss ETc: {etc:.2f} mm/day."
+        )
+        recommendation_hi = (
+            f"अगली सिंचाई के लिए लगभग {days_until_deficit} दिन प्रतीक्षा करें। वर्तमान कमी {deficit_mm:.1f}mm है। "
+            f"FAO-56 ET0: {et0:.2f} mm/day, Kc: {kc:.2f}."
+        )
+        recommendation_ta = (
+            f"அடுத்த பாசனத்திற்கு சுமார் {days_until_deficit} நாட்கள் காத்திருக்கவும். பற்றாக்குறை {deficit_mm:.1f}மிமீ. "
+            f"ET0: {et0:.2f} mm/day, Kc: {kc:.2f}."
+        )
 
     return {
         "action": action,
-        "soil_moisture_pct": moisture,
+        "et0_mm_day": et0,
+        "kc": kc,
+        "etc_mm_day": etc,
+        "soil_moisture_pct": moisture_pct,
+        "deficit_mm": deficit_mm,
         "rain_forecast_7day_mm": rain_total,
         "growth_stage": growth_stage,
         "recommended_volume_l_per_ha": water_req_liters_per_ha,
