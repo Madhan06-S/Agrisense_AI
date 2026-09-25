@@ -69,6 +69,19 @@ def load_model():
         
     return _MODEL, _METADATA
 
+def get_model_status() -> Dict[str, Any]:
+    """Returns status of XGBoost booster model loading."""
+    model, meta = load_model()
+    is_loaded = model is not None
+    return {
+        "model_loaded": is_loaded,
+        "fallback_active": not is_loaded,
+        "model_version": meta.get("model_version", "mock-dev") if meta else "mock-dev",
+        "trees": 1500 if is_loaded else 0,
+        "xgb_package_available": HAS_XGB,
+        "model_file_path": MODEL_PATH
+    }
+
 def get_mock_prediction(vector: np.ndarray) -> Dict[str, Any]:
     """
     Mock heuristic model for development:

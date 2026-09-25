@@ -36,7 +36,15 @@ graph TD
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack & ML Prerequisites
+
+### OpenMP (`libomp`) System Library Setup
+To ensure the 1,500-tree XGBoost damage prediction model loads natively across OS platforms:
+- **macOS**: `brew install libomp`
+- **Linux (Ubuntu/Debian)**: `sudo apt-get install -y libomp-dev`
+- **Windows**: Included in Microsoft Visual C++ Redistributable (`pip install xgboost`)
+
+Verify ML booster health via API: `GET http://localhost:8000/api/v1/ml/health`
 
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS (Light Theme), Lucide React Icons, Web Speech API (SpeechRecognition & SpeechSynthesis), Recharts.
 - **Backend**: FastAPI (Python 3.9+), SQLAlchemy (AsyncSession), SQLite, Pydantic, APScheduler.

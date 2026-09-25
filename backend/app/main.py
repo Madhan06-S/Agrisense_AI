@@ -46,6 +46,16 @@ async def startup_event():
     else:
         logger.info("COPILOT: LLM provider NOT configured — heuristic mode active (rule engine on real NDVI/weather data)")
 
+    try:
+        from app.ml.xgboost.inference import get_model_status
+        xgb_status = get_model_status()
+        if xgb_status["model_loaded"]:
+            logger.info(f"ML: XGBoost booster LOADED (1500 trees, version {xgb_status['model_version']})")
+        else:
+            logger.warning("ML: XGBoost FAILED — mock fallback ACTIVE")
+    except Exception as ml_err:
+        logger.warning(f"ML: XGBoost health check error: {ml_err}")
+
     logger.info("Initializing Google Earth Engine on system startup...")
     try:
         await initialize_gee()

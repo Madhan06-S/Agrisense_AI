@@ -46,16 +46,29 @@ async def predict_farm_damage_batch(payload: BatchPredictRequest):
         logger.error(f"Error predicting batch damage: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/health", response_model=Dict[str, Any])
+async def get_ml_health():
+    """
+    Returns health and load status of the XGBoost booster model.
+    """
+    from app.ml.xgboost.inference import get_model_status
+    return get_model_status()
+
 @router.get("/model/info", response_model=Dict[str, Any])
 async def get_model_info():
     """
     Retrieves info about the active XGBoost model.
     """
+    from app.ml.xgboost.inference import get_model_status
+    status = get_model_status()
     _, meta = load_model()
     return {
+        "model_loaded": status["model_loaded"],
+        "fallback_active": status["fallback_active"],
         "model_version": meta.get("model_version", "mock-dev"),
         "mean_cv_logloss": meta.get("mean_cv_logloss", 0.0),
         "trained_samples": meta.get("trained_samples", 0),
+        "trees": status["trees"],
         "features": 22
     }
 
