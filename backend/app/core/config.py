@@ -1,12 +1,16 @@
+import os
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_DB_PATH = os.path.abspath(os.path.join(os.getcwd(), "backend", "agrisense.db")) if os.path.exists(os.path.join(os.getcwd(), "backend")) else os.path.join(_BASE_DIR, "backend", "agrisense.db")
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AgriSense AI"
     API_V1_STR: str = "/api/v1"
     
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./agrisense.db"
+    DATABASE_URL: str = f"sqlite+aiosqlite:///{_DB_PATH}"
     
     # Redis & Celery
     REDIS_URL: str = "redis://localhost:6379/0"

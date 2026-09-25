@@ -317,12 +317,14 @@ async def get_claim_satellite_image(
 async def verify_image_preupload(
     file: UploadFile = File(...),
     farm_id: Optional[int] = Form(None),
+    claim_id: Optional[int] = Form(None),
     client_lat: Optional[float] = Form(None),
     client_lng: Optional[float] = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Instant pre-upload photo authenticity check for farmer UI.
+    Optionally persists ClaimImage record if claim_id is provided.
     """
     data = await file.read()
     
@@ -331,10 +333,22 @@ async def verify_image_preupload(
         stmt = select(Farm).where(Farm.id == farm_id)
         res = await db.execute(stmt)
         farm = res.scalars().first()
-        if farm and farm.boundary:
+        if farm and getattr(farm, "boundary", None):
             try:
-                from shapely.wkt import loads
-                poly = loads(farm.boundary)
+                if isinstance(farm.boundary, dict):
+                    from shapely.geometry import shape
+                    poly = shape(farm.boundary)
+                elif isinstance(farm.boundary, str):
+                    import json
+                    try:
+                        from shapely.geometry import shape
+                        poly = shape(json.loads(farm.boundary))
+                    except Exception:
+                        from shapely.wkt import loads
+                        poly = loads(farm.boundary)
+                else:
+                    from geoalchemy2.shape import to_shape
+                    poly = to_shape(farm.boundary)
                 farm_location = (poly.centroid.y, poly.centroid.x)
             except Exception:
                 pass
@@ -353,6 +367,49 @@ async def verify_image_preupload(
         client_location=client_loc,
         existing_hashes=existing_hashes
     )
+
+    if claim_id:
+        # Check claim exists
+        claim_res = await db.execute(select(Claim).where(Claim.id == claim_id))
+        claim = claim_res.scalar_one_or_none()
+        if claim:
+            claim_dir = os.path.join("data", "uploads", "claims", str(claim_id))
+            os.makedirs(claim_dir, exist_ok=True)
+            file_path = os.path.join(claim_dir, file.filename)
+            with open(file_path, "wb") as buffer:
+                buffer.write(data)
+
+            url = f"/uploads/claims/{claim_id}/{file.filename}"
+
+            taken_at_val = auth_result.get("taken_at")
+            if isinstance(taken_at_val, datetime):
+                cap_at = taken_at_val
+            elif isinstance(taken_at_val, str):
+                try:
+                    cap_at = datetime.fromisoformat(taken_at_val)
+                except Exception:
+                    cap_at = datetime.now(timezone.utc)
+            else:
+                cap_at = datetime.now(timezone.utc)
+
+            img_record = ClaimImage(
+                claim_id=claim_id,
+                image_url=url,
+                image_hash=_compute_phash(data),
+                sha256_hash=auth_result["sha256"],
+                latitude=auth_result["latitude"],
+                longitude=auth_result["longitude"],
+                is_geo_tagged=auth_result["latitude"] is not None,
+                captured_at=cap_at,
+                camera_model=auth_result["camera_model"],
+                authenticity_flags=auth_result["authenticity_flags"],
+                verified=auth_result["verified"],
+                uploaded_by_role="farmer",
+                file_size_bytes=len(data),
+                original_filename=file.filename,
+            )
+            db.add(img_record)
+            await db.commit()
 
     return {
         "filename": file.filename,
@@ -399,8 +456,20 @@ async def upload_images(
     farm_location = None
     if farm and getattr(farm, "boundary", None):
         try:
-            from shapely.wkt import loads
-            poly = loads(farm.boundary)
+            if isinstance(farm.boundary, dict):
+                from shapely.geometry import shape
+                poly = shape(farm.boundary)
+            elif isinstance(farm.boundary, str):
+                import json
+                try:
+                    from shapely.geometry import shape
+                    poly = shape(json.loads(farm.boundary))
+                except Exception:
+                    from shapely.wkt import loads
+                    poly = loads(farm.boundary)
+            else:
+                from geoalchemy2.shape import to_shape
+                poly = to_shape(farm.boundary)
             farm_location = (poly.centroid.y, poly.centroid.x)
         except Exception:
             pass
@@ -436,6 +505,17 @@ async def upload_images(
 
         url = f"/uploads/claims/{claim_id}/{f.filename}"
 
+        taken_at_val = auth.get("taken_at")
+        if isinstance(taken_at_val, datetime):
+            cap_at = taken_at_val
+        elif isinstance(taken_at_val, str):
+            try:
+                cap_at = datetime.fromisoformat(taken_at_val)
+            except Exception:
+                cap_at = datetime.now(timezone.utc)
+        else:
+            cap_at = datetime.now(timezone.utc)
+
         img_record = ClaimImage(
             claim_id=claim_id,
             image_url=url,
@@ -444,7 +524,7 @@ async def upload_images(
             latitude=auth["latitude"],
             longitude=auth["longitude"],
             is_geo_tagged=auth["latitude"] is not None,
-            captured_at=datetime.fromisoformat(auth["taken_at"]) if auth["taken_at"] else datetime.now(timezone.utc),
+            captured_at=cap_at,
             camera_model=auth["camera_model"],
             authenticity_flags=auth["authenticity_flags"],
             verified=auth["verified"],
