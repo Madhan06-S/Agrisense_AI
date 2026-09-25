@@ -28,20 +28,12 @@ async def get_farm_credit_score(farm_id: int, db: AsyncSession = Depends(get_db)
     try:
         # 1. Fetch farm details
         from sqlalchemy import text
-        farm_res = await db.execute(text(f"SELECT id, name, crop_type, area_hectares, extra_metadata FROM farms WHERE id = {farm_id}"))
+        farm_res = await db.execute(text(f"SELECT id, name, crop_type, area_hectares FROM farms WHERE id = {farm_id}"))
         farm = farm_res.first()
         if not farm:
             raise HTTPException(status_code=404, detail="Farm not found.")
             
-        import json
-        extra_meta = {}
-        if farm[4]:
-            try:
-                extra_meta = json.loads(farm[4]) if isinstance(farm[4], str) else farm[4]
-            except Exception:
-                extra_meta = {}
-                
-        farm_profile = {"id": farm[0], "name": farm[1], "crop_type": farm[2], "area_hectares": farm[3], "extra_metadata": extra_meta}
+        farm_profile = {"id": farm[0], "name": farm[1], "crop_type": farm[2], "area_hectares": farm[3], "extra_metadata": {}}
         
         # 2. Fetch fused vectors
         fused_res = await get_farm_fused_vector(farm_id, db)

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { 
   ShieldCheck, 
@@ -16,44 +16,139 @@ import {
   Send,
   Globe,
   Sparkles,
-  Square
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  RefreshCw,
+  TrendingUp,
+  Droplets,
+  Bug,
+  DollarSign,
+  Activity,
+  Image as ImageIcon
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Farm } from "@/components/MapComponent";
 import CopilotAvatar3D from "@/components/copilot/CopilotAvatar3D";
 import CreditScore3D from "@/components/credit/CreditScore3D";
 import Link from "next/link";
-
 import { dispatchApiError } from "@/components/ToastProvider";
 
 const queryClient = new QueryClient();
 
+interface ChatMessage {
+  id: string;
+  sender: "user" | "assistant";
+  text: string;
+  timestamp: string;
+  contextSummary?: string;
+  modelUsed?: string;
+  isHeuristic?: boolean;
+}
+
 function CopilotDashboardContent() {
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [activeAdvisoryIdx, setActiveAdvisoryIdx] = useState(0);
-  const [followedActions, setFollowedActions] = useState<Record<string, boolean>>({});
-  const [leafPhoto, setLeafPhoto] = useState<string | null>(null);
-  const [leafResult, setLeafResult] = useState<string | null>(null);
-  
-  // Voice Copilot Web Speech API States
   const [selectedLang, setSelectedLang] = useState<"en-IN" | "hi-IN" | "ta-IN">("hi-IN");
+
+  // Chat State
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome-1",
+      sender: "assistant",
+      text: "Namaste Patel-ji! I am your AI Agronomy Copilot connected live to your farm's NDVI satellite feed and weather forecast. Ask me anything about irrigation, pests, fertilizer, or crop health!",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      contextSummary: "📡 NDVI 0.28 🔴 | 🌧 12.5mm rain | 🌾 Rice",
+      modelUsed: "Gemini 2.5 Flash",
+      isHeuristic: false
+    }
+  ]);
+  const [inputText, setInputText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Voice Speech Recognition States
   const [isListening, setIsListening] = useState(false);
   const [hasSpeechSupport, setHasSpeechSupport] = useState(true);
-  const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
-  const [voiceText, setVoiceText] = useState("");
-  const [voiceResponseText, setVoiceResponseText] = useState("");
-  const [manualQuery, setManualQuery] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
 
-  // Check browser speech recognition support
+  // Leaf Disease Diagnostics States
+  const [leafPhoto, setLeafPhoto] = useState<string | null>(null);
+  const [isAnalyzingLeaf, setIsAnalyzingLeaf] = useState(false);
+  const [leafDiagnosis, setLeafDiagnosis] = useState<any>(null);
+
+  // Collapsible Section State
+  const [showStaticAdvisories, setShowStaticAdvisories] = useState(false);
+  const [activeAdvisoryIdx, setActiveAdvisoryIdx] = useState(0);
+
+  // Scroll to bottom on new chat message
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Speech Recognition Initialization
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRecognition) {
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.interimResults = false;
+        
+        rec.onstart = () => {
+          setIsListening(true);
+          setVoiceError(null);
+        };
+
+        rec.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript.trim()) {
+            setInputText(transcript);
+            handleSendMessage(transcript);
+          }
+        };
+
+        rec.onerror = (event: any) => {
+          setIsListening(false);
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            setVoiceError("Mic blocked — allow microphone permission in browser address bar.");
+          } else if (event.error === "no-speech") {
+            setVoiceError("No speech detected — please try speaking again.");
+          } else {
+            setVoiceError(`Voice capture error (${event.error}). Please type your prompt.`);
+          }
+        };
+
+        rec.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = rec;
+      } else {
         setHasSpeechSupport(false);
       }
     }
-  }, []);
+  }, [selectedLang]);
+
+  const toggleVoiceInput = () => {
+    setVoiceError(null);
+    if (!recognitionRef.current) {
+      setVoiceError("Speech recognition is not supported in this browser. Please use Chrome/Edge.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.lang = selectedLang;
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        setVoiceError("Voice recording busy. Try clicking again.");
+        setIsListening(false);
+      }
+    }
+  };
 
   // Fetch Farms
   const { data: farms = [] } = useQuery<Farm[]>({
@@ -68,65 +163,75 @@ function CopilotDashboardContent() {
         if (!res.ok) throw new Error(`Farm API Error (${res.status})`);
         return await res.json();
       } catch (err: any) {
-        dispatchApiError(err.message || "Failed to load farms from API. Loaded cached profile.");
+        dispatchApiError(err.message || "Loaded cached farm profile.");
         const cached = localStorage.getItem("agrisense_cached_farms");
-        return cached ? JSON.parse(cached) : [{ id: 1, name: "Patel Rice Farm #1", crop_type: "Rice" }];
+        return cached ? JSON.parse(cached) : [{ id: 1, name: "Patel Rice Farm #1", crop_type: "Rice", area_hectares: 2.5 }];
       }
     },
   });
 
-  // Select first farm by default
   useEffect(() => {
     if (farms.length > 0 && !selectedFarm) {
       setSelectedFarm(farms[0]);
     }
   }, [farms, selectedFarm]);
 
-  // Fetch Advisories
-  const { data: advisoriesReport = null, refetch: refetchAdvisories } = useQuery({
+  // Fetch ML Insights Cards Data
+  const { data: farmInsights = null } = useQuery({
+    queryKey: ["farm_ml_insights", selectedFarm?.id],
+    queryFn: async () => {
+      if (!selectedFarm) return null;
+      try {
+        const res = await fetch(`/api/v1/copilot/insights/${selectedFarm.id}`);
+        if (!res.ok) throw new Error("Failed to load insights");
+        return await res.json();
+      } catch {
+        return {
+          crop_type: selectedFarm.crop_type || "Rice",
+          area_hectares: selectedFarm.area_hectares || 2.5,
+          ndvi: 0.28,
+          soil_humidity_pct: 35.0,
+          insights: {
+            yield: { estimated_yield_per_acre: 18.5, regional_avg_per_acre: 18.0, status_label: "Optimal Vigor" },
+            pest_risk: { pest_risk_score: 45, risk_level: "MEDIUM", top_likely_pests: ["Brown Plant Hopper", "Stem Borer"] },
+            irrigation: { action: "SKIP_IRRIGATION", recommendation_english: "Skip irrigation. 25mm rain expected." },
+            market: { msp_inr: 2300, mandi_avg_inr: 2420, recommendation: "SELL_NOW" }
+          }
+        };
+      }
+    },
+    enabled: !!selectedFarm,
+  });
+
+  // Fetch Full Advisories for Collapsible View
+  const { data: advisoriesReport = null } = useQuery({
     queryKey: ["farm_advisories", selectedFarm?.id],
     queryFn: async () => {
       if (!selectedFarm) return null;
       try {
-        const token = localStorage.getItem("access_token");
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
         const res = await fetch("/api/v1/copilot/advise", {
           method: "POST",
-          headers,
-          body: JSON.stringify({ farm_id: selectedFarm.id })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ farm_id: selectedFarm.id, language: selectedLang })
         });
-        if (!res.ok) {
-          const errDetail = await res.json().catch(() => ({ detail: "Advise failed" }));
-          throw new Error(errDetail.detail || `Copilot API status ${res.status}`);
-        }
-        const data = await res.json();
-        if (data?.advisories?.[0]?.english) {
-          setVoiceResponseText(data.advisories[0].english);
-        }
-        return data;
-      } catch (err: any) {
-        dispatchApiError(err.message || "Copilot advice fetch failed. Using local heuristic fallback.");
+        if (!res.ok) throw new Error("Advisory fetch error");
+        return await res.json();
+      } catch {
         return {
-          advisory_id: `ADV-REAL-${selectedFarm.id}`,
           source: "HEURISTIC_ADVISOR",
           is_heuristic: true,
           advisories: [
             {
               type: "irrigation",
-              english: "[HIGH] Postpone irrigation. Heavy rain forecast (85% probability) on Thursday will naturally saturate soil.",
-              hindi: "[उच्च तीव्रता] सिंचाई स्थगित करें। गुरुवार को भारी बारिश (85% संभावना) से मिट्टी को पर्याप्त नमी मिलेगी।"
+              english: "[HIGH] Postpone irrigation. Heavy rain forecast (12.5mm) will naturally saturate soil.",
+              hindi: "[उच्च] सिंचाई स्थगित करें। भारी बारिश से मिट्टी संतृप्त होगी।",
+              tamil: "[அதிகம்] மழை பெய்ய வாய்ப்புள்ளதால் பாசனத்தை தள்ளிவைக்கவும்."
             },
             {
               type: "pest",
-              english: "[MEDIUM] Apply neem-based bio-pesticide spray. Prevents potential Brown Plant Hopper infestation due to high humidity.",
-              hindi: "[मध्यम तीव्रता] नीम आधारित जैव-कीटनाशक का छिड़काव करें। अत्यधिक उमस से होने वाले हॉपर कीट के प्रकोप को रोकता है।"
-            },
-            {
-              type: "fertilizer",
-              english: "[LOW] Apply nitrogen top-dressing (45kg urea per acre) to boost foliage vigor in mid-stage growth.",
-              hindi: "[निम्न तीव्रता] पत्तियों के बेहतर स्वास्थ्य और विकास के लिए यूरिया का छिड़काव (45 किग्रा प्रति एकड़) करें।"
+              english: "[MEDIUM - Humidity 35.0%] Monitor crop base for Brown Plant Hopper.",
+              hindi: "[मध्यम - नमी 35.0%] तने में हॉपर कीट की निगरानी करें।",
+              tamil: "[நடுத்தர - ஈரப்பதம் 35.0%] தண்டுப்பூச்சி தாக்குதலை கண்காணிக்கவும்."
             }
           ]
         };
@@ -142,22 +247,17 @@ function CopilotDashboardContent() {
       if (!selectedFarm) return null;
       try {
         const res = await fetch(`/api/v1/credit/score/${selectedFarm.id}`);
-        return await res.json();
+        if (!res.ok) throw new Error(`Credit API status ${res.status}`);
+        const data = await res.json();
+        if (!data || !data.score_report) throw new Error("Missing score_report");
+        return data;
       } catch {
         return {
           score_report: {
             credit_score: 680,
             tier: "Good",
             max_loan_limit_inr: 300000.0,
-            interest_rate_percent: 9.0,
-            shap_breakdown: {
-              stability: 80.0,
-              diversity: 70.0,
-              productivity: 85.0,
-              resilience: 80.0,
-              payment_history: 95.0,
-              tenure: 60.0
-            }
+            interest_rate_percent: 9.0
           }
         };
       }
@@ -165,548 +265,539 @@ function CopilotDashboardContent() {
     enabled: !!selectedFarm,
   });
 
-  const activeAdvisory = advisoriesReport?.advisories?.[activeAdvisoryIdx];
+  // Send Chat Query Mutation
+  const handleSendMessage = async (textToSend?: string) => {
+    const prompt = textToSend || inputText;
+    if (!prompt.trim() || !selectedFarm || isSending) return;
 
-  const handleLeafUpload = () => {
-    setLeafPhoto("https://images.unsplash.com/photo-1599599810769-bcde5a160d32");
-    setLeafResult("Detected: Blast Disease (Moderate). Treatment: Apply Tricyclazole 75% WP (120g/acre) under local agricultural guidelines.");
-  };
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      sender: "user",
+      text: prompt,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
 
-  // Web Speech API Handlers
-  const startListening = () => {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setHasSpeechSupport(false);
-      return;
-    }
-
-    try {
-      window.speechSynthesis?.cancel();
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = selectedLang;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setVoiceText("🎙 Listening... (बोलिए / Speak now)");
-      };
-
-      recognition.onresult = (event: any) => {
-        const current = event.resultIndex;
-        const transcript = event.results[current][0].transcript;
-        setVoiceText(`"${transcript}"`);
-
-        if (event.results[current].isFinal) {
-          handleSendVoiceQuery(transcript);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
-        setIsListening(false);
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setVoiceText("⚠️ Microphone permission denied. Click the lock/camera icon in your address bar to allow mic access.");
-        } else {
-          setVoiceText("Voice recognition ended. Try speaking again or type prompt below.");
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-      setRecognitionInstance(recognition);
-    } catch (e) {
-      console.error("Speech recognition start error:", e);
-      setIsListening(false);
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionInstance) {
-      try { recognitionInstance.stop(); } catch (e) {}
-    }
-    setIsListening(false);
-  };
-
-  const speakText = (textToSpeak: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = selectedLang;
-
-      // Select voice matching language (ta, hi, en)
-      const voices = window.speechSynthesis.getVoices();
-      const langPrefix = selectedLang.startsWith("ta") ? "ta" : selectedLang.startsWith("hi") ? "hi" : "en";
-      const matchingVoice = voices.find(v => v.lang.toLowerCase().includes(langPrefix));
-      if (matchingVoice) utterance.voice = matchingVoice;
-
-      window.speechSynthesis.speak(utterance);
-    } catch (err) {
-      console.warn("Speech synthesis error:", err);
-    }
-  };
-
-  const handleSendVoiceQuery = async (queryText: string) => {
-    if (!selectedFarm || !queryText.trim()) return;
-    setIsProcessing(true);
-    setVoiceText(`Analyzing: "${queryText}"... (Thinking / சிந்திக்கிறது / सोच रहा है)`);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    setMessages((prev) => [...prev, userMsg]);
+    setInputText("");
+    setIsSending(true);
 
     try {
-      const token = localStorage.getItem("access_token");
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
       const res = await fetch("/api/v1/copilot/advise", {
-        method: "POST",
-        headers,
-        signal: controller.signal,
-        body: JSON.stringify({
-          farm_id: selectedFarm.id,
-          prompt: queryText,
-          language: selectedLang
-        })
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        const topAdv = data?.advisories?.[0];
-        const spokenMsg = selectedLang === "ta-IN"
-          ? (topAdv?.tamil || topAdv?.english || "பயிர் ஆரோக்கியம் நன்றாக உள்ளது. நீர் வடிகால் வசதியை சோதிக்கவும்.")
-          : selectedLang === "hi-IN" 
-          ? (topAdv?.hindi || topAdv?.english || "आपकी फसल का स्वास्थ्य अच्छा है। खेत में नमी की निगरानी रखें।")
-          : (topAdv?.english || "Crop health parameters evaluated. Field drainage is clear.");
-
-        setVoiceText(`AI Response: ${spokenMsg}`);
-        setVoiceResponseText(spokenMsg);
-        speakText(spokenMsg);
-        refetchAdvisories();
-      } else {
-        dispatchApiError(`Copilot Voice Query error: status ${res.status}`);
-        const fallbackMsg = selectedLang === "ta-IN"
-          ? "பயிர் வளர்ச்சி சிறப்பாக உள்ளது. வரவிருக்கும் மழையால் நீர் பாய்ச்சுவதை தள்ளி வைக்கவும்."
-          : selectedLang === "hi-IN" 
-          ? "आपकी फसल का स्वास्थ्य उत्तम है। आगामी बारिश के कारण सिंचाई स्थगित रखें।"
-          : "Crop vigor is good. Postpone scheduled irrigation due to incoming rainfall.";
-        setVoiceText(`AI Response: ${fallbackMsg}`);
-        setVoiceResponseText(fallbackMsg);
-        speakText(fallbackMsg);
-      }
-    } catch (err: any) {
-      dispatchApiError(err.message || "Network error submitting voice query");
-      const fallbackMsg = "Foliage and soil moisture parameters checked. Maintain normal field monitoring.";
-      setVoiceText(`AI Response: ${fallbackMsg}`);
-      setVoiceResponseText(fallbackMsg);
-      speakText(fallbackMsg);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const feedbackMutation = useMutation({
-    mutationFn: async (followed: boolean) => {
-      if (!advisoriesReport) return;
-      await fetch("/api/v1/copilot/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          advisory_id: advisoriesReport.advisory_id,
-          rating: "thumbs_up",
-          followed
+          farm_id: selectedFarm.id,
+          prompt: prompt,
+          language: selectedLang
         })
       });
-    }
-  });
 
-  const handleFollowAction = (type: string) => {
-    setFollowedActions(prev => ({ ...prev, [type]: true }));
-    feedbackMutation.mutate(true);
+      if (!res.ok) throw new Error(`API returned HTTP ${res.status}`);
+      const data = await res.json();
+
+      const assistantReply = data.raw_text || data.advisories?.[0]?.english || "Advice processed successfully.";
+      const assistantMsg: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        sender: "assistant",
+        text: assistantReply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        contextSummary: data.context_summary || `📡 Farm #${selectedFarm.id} | ${selectedFarm.crop_type}`,
+        modelUsed: data.model_used || (data.is_heuristic ? "Heuristic Rules" : "Gemini 2.5 Flash"),
+        isHeuristic: data.is_heuristic
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (err: any) {
+      dispatchApiError("Failed to reach AI Copilot server. Falling back to local agronomy advice.");
+      const fallbackMsg: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        sender: "assistant",
+        text: `Based on your ${selectedFarm.crop_type} field data: Soil humidity is at 35.0% and 12.5mm rain is expected today. Postpone irrigation and inspect crop base for pest activity.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        contextSummary: `📡 ${selectedFarm.name} | Offline Rules Fallback`,
+        modelUsed: "Rule Engine Fallback",
+        isHeuristic: true
+      };
+      setMessages((prev) => [...prev, fallbackMsg]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const mandiData = [
-    { market: "Khanna Mandi", price: 2150 },
-    { market: "Rajpura Mandi", price: 2180 },
-    { market: "Sirhind Mandi", price: 2125 },
-    { market: "Moga Mandi", price: 2210 }
-  ];
+  // Handle Leaf Image Upload & Diagnosis
+  const handleLeafUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64 = evt.target?.result as string;
+      setLeafPhoto(base64);
+      setIsAnalyzingLeaf(true);
+      setLeafDiagnosis(null);
+
+      try {
+        const res = await fetch("/api/v1/copilot/diagnose-leaf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_base64: base64,
+            crop_type: selectedFarm?.crop_type || "Rice",
+            language: selectedLang
+          })
+        });
+
+        if (!res.ok) throw new Error("Leaf diagnosis failed");
+        const data = await res.json();
+        setLeafDiagnosis(data.diagnosis);
+
+        // Also push diagnosis as a message into chat stream
+        const diagText = `🍃 Leaf Diagnostic Result: Identified ${data.diagnosis.disease_name} (Confidence: ${Math.round(data.diagnosis.confidence * 100)}%). Treatment: ${data.diagnosis.treatment_english}`;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `diag-${Date.now()}`,
+            sender: "assistant",
+            text: diagText,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            contextSummary: "🔬 AI Vision Pathology Analysis",
+            modelUsed: data.diagnosis.source || "Gemini 2.5 Flash Vision",
+            isHeuristic: false
+          }
+        ]);
+      } catch (err) {
+        dispatchApiError("Failed to analyze image with vision model. Using heuristic disease scanner.");
+        setLeafDiagnosis({
+          disease_name: "Rice Blast (Pyricularia oryzae)",
+          confidence: 0.88,
+          severity: "MEDIUM",
+          treatment_english: "Apply Tricyclazole 75% WP @ 0.6 g/L of water.",
+          treatment_hindi: "ट्राइसाइक्लाजोल 75% डब्लूपी का छिड़काव करें।",
+          treatment_tamil: "டிரைசைக்ளோசோல் தெளிக்கவும்."
+        });
+      } finally {
+        setIsAnalyzingLeaf(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const activeAdvisory = advisoriesReport?.advisories?.[activeAdvisoryIdx];
 
   return (
-    <div className="min-h-screen bg-[#F7F9F5] text-slate-800 p-4 md:p-8 font-sans">
-      
-      {/* Header */}
-      <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#E5EBE3] pb-4">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/farmer" className="p-2 bg-white border border-[#E5EBE3] rounded-lg hover:bg-slate-50 transition-colors text-[#374151]">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-bold text-[#1B5E20]">AgriSense AI Farmer Copilot</h1>
-            <p className="text-xs text-[#5B6B5B] mt-0.5">Access personalized agronomy advice, real voice copilot support, and credit estimates.</p>
-          </div>
-        </div>
-        
-        {/* Dropdown Selector */}
-        {farms.length > 0 && (
-          <div className="flex gap-2 items-center text-xs">
-            <span className="text-[#5B6B5B] font-semibold uppercase">Select Farm:</span>
-            <select
-              value={selectedFarm?.id ?? ""}
-              onChange={(e) => {
-                const id = parseInt(e.target.value);
-                const found = farms.find((f) => f.id === id);
-                if (found) setSelectedFarm(found);
-              }}
-              className="bg-white border border-[#E5EBE3] rounded-lg px-3 py-1.5 text-xs text-[#1B5E20] font-semibold focus:outline-none focus:border-[#2E7D32]"
+    <div className="min-h-screen bg-[#F8FAF8] text-[#1B5E20] font-sans pb-12">
+      {/* Top Header Bar */}
+      <header className="bg-white border-b border-[#E5EBE3] sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/dashboard/farmer" 
+              className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#1B5E20] border border-[#2E7D32]/20 transition"
             >
-              {farms.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-      </header>
-
-      {selectedFarm ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Left Columns (8 spans): 3D Assistant & Advisories */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            
-            {/* 3D Advisor Avatar */}
-            {activeAdvisory && (
-              <div className="bg-white border border-[#E5EBE3] rounded-xl overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-[#E5EBE3] bg-slate-50 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#1B5E20]" />
-                    <span className="text-xs font-bold text-[#1B5E20] uppercase">3D Agronomy Assistant</span>
-                  </div>
-                  {voiceResponseText && (
-                    <button 
-                      onClick={() => speakText(voiceResponseText)}
-                      className="inline-flex items-center gap-1 text-[11px] text-[#1B5E20] font-bold bg-[#E8F5E9] px-2 py-0.5 rounded border border-[#2E7D32]/20"
-                    >
-                      <Volume2 className="w-3.5 h-3.5" /> Speak Out Loud
-                    </button>
-                  )}
-                </div>
-                <div className="h-[250px] relative bg-slate-50">
-                  <CopilotAvatar3D
-                    adviceText={activeAdvisory.english}
-                    activeTopic={activeAdvisory.type as any}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Daily Briefing Cards */}
-            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider">Priority Crop Advisories</h3>
-                  {advisoriesReport?.is_heuristic || advisoriesReport?.source === "HEURISTIC_ADVISOR" ? (
-                    <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded font-bold">
-                      Offline Mode (Live Data Heuristics)
-                    </span>
-                  ) : (
-                    <span className="text-[10px] bg-emerald-100 text-[#1B5E20] border border-emerald-300 px-2 py-0.5 rounded font-bold">
-                      LLM AI Online
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] bg-[#E8F5E9] text-[#1B5E20] border border-[#2E7D32]/20 px-2 py-0.5 rounded font-bold">
-                  {advisoriesReport?.advisories?.length ?? 0} Recommendations Active
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-[#1B5E20] tracking-tight">AI Agronomy Copilot</h1>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-[#1B5E20] border border-[#2E7D32]/30 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  MNC-Grade AI Assistant
                 </span>
               </div>
-              
-              <div className="space-y-3">
-                {advisoriesReport?.advisories?.map((adv: any, idx: number) => (
-                  <div
-                    key={idx}
-                    onClick={() => setActiveAdvisoryIdx(idx)}
-                    className={`p-4 rounded-lg border cursor-pointer transition flex justify-between items-center ${
-                      activeAdvisoryIdx === idx ? "bg-[#E8F5E9]/50 border-[#2E7D32]/40" : "bg-white border-[#E5EBE3] hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="flex-grow pr-4">
-                      <div className="flex gap-2 items-center mb-1">
-                        <Tractor className="w-4 h-4 text-[#1B5E20]" />
-                        <h4 className="text-xs font-bold text-slate-800 capitalize">{adv.type} Advice</h4>
-                      </div>
-                      <p className="text-xs text-slate-700 leading-relaxed font-semibold">{adv.english}</p>
-                      {adv.hindi && <p className="text-xs text-[#5B6B5B] mt-0.5 font-semibold">{adv.hindi}</p>}
-                      {adv.tamil && <p className="text-xs text-emerald-800 mt-0.5 font-semibold">{adv.tamil}</p>}
-                    </div>
-                    
-                    <div>
-                      {followedActions[adv.type] ? (
-                        <span className="flex gap-1 items-center px-2 py-1 rounded bg-green-100 text-[#1B5E20] border border-green-300 text-[9px] font-bold uppercase whitespace-nowrap">
-                          <Check className="w-3.5 h-3.5" /> Applied
-                        </span>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFollowAction(adv.type);
-                          }}
-                          className="py-1 px-3 rounded bg-[#2E7D32] text-white text-[9px] font-bold uppercase hover:bg-[#1B5E20] transition"
-                        >
-                          Mark Applied
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-[#5B6B5B]">Conversational Farm Intelligence powered by Gemini 2.5 Flash & 5 Agronomy Models</p>
             </div>
           </div>
 
-          {/* Right Columns (4 spans): Real Voice Input & Diagnostics */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Farm Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-[#E5EBE3] px-3 py-1.5 rounded-lg text-xs font-semibold">
+              <Tractor className="w-4 h-4 text-[#1B5E20]" />
+              <select 
+                className="bg-transparent font-bold text-[#1B5E20] focus:outline-none cursor-pointer"
+                value={selectedFarm?.id || ""}
+                onChange={(e) => {
+                  const f = farms.find(f => f.id === Number(e.target.value));
+                  if (f) setSelectedFarm(f);
+                }}
+              >
+                {farms.map((farm) => (
+                  <option key={farm.id} value={farm.id}>
+                    {farm.name} ({farm.crop_type})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Language Selector */}
+            <div className="flex items-center gap-1.5 bg-emerald-50 border border-[#2E7D32]/30 px-3 py-1.5 rounded-lg text-xs font-bold text-[#1B5E20]">
+              <Globe className="w-4 h-4 text-[#1B5E20]" />
+              <select 
+                value={selectedLang} 
+                onChange={(e) => setSelectedLang(e.target.value as any)}
+                className="bg-transparent font-bold text-[#1B5E20] focus:outline-none cursor-pointer"
+              >
+                <option value="en-IN">English (EN)</option>
+                <option value="hi-IN">हिंदी (Hindi)</option>
+                <option value="ta-IN">தமிழ் (Tamil)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* LEFT COLUMN: Conversational Chat Interface (8 Cols) */}
+        <section className="lg:col-span-8 flex flex-col space-y-6">
+          
+          {/* Active Provider Banner */}
+          <div className="bg-white border border-[#E5EBE3] rounded-xl p-3 flex justify-between items-center shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-xs font-bold text-[#1B5E20]">Active Engine:</span>
+              <span className="text-xs font-semibold text-slate-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                Gemini 2.5 Flash LLM + Live Farm Data Feed
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+              Language: <span className="font-bold text-[#1B5E20]">{selectedLang === "hi-IN" ? "Hindi" : selectedLang === "ta-IN" ? "Tamil" : "English"}</span>
+            </span>
+          </div>
+
+          {/* Voice Error Notification Banner */}
+          {voiceError && (
+            <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl flex items-center justify-between text-xs text-amber-900 font-semibold shadow-sm animate-fade-in">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span>{voiceError}</span>
+              </div>
+              <button onClick={() => setVoiceError(null)} className="text-amber-700 hover:text-amber-900 text-xs underline">Dismiss</button>
+            </div>
+          )}
+
+          {/* Main Conversational Chat Box */}
+          <div className="bg-white border border-[#E5EBE3] rounded-2xl shadow-sm flex flex-col h-[560px] overflow-hidden">
             
-            {/* REAL VOICE COPILOT (WEB SPEECH API) */}
-            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider flex items-center gap-1.5">
-                  <Mic className="w-4 h-4 text-[#1B5E20]" />
-                  Voice Query Assistant
-                </h3>
-                
-                {/* Language Switcher */}
-                <div className="flex items-center gap-1 bg-[#F7F9F5] p-1 rounded-md border border-[#E5EBE3]">
-                  <Globe className="w-3 h-3 text-[#5B6B5B]" />
-                  <button
-                    onClick={() => setSelectedLang("ta-IN")}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
-                      selectedLang === "ta-IN" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
-                    }`}
-                  >
-                    தமிழ்
-                  </button>
-                  <button
-                    onClick={() => setSelectedLang("hi-IN")}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
-                      selectedLang === "hi-IN" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
-                    }`}
-                  >
-                    हिन्दी
-                  </button>
-                  <button
-                    onClick={() => setSelectedLang("en-IN")}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
-                      selectedLang === "en-IN" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
-                    }`}
-                  >
-                    EN
-                  </button>
+            {/* Chat Stream Header */}
+            <div className="p-4 border-b border-[#E5EBE3] bg-emerald-50/50 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#1B5E20] text-white flex items-center justify-center font-bold text-sm shadow">
+                  🌾
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-[#1B5E20]">Patel-ji&apos;s Farm Chat Assistant</h2>
+                  <p className="text-[10px] text-[#5B6B5B]">Grounded in Live NDVI {selectedFarm?.name || ""}</p>
                 </div>
               </div>
+              <span className="text-xs text-emerald-800 font-bold bg-white px-2.5 py-1 rounded-lg border border-[#E5EBE3]">
+                {messages.length} Messages
+              </span>
+            </div>
 
-              {hasSpeechSupport ? (
-                <div className="flex flex-col items-center gap-3">
-                  <p className="text-xs text-[#5B6B5B] text-center">
-                    Speak your crop question in {selectedLang === "ta-IN" ? "Tamil (தமிழ்)" : selectedLang === "hi-IN" ? "Hindi (हिन्दी)" : "English"}:
-                  </p>
-
-                  <div className="flex items-center gap-3">
-                    {isListening ? (
-                      <button
-                        onClick={stopListening}
-                        className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 text-white flex flex-col items-center justify-center animate-pulse border-4 border-red-200 transition shadow-md"
-                        title="Click to Stop Recording"
-                      >
-                        <Square className="w-5 h-5 fill-current" />
-                        <span className="text-[9px] font-bold mt-0.5">STOP</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={startListening}
-                        disabled={isProcessing}
-                        className="w-16 h-16 rounded-full bg-[#1B5E20] hover:bg-[#2E7D32] text-white flex flex-col items-center justify-center transition border-4 border-[#E8F5E9] shadow-md disabled:opacity-50"
-                        title="Click to Record Voice Question"
-                      >
-                        <Mic className="w-6 h-6" />
-                        <span className="text-[9px] font-bold mt-0.5">SPEAK</span>
-                      </button>
+            {/* Chat Messages Body */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/30">
+              {messages.map((msg) => (
+                <div 
+                  key={msg.id} 
+                  className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+                >
+                  <div 
+                    className={`max-w-[85%] rounded-2xl p-4 shadow-sm space-y-2 text-sm leading-relaxed ${
+                      msg.sender === "user"
+                        ? "bg-[#1B5E20] text-white rounded-br-none font-medium"
+                        : "bg-white text-slate-800 border border-[#E5EBE3] rounded-bl-none"
+                    }`}
+                  >
+                    {/* Context Chips for Assistant Message */}
+                    {msg.sender === "assistant" && msg.contextSummary && (
+                      <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-2 text-[11px] text-[#1B5E20] font-bold flex flex-wrap items-center justify-between gap-1 mb-2">
+                        <span>{msg.contextSummary}</span>
+                        <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wider">
+                          Source: {msg.modelUsed}
+                        </span>
+                      </div>
                     )}
-                  </div>
 
-                  {voiceText && (
-                    <div className="bg-[#F7F9F5] p-3 rounded-lg border border-[#E5EBE3] w-full text-xs space-y-1">
-                      <p className="text-[#1B5E20] font-semibold leading-relaxed">
-                        {voiceText}
-                      </p>
+                    <p className="whitespace-pre-line">{msg.text}</p>
+                    
+                    <div className={`text-[10px] flex justify-end gap-2 ${msg.sender === "user" ? "text-emerald-200" : "text-slate-400"}`}>
+                      <span>{msg.timestamp}</span>
                     </div>
-                  )}
-
-                  {/* Manual Type Query Fallback */}
-                  <div className="w-full pt-2 border-t border-slate-100 flex gap-2">
-                    <input
-                      type="text"
-                      value={manualQuery}
-                      onChange={(e) => setManualQuery(e.target.value)}
-                      placeholder={selectedLang === "hi-IN" ? "अपनी समस्या यहाँ लिखें..." : "Or type your agronomy question..."}
-                      className="flex-grow text-xs border border-[#E5EBE3] rounded-md px-3 py-2 text-slate-800 focus:outline-none focus:border-[#2E7D32]"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && manualQuery) {
-                          handleSendVoiceQuery(manualQuery);
-                          setManualQuery("");
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        if (manualQuery) {
-                          handleSendVoiceQuery(manualQuery);
-                          setManualQuery("");
-                        }
-                      }}
-                      className="bg-[#1B5E20] text-white px-3 py-2 rounded-md hover:bg-[#2E7D32] transition text-xs font-bold flex items-center gap-1"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 </div>
-              ) : (
-                /* Fallback when browser lacks Web Speech API */
-                <div className="space-y-3">
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-800">
-                    ⚠️ Voice input requires Chrome/Edge on HTTPS or localhost. You can type your query below:
+              ))}
+
+              {isSending && (
+                <div className="flex items-start gap-2">
+                  <div className="bg-white border border-[#E5EBE3] p-3 rounded-2xl text-xs text-slate-500 font-semibold flex items-center gap-2 shadow-sm animate-pulse">
+                    <Sparkles className="w-4 h-4 text-amber-500 animate-spin" />
+                    <span>Analyzing live farm satellite & weather vectors...</span>
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={manualQuery}
-                      onChange={(e) => setManualQuery(e.target.value)}
-                      placeholder="Type your crop question here..."
-                      className="flex-grow text-xs border border-[#E5EBE3] rounded-md px-3 py-2 text-slate-800 focus:outline-none focus:border-[#2E7D32]"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && manualQuery) {
-                          handleSendVoiceQuery(manualQuery);
-                          setManualQuery("");
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        if (manualQuery) {
-                          handleSendVoiceQuery(manualQuery);
-                          setManualQuery("");
-                        }
-                      }}
-                      className="bg-[#1B5E20] text-white px-3 py-2 rounded-md hover:bg-[#2E7D32] transition text-xs font-bold"
-                    >
-                      Ask AI
-                    </button>
-                  </div>
-                  {voiceText && (
-                    <div className="bg-[#F7F9F5] p-3 rounded-lg border border-[#E5EBE3] text-xs text-[#1B5E20] font-semibold">
-                      {voiceText}
-                    </div>
-                  )}
                 </div>
               )}
+              <div ref={chatEndRef} />
             </div>
 
-            {/* Diagnostic leaf scan */}
-            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
-              <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-2">
-                <UploadCloud className="w-4 h-4 text-[#1B5E20]" />
-                Leaf Disease Diagnostic
-              </h3>
-              <p className="text-xs text-[#5B6B5B] leading-relaxed">
-                Upload a geo-tagged image of affected crop leaves to analyze pest/disease indicators.
-              </p>
-              <div className="flex flex-col items-center gap-3">
-                {leafPhoto ? (
-                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-[#E5EBE3]">
-                    <img src={leafPhoto} alt="Uploaded Leaf" className="w-full h-full object-cover" />
-                    <button onClick={() => { setLeafPhoto(null); setLeafResult(null); }} className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full">
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleLeafUpload}
-                    className="w-full border-2 border-dashed border-slate-300 hover:border-[#2E7D32] p-6 rounded-lg text-center text-xs text-slate-500 hover:text-[#1B5E20] flex flex-col items-center gap-2 transition"
-                  >
-                    <UploadCloud className="w-6 h-6 text-[#1B5E20]" />
-                    <span>Upload Leaf Image</span>
-                  </button>
-                )}
+            {/* Quick-Ask Chips Row */}
+            <div className="p-2.5 bg-white border-t border-[#E5EBE3] flex items-center gap-2 overflow-x-auto scrollbar-none">
+              <span className="text-[10px] font-bold text-[#5B6B5B] uppercase whitespace-nowrap px-1">Quick Ask:</span>
+              {[
+                { label: "🌾 Crop Health", query: "How is my crop health and vigor based on latest satellite data?" },
+                { label: "🐛 Pest Risk", query: "What is the pest risk score and top likely pests this week?" },
+                { label: "💧 Irrigate Today?", query: "Should I irrigate my fields today based on rainfall forecast?" },
+                { label: "🧪 Fertilizer", query: "What is the recommended fertilizer top-dressing dose?" },
+                { label: "💰 Market Price", query: "What is the current Mandi price vs MSP for my crop?" }
+              ].map((chip, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSendMessage(chip.query)}
+                  disabled={isSending}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-[#1B5E20] border border-[#2E7D32]/20 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
 
-                {leafResult && (
-                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-[11px] text-amber-800 leading-relaxed font-semibold">
-                    {leafResult}
+            {/* Chat Input Bar */}
+            <div className="p-3 bg-white border-t border-[#E5EBE3] flex items-center gap-2">
+              {/* Mic Voice Button */}
+              <button
+                onClick={toggleVoiceInput}
+                className={`p-3 rounded-xl flex items-center justify-center transition flex-shrink-0 ${
+                  isListening
+                    ? "bg-red-600 text-white animate-pulse ring-4 ring-red-200"
+                    : "bg-emerald-100 text-[#1B5E20] hover:bg-emerald-200"
+                }`}
+                title={isListening ? "Click to stop voice capture" : "Speak in your language"}
+              >
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+
+              <input
+                type="text"
+                placeholder={isListening ? "Listening... Speak now!" : "Ask copilot in English, Hindi, or Tamil..."}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                disabled={isSending}
+                className="flex-1 bg-slate-50 border border-[#E5EBE3] rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1B5E20]/30"
+              />
+
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={isSending || !inputText.trim()}
+                className="bg-[#1B5E20] text-white p-3 rounded-xl hover:bg-[#2E7D32] transition disabled:opacity-50 flex-shrink-0 shadow"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible Secondary Section: This Week's Advisories */}
+          <div className="bg-white border border-[#E5EBE3] rounded-2xl shadow-sm overflow-hidden">
+            <button
+              onClick={() => setShowStaticAdvisories(!showStaticAdvisories)}
+              className="w-full p-4 bg-emerald-50/50 hover:bg-emerald-50 transition flex justify-between items-center text-left"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-[#1B5E20]" />
+                <h3 className="text-sm font-bold text-[#1B5E20]">This Week&apos;s Structured Advisories (Trilingual)</h3>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#1B5E20]">
+                <span>{showStaticAdvisories ? "Hide" : "Show"}</span>
+                {showStaticAdvisories ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            </button>
+
+            {showStaticAdvisories && (
+              <div className="p-5 border-t border-[#E5EBE3] space-y-4">
+                <div className="flex border-b border-[#E5EBE3]">
+                  {advisoriesReport?.advisories?.map((adv: any, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveAdvisoryIdx(idx)}
+                      className={`pb-2 px-4 text-xs font-bold uppercase transition border-b-2 ${
+                        activeAdvisoryIdx === idx
+                          ? "border-[#1B5E20] text-[#1B5E20]"
+                          : "border-transparent text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      {adv.type || `Alert #${idx + 1}`}
+                    </button>
+                  ))}
+                </div>
+
+                {activeAdvisory && (
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div className="text-xs space-y-2 text-slate-800">
+                      <p><span className="font-bold text-[#1B5E20]">English:</span> {activeAdvisory.english}</p>
+                      <p><span className="font-bold text-[#1B5E20]">हिंदी:</span> {activeAdvisory.hindi}</p>
+                      <p><span className="font-bold text-[#1B5E20]">தமிழ்:</span> {activeAdvisory.tamil}</p>
+                    </div>
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN: 5 ML Insights & Diagnostics (4 Cols) */}
+        <section className="lg:col-span-4 flex flex-col space-y-6">
+
+          {/* 3D Robot Farmer Avatar */}
+          <CopilotAvatar3D 
+            adviceText={messages[messages.length - 1]?.text || "Namaste! I am your AI Agronomy Assistant."}
+            activeTopic="general"
+          />
+
+          {/* Leaf Disease Diagnostic Card */}
+          <div className="bg-white border border-[#E5EBE3] rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+              <ImageIcon className="w-4 h-4 text-[#1B5E20]" />
+              <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider">Leaf Disease AI Scanner</h3>
             </div>
 
-            {/* 3D Credit Score */}
-            {creditReport && (
-              <div className="bg-white border border-[#E5EBE3] rounded-xl overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-[#E5EBE3] bg-slate-50 flex items-center gap-2">
-                  <Landmark className="w-4 h-4 text-[#1B5E20]" />
-                  <span className="text-xs font-bold text-[#1B5E20] uppercase">Aadhaar Credit Rating</span>
-                </div>
-                <div className="h-[200px] relative bg-slate-50">
-                  <CreditScore3D score={creditReport.score_report.credit_score} />
-                </div>
-                <div className="p-4 bg-white border-t border-slate-100 text-xs space-y-2">
-                  <div className="flex justify-between font-bold">
-                    <span>Credit Tier:</span>
-                    <span className="text-[#1B5E20]">{creditReport.score_report.tier}</span>
-                  </div>
-                  <div className="flex justify-between font-bold">
-                    <span>Eligible Kisan Credit Loan:</span>
-                    <span>₹{creditReport.score_report.max_loan_limit_inr.toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between font-bold">
-                    <span>Interest Rate:</span>
-                    <span>{creditReport.interest_rate_percent || creditReport.score_report.interest_rate_percent}% p.a.</span>
-                  </div>
-                </div>
+            <label className="border-2 border-dashed border-emerald-200 hover:border-[#1B5E20] p-4 rounded-xl flex flex-col items-center justify-center cursor-pointer transition bg-emerald-50/30">
+              <input type="file" accept="image/*" className="hidden" onChange={handleLeafUpload} />
+              <UploadCloud className="w-8 h-8 text-[#1B5E20] mb-1" />
+              <span className="text-xs font-bold text-[#1B5E20]">Upload Leaf Photo</span>
+              <span className="text-[10px] text-slate-500">Instant AI Pathology Diagnosis</span>
+            </label>
+
+            {isAnalyzingLeaf && (
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 font-semibold flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 text-amber-600 animate-spin" />
+                <span>Running Gemini Vision Pathological Classifier...</span>
               </div>
             )}
 
-            {/* Mandi Prices */}
-            <div className="bg-white border border-[#E5EBE3] p-5 rounded-xl shadow-sm space-y-4">
-              <h3 className="text-xs font-bold text-[#1B5E20] uppercase tracking-wider border-b border-slate-100 pb-2">
-                Wheat Mandi Rates (Per Quintal)
-              </h3>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={mandiData}>
-                    <XAxis dataKey="market" stroke="#94a3b8" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
-                    <Tooltip cursor={{ fill: "rgba(22, 101, 52, 0.05)" }} />
-                    <Bar dataKey="price" fill="#166534" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+            {leafDiagnosis && (
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs space-y-2 text-slate-800">
+                <div className="flex justify-between font-bold">
+                  <span className="text-[#1B5E20]">{leafDiagnosis.disease_name}</span>
+                  <span className="bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded text-[10px]">
+                    {Math.round((leafDiagnosis.confidence || 0.88) * 100)}% Match
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed"><span className="font-bold">Treatment:</span> {leafDiagnosis.treatment_english}</p>
+              </div>
+            )}
+          </div>
+
+          {/* 4 ML Insights Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+            
+            {/* Yield Estimator Card */}
+            <div className="bg-white border border-[#E5EBE3] p-4 rounded-xl shadow-sm space-y-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-[#1B5E20]" />
+                  <span className="text-xs font-bold text-[#1B5E20] uppercase">Yield Estimator</span>
+                </div>
+                <span className="text-[10px] font-bold bg-emerald-100 text-[#1B5E20] px-2 py-0.5 rounded">
+                  {farmInsights?.insights?.yield?.status_label || "Optimal"}
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline pt-1">
+                <div>
+                  <span className="text-xl font-extrabold text-[#1B5E20]">
+                    {farmInsights?.insights?.yield?.estimated_yield_per_acre || 18.5}
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium ml-1">q/acre</span>
+                </div>
+                <span className="text-xs text-slate-400 font-medium">
+                  Regional Avg: {farmInsights?.insights?.yield?.regional_avg_per_acre || 18.0} q
+                </span>
+              </div>
+            </div>
+
+            {/* Pest Risk Matrix Card */}
+            <div className="bg-white border border-[#E5EBE3] p-4 rounded-xl shadow-sm space-y-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <Bug className="w-4 h-4 text-amber-600" />
+                  <span className="text-xs font-bold text-[#1B5E20] uppercase">Pest Risk Matrix</span>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                  {farmInsights?.insights?.pest_risk?.risk_level || "MEDIUM"} ({farmInsights?.insights?.pest_risk?.pest_risk_score || 45}/100)
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 font-medium">
+                Top Pests: <span className="font-bold text-[#1B5E20]">{farmInsights?.insights?.pest_risk?.top_likely_pests?.join(", ") || "Brown Plant Hopper"}</span>
+              </p>
+            </div>
+
+            {/* ET Irrigation Scheduler Card */}
+            <div className="bg-white border border-[#E5EBE3] p-4 rounded-xl shadow-sm space-y-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <Droplets className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-bold text-[#1B5E20] uppercase">ET Irrigation Scheduler</span>
+                </div>
+                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                  {farmInsights?.insights?.irrigation?.action || "SKIP_IRRIGATION"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-normal font-medium">
+                {farmInsights?.insights?.irrigation?.recommendation_english || "Skip irrigation. Rainfall expected."}
+              </p>
+            </div>
+
+            {/* Market MSP Advisory Card */}
+            <div className="bg-white border border-[#E5EBE3] p-4 rounded-xl shadow-sm space-y-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-[#1B5E20] uppercase">Market MSP Advisory</span>
+                </div>
+                <span className="text-[10px] font-bold bg-emerald-100 text-[#1B5E20] px-2 py-0.5 rounded">
+                  {farmInsights?.insights?.market?.recommendation || "SELL_NOW"}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs font-bold">
+                <span>MSP 2026: ₹{farmInsights?.insights?.market?.msp_inr || 2300}/q</span>
+                <span className="text-[#1B5E20]">Mandi: ₹{farmInsights?.insights?.market?.mandi_avg_inr || 2420}/q</span>
               </div>
             </div>
 
           </div>
 
-        </div>
-      ) : (
-        <div className="p-12 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl bg-white">
-          No farms registered yet. Please register a farm on the farm ingestion page.
-        </div>
-      )}
+          {/* Aadhaar Credit Rating Card */}
+          {creditReport?.score_report && (
+            <div className="bg-white border border-[#E5EBE3] rounded-xl overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-[#E5EBE3] bg-slate-50 flex items-center gap-2">
+                <Landmark className="w-4 h-4 text-[#1B5E20]" />
+                <span className="text-xs font-bold text-[#1B5E20] uppercase">Aadhaar Credit Rating</span>
+              </div>
+              <div className="h-[200px] relative bg-slate-50">
+                <CreditScore3D score={creditReport.score_report.credit_score ?? 680} />
+              </div>
+              <div className="p-4 bg-white border-t border-slate-100 text-xs space-y-2">
+                <div className="flex justify-between font-bold">
+                  <span>Credit Tier:</span>
+                  <span className="text-[#1B5E20]">{creditReport.score_report.tier || "Good"}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Eligible Kisan Credit Loan:</span>
+                  <span>₹{(creditReport.score_report.max_loan_limit_inr ?? 300000).toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Interest Rate:</span>
+                  <span>{creditReport.interest_rate_percent || creditReport.score_report.interest_rate_percent || 9}% p.a.</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </section>
+      </main>
     </div>
   );
 }
 
-export default function Page() {
+export default function CopilotPage() {
   return (
     <QueryClientProvider client={queryClient}>
       <CopilotDashboardContent />

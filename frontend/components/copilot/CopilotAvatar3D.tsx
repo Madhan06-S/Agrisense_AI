@@ -181,16 +181,16 @@ export default function CopilotAvatar3D({ adviceText = "Namaste Ramesh ji! Heavy
           
           {/* Floating Speech Bubble inside 3D space */}
           <Html position={[0, 2.3, 0]} center>
-            <div className="p-3 rounded-lg border border-white/15 bg-slate-900/95 backdrop-blur-md shadow-2xl w-48 text-center relative pointer-events-none">
-              <span className="text-[10px] text-slate-200 leading-normal block">
+            <div className="p-3 rounded-xl border border-[#E5EBE3] bg-white/95 text-[#1B5E20] backdrop-blur-md shadow-md w-52 text-center relative pointer-events-none">
+              <span className="text-[11px] font-semibold text-slate-800 leading-snug block">
                 {adviceText}
               </span>
               {/* Pointer triangle */}
-              <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-900" />
+              <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-white" />
             </div>
           </Html>
 
-          <gridHelper args={[8, 8, "#334155", "#1e293b"]} position={[0, -0.4, 0]} />
+          <gridHelper args={[8, 8, "#2E7D32", "#CBD5E1"]} position={[0, -0.4, 0]} />
           <OrbitControls enableDamping maxPolarAngle={Math.PI / 2.1} minDistance={3} maxDistance={8} />
         </Canvas>
       </div>
