@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from shapely.geometry import shape
@@ -122,47 +122,106 @@ def record_override(claim_id: int, official_id: int, original_color: str, new_co
     return entry
 
 
-async def evaluate_traffic_light(claim_id: int, db: AsyncSession) -> Dict[str, Any]:
-    stmt = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
-    res = await db.execute(stmt)
-    assessment = res.scalars().first()
-
-    if not assessment:
-        return {
-            "light": TrafficLight.YELLOW.value,
-            "score": 0,
-            "confidence": 0,
-            "message": "AI assessment pending. Routed for human officer field visit.",
-            "auto_action": "field_visit_required",
-            "breakdown": {"satellite": 0, "image": 0, "weather": 0}
-        }
-
-    score = assessment.combined_score or 0
-    confidence = assessment.confidence or 0.5
-
-    if score < 25:
-        light = TrafficLight.GREEN
-        message = "Low damage detected (NDVI normal). Claim auto-closed with no damage."
-        auto_action = "auto_close"
-    elif score < 70:
-        light = TrafficLight.YELLOW
-        message = "Moderate damage detected. Routed for human officer field visit with GPS dispatch."
-        auto_action = "field_visit_required"
+async def evaluate_traffic_light(
+    claim_id: int,
+    db: AsyncSession,
+    model_probs: Optional[Dict[str, float]] = None,
+    model_available: Optional[bool] = None
+) -> Dict[str, Any]:
+    """
+    Traffic light evaluation driven by XGBoost class probabilities:
+    - GREEN: p_severe < 0.15 AND p_moderate < 0.35
+    - RED: p_severe >= 0.60
+    - YELLOW: otherwise
+    Falls back to combined score thresholds (<25 GREEN, <70 YELLOW) only if model is unavailable.
+    """
+    if db is not None:
+        stmt = select(DamageAssessment).where(DamageAssessment.claim_id == claim_id)
+        res = await db.execute(stmt)
+        assessment = res.scalars().first()
     else:
-        light = TrafficLight.RED
-        message = "Severe vegetation drop confirmed. Auto-approved for instant payout trigger."
-        auto_action = "auto_approve"
+        assessment = None
+
+    # Check model health status if not explicitly specified
+    if model_available is None:
+        try:
+            from app.ml.xgboost.inference import get_model_status
+            status = get_model_status()
+            model_available = status.get("model_loaded", False) and not status.get("fallback_active", True)
+        except Exception as e:
+            logger.warning(f"Could not query XGBoost model status: {e}")
+            model_available = False
+
+    p_no_damage = 0.0
+    p_moderate = 0.0
+    p_severe = 0.0
+    has_explicit_probs = False
+
+    if model_probs is not None:
+        p_no_damage = float(model_probs.get("p_no_damage", model_probs.get("no_damage", 0.0)))
+        p_moderate = float(model_probs.get("p_moderate", model_probs.get("moderate_damage", 0.0)))
+        p_severe = float(model_probs.get("p_severe", model_probs.get("severe_damage", 0.0)))
+        has_explicit_probs = True
+    elif assessment and assessment.explanation_json and isinstance(assessment.explanation_json, dict):
+        exp = assessment.explanation_json
+        if "damage_probabilities" in exp and isinstance(exp["damage_probabilities"], list) and len(exp["damage_probabilities"]) >= 3:
+            p_no_damage = float(exp["damage_probabilities"][0])
+            p_moderate = float(exp["damage_probabilities"][1])
+            p_severe = float(exp["damage_probabilities"][2])
+            has_explicit_probs = True
+
+    # Apply XGBoost Probability Decision Rule
+    if (model_available or has_explicit_probs) and (p_no_damage > 0 or p_moderate > 0 or p_severe > 0):
+        basis = "xgboost_probs"
+        if p_severe >= 0.60:
+            light = TrafficLight.RED
+            message = f"Severe damage confirmed by XGBoost model (p_severe={p_severe:.2f} >= 0.60). Auto-approved."
+            auto_action = "auto_approve"
+        elif p_severe < 0.15 and p_moderate < 0.35:
+            light = TrafficLight.GREEN
+            message = f"Low damage confirmed by XGBoost model (p_severe={p_severe:.2f} < 0.15, p_moderate={p_moderate:.2f} < 0.35). Auto-closed."
+            auto_action = "auto_close"
+        else:
+            light = TrafficLight.YELLOW
+            message = f"Moderate damage flagged by XGBoost model (p_severe={p_severe:.2f}, p_moderate={p_moderate:.2f}). Field visit required."
+            auto_action = "field_visit_required"
+    else:
+        # Fallback path: combined score thresholds (<25 GREEN, <70 YELLOW, else RED)
+        basis = "score_fallback"
+        score = assessment.combined_score if assessment else 0
+        if score < 25:
+            light = TrafficLight.GREEN
+            p_no_damage, p_moderate, p_severe = 0.85, 0.10, 0.05
+            message = "Low damage detected (score < 25). Claim auto-closed with no damage."
+            auto_action = "auto_close"
+        elif score < 70:
+            light = TrafficLight.YELLOW
+            p_no_damage, p_moderate, p_severe = 0.20, 0.65, 0.15
+            message = "Moderate damage detected (score < 70). Routed for officer field visit."
+            auto_action = "field_visit_required"
+        else:
+            light = TrafficLight.RED
+            p_no_damage, p_moderate, p_severe = 0.05, 0.25, 0.70
+            message = "Severe vegetation drop confirmed (score >= 70). Auto-approved."
+            auto_action = "auto_approve"
+
+    score_val = assessment.combined_score if assessment else 0.0
+    conf_val = assessment.confidence if assessment else 0.85
 
     return {
         "light": light.value,
-        "score": round(score, 1),
-        "confidence": round(confidence, 2),
+        "score": round(score_val or 0.0, 1),
+        "confidence": round(conf_val or 0.85, 2),
         "message": message,
         "auto_action": auto_action,
+        "basis": basis,
+        "p_no_damage": round(p_no_damage, 3),
+        "p_moderate": round(p_moderate, 3),
+        "p_severe": round(p_severe, 3),
         "breakdown": {
-            "satellite": assessment.satellite_score,
-            "image": assessment.image_score,
-            "weather": assessment.weather_score
+            "satellite": assessment.satellite_score if assessment else 0,
+            "image": assessment.image_score if assessment else 0,
+            "weather": assessment.weather_score if assessment else 0
         }
     }
 
