@@ -31,6 +31,23 @@ class NetworkTimeoutError(GEEAuthError):
     """Raised when connections to the Earth Engine API timeout."""
     pass
 
+GEE_STATE = {
+    "source": "archive_fallback",
+    "last_live_fetch": None,
+    "auth_error": None
+}
+
+def get_gee_status() -> dict:
+    return {
+        "source": GEE_STATE["source"],
+        "last_live_fetch": GEE_STATE["last_live_fetch"]
+    }
+
+def record_live_fetch_success():
+    from datetime import datetime, timezone
+    GEE_STATE["last_live_fetch"] = datetime.now(timezone.utc).isoformat()
+    GEE_STATE["source"] = "live_gee"
+
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -83,10 +100,14 @@ def initialize_gee_sync() -> bool:
         # Execute EE initialization
         ee.Initialize(**init_kwargs)
         logger.info("Google Earth Engine initialized successfully.")
+        GEE_STATE["source"] = "live_gee"
+        GEE_STATE["auth_error"] = None
         return True
 
     except ee.EEException as e:
         msg = str(e).lower()
+        GEE_STATE["source"] = "archive_fallback"
+        GEE_STATE["auth_error"] = str(e)
         logger.error(f"Earth Engine exception during initialization: {e}")
         if "quota" in msg:
             raise QuotaExceededError(f"GEE quota exceeded: {e}")
@@ -99,6 +120,8 @@ def initialize_gee_sync() -> bool:
         else:
             raise GEEAuthError(f"GEE initialization failed: {e}")
     except Exception as e:
+        GEE_STATE["source"] = "archive_fallback"
+        GEE_STATE["auth_error"] = str(e)
         logger.error(f"Unexpected error during GEE initialization: {e}")
         raise GEEAuthError(f"GEE unexpected authentication error: {e}")
 

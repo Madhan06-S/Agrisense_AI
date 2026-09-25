@@ -86,6 +86,7 @@ export default function FarmerDashboard() {
   const [earlyWarning, setEarlyWarning] = useState<EarlyWarning | null>(null);
   const [recommendation, setRecommendation] = useState<string>("");
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [satStatus, setSatStatus] = useState<{ source: string; last_live_fetch: string | null }>({ source: "archive_fallback", last_live_fetch: null });
 
   // SMS Advisory States
   const [smsSending, setSmsSending] = useState(false);
@@ -210,6 +211,16 @@ export default function FarmerDashboard() {
       const token = localStorage.getItem("access_token");
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // 0. Fetch Satellite Status
+      fetch("/api/v1/satellite/status")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.source) {
+            setSatStatus(data);
+          }
+        })
+        .catch(() => {});
 
       // 1. Fetch Satellite Data
       setSatellitePending(false);
@@ -572,7 +583,18 @@ export default function FarmerDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               {/* Card 1: Crop Health (NDVI) */}
               <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
-                <p className="text-[#6B7280] font-semibold">Crop Health (NDVI)</p>
+                <div className="flex items-center justify-between gap-1">
+                  <p className="text-[#6B7280] font-semibold">Crop Health (NDVI)</p>
+                  {satStatus.source === "live_gee" ? (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      🛰 Live Sentinel-2
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-300">
+                      🗂 Sentinel-2 Archive Mode
+                    </span>
+                  )}
+                </div>
                 {satellitePending ? (
                   <div className="space-y-1.5">
                     <p className="text-xs text-amber-800 font-semibold">Satellite scan pending</p>

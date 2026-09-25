@@ -44,3 +44,12 @@ async def test_gee_health_check_unhealthy():
         health = await check_gee_health()
         assert health["status"] == "unhealthy"
         assert "Quota exceeded" in health["error"]
+
+@pytest.mark.asyncio
+async def test_gee_status_endpoint():
+    from app.services.gee_auth import get_gee_status, GEE_STATE
+    GEE_STATE["source"] = "archive_fallback"
+    status = get_gee_status()
+    assert status["source"] == "archive_fallback"
+    assert "last_live_fetch" in status
+

@@ -14,6 +14,16 @@ from app.tasks.satellite_tasks import fetch_satellite_data, preprocess_images
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+@router.get("/status", response_model=dict)
+async def get_satellite_status():
+    """
+    Returns current GEE ingestion status:
+    source: "live_gee" | "archive_fallback"
+    last_live_fetch: timestamp string | null
+    """
+    from app.services.gee_auth import get_gee_status
+    return get_gee_status()
+
 @router.post("/fetch", response_model=dict, status_code=status.HTTP_202_ACCEPTED)
 async def trigger_satellite_fetch(
     farm_id: int,
