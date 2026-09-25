@@ -63,20 +63,22 @@ def initialize_gee_sync() -> bool:
         logger.info("Attempting Google Earth Engine initialization...")
         credentials = None
 
+        EE_SCOPES = ["https://www.googleapis.com/auth/earthengine"]
+
         # 1. Service Account JSON key content (env variable)
         if settings.GEE_KEY_CONTENT:
             try:
                 info = json.loads(settings.GEE_KEY_CONTENT)
-                credentials = service_account.Credentials.from_service_account_info(info)
+                credentials = service_account.Credentials.from_service_account_info(info, scopes=EE_SCOPES)
                 logger.info("Loaded GEE service account credentials from GEE_KEY_CONTENT.")
             except Exception as e:
                 logger.error(f"Failed to parse GEE_KEY_CONTENT: {e}")
                 raise InvalidCredentialsError("Invalid service account JSON key content in settings.")
         
         # 2. Service Account JSON key file path
-        elif settings.GEE_KEY_FILE:
+        elif settings.GEE_KEY_FILE and os.path.exists(settings.GEE_KEY_FILE):
             try:
-                credentials = service_account.Credentials.from_service_account_file(settings.GEE_KEY_FILE)
+                credentials = service_account.Credentials.from_service_account_file(settings.GEE_KEY_FILE, scopes=EE_SCOPES)
                 logger.info(f"Loaded GEE service account credentials from file: {settings.GEE_KEY_FILE}")
             except Exception as e:
                 logger.error(f"Failed to load credentials from file {settings.GEE_KEY_FILE}: {e}")
