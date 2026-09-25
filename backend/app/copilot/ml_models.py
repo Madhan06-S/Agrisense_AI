@@ -3,7 +3,9 @@ import base64
 import json
 import math
 import os
+import time
 from typing import Dict, Any, List, Optional
+import requests
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -420,44 +422,183 @@ def schedule_irrigation(
     }
 
 
+# In-memory 6-hour TTL cache for AGMARKNET Mandi prices
+MANDI_PRICE_CACHE: Dict[str, Dict[str, Any]] = {}
+
+
+def fetch_mandi_prices(commodity: str, state: str = "Punjab", force_refresh: bool = False) -> Dict[str, Any]:
+    """
+    Fetches live mandi prices for a commodity and state from AGMARKNET (data.gov.in API)
+    or falls back to static baseline with explicit timestamp metadata.
+    Caches results in memory for 6 hours (21,600 seconds).
+    """
+    cache_key = f"{commodity.strip().lower()}_{state.strip().lower()}"
+    now = time.time()
+
+    if not force_refresh and cache_key in MANDI_PRICE_CACHE:
+        entry = MANDI_PRICE_CACHE[cache_key]
+        if now < entry.get("expires_at", 0):
+            logger.info(f"Returning cached AGMARKNET Mandi price for {commodity} in {state}")
+            return entry["data"]
+
+    today_str = time.strftime("%Y-%m-%d")
+    api_key = os.getenv("AGMARKNET_API_KEY", "579b464db66ec23bdd000001cdd394632b70409383c074861e52a9e7")
+    url = "https://api.data.gov.in/resource/9ef74130-e14b-4359-b415-ec42065f4523"
+    params = {
+        "api-key": api_key,
+        "format": "json",
+        "limit": "5",
+        "filters[state]": state,
+        "filters[commodity]": commodity
+    }
+
+    try:
+        resp = requests.get(url, params=params, timeout=3.0)
+        if resp.status_code == 200:
+            payload = resp.json()
+            records = payload.get("records", [])
+            if records:
+                rec = records[0]
+                modal = float(rec.get("modal_price", rec.get("modal_price_inr", 0)))
+                min_p = float(rec.get("min_price", modal * 0.95))
+                max_p = float(rec.get("max_price", modal * 1.05))
+                mkt = rec.get("market", f"{state} APMC Mandi")
+                p_date = rec.get("arrival_date", rec.get("date", today_str))
+
+                data = {
+                    "commodity": commodity,
+                    "state": state,
+                    "modal_price": modal,
+                    "min_price": min_p,
+                    "max_price": max_p,
+                    "market": mkt,
+                    "date": p_date,
+                    "source": "AGMARKNET_LIVE",
+                    "fallback_stamp": None
+                }
+
+                MANDI_PRICE_CACHE[cache_key] = {
+                    "data": data,
+                    "expires_at": now + 21600
+                }
+                return data
+    except Exception as err:
+        logger.warning(f"AGMARKNET fetch failed / unreachable: {err}")
+
+    # Fallback to static MSP baseline with explicit stamp
+    crop_key = commodity.capitalize()
+    market_base = MSP_2026_DATA.get(crop_key, MSP_2026_DATA["Rice"])
+    mandi_avg = float(market_base["mandi_avg"])
+
+    fallback_stamp = f"prices as of {today_str}, live feed unavailable"
+
+    data = {
+        "commodity": commodity,
+        "state": state,
+        "modal_price": mandi_avg,
+        "min_price": round(mandi_avg * 0.95, 1),
+        "max_price": round(mandi_avg * 1.05, 1),
+        "market": f"{state} Mandi (Regional)",
+        "date": today_str,
+        "source": "STATIC_FALLBACK",
+        "fallback_stamp": fallback_stamp
+    }
+
+    MANDI_PRICE_CACHE[cache_key] = {
+        "data": data,
+        "expires_at": now + 21600
+    }
+    return data
+
+
 # ==========================================
 # 5. Market Advisory & MSP Engine
 # ==========================================
 def get_market_advisory(crop_type: str, state: str = "Punjab") -> Dict[str, Any]:
     """
-    Returns MSP vs Mandi price comparisons and trade advice for the crop.
+    Returns MSP vs AGMARKNET Mandi price comparisons and trade advice for the crop.
     """
     crop_key = crop_type.capitalize()
-    market = MSP_2026_DATA.get(crop_key, MSP_2026_DATA["Rice"])
+    market_base = MSP_2026_DATA.get(crop_key, MSP_2026_DATA["Rice"])
+    msp = market_base["msp"]
 
-    msp = market["msp"]
-    mandi = market["mandi_avg"]
-    trend = market["trend"]
+    mandi_data = fetch_mandi_prices(crop_type, state)
+    mandi_price = mandi_data["modal_price"]
+    trend = market_base.get("trend", "STABLE")
 
-    diff_per_q = mandi - msp
+    diff_per_q = round(mandi_price - msp, 1)
     pct_above_msp = round((diff_per_q / msp) * 100.0, 1)
 
-    if diff_per_q > 0 and trend == "UPWARD":
+    fallback_stamp = mandi_data.get("fallback_stamp")
+    stamp_suffix = f" [{fallback_stamp}]" if fallback_stamp else ""
+
+    # Decision rules:
+    # modal_price > MSP -> SELL_NOW with premium %
+    # within 5% of MSP -> HOLD only if forecast price trend rising
+    # below MSP -> "Below MSP floor — MSP procurement applies"
+    if diff_per_q > 0:
         advice = "SELL_NOW"
-        advice_text_en = f"Current Mandi price (₹{mandi}/q) is {pct_above_msp}% above MSP (₹{msp}/q) with an upward trend. Favorable selling window."
-        advice_text_hi = f"वर्तमान मंडी भाव (₹{mandi}/क्विंटल) एमएसपी (₹{msp}) से {pct_above_msp}% अधिक है। बिक्री का अच्छा अवसर।"
-        advice_text_ta = f"தற்போதைய சந்தை விலை (₹{mandi}) அரசு ஆதரவு விலையை விட {pct_above_msp}% அதிகமாக உள்ளது."
-    elif diff_per_q < 0:
-        advice = "SELL_TO_GOVT_PROCUREMENT"
-        advice_text_en = f"Mandi price (₹{mandi}/q) is below MSP (₹{msp}/q). Register at government procurement center for full MSP price."
-        advice_text_hi = f"मंडी भाव (₹{mandi}) एमएसपी (₹{msp}) से कम है। सरकारी खरीद केंद्र (Procurement Center) पर पंजीकरण कराएं।"
-        advice_text_ta = f"சந்தை விலை ஆதரவு விலையை விட குறைவு. அரசு கொள்முதல் மையத்தில் விற்கவும்."
+        advice_text_en = (
+            f"Current Mandi price (₹{mandi_price}/q) is {pct_above_msp}% above MSP (₹{msp}/q) at {mandi_data['market']}. "
+            f"Favorable selling window.{stamp_suffix}"
+        )
+        advice_text_hi = (
+            f"वर्तमान मंडी भाव (₹{mandi_price}/क्विंटल) एमएसपी (₹{msp}) से {pct_above_msp}% अधिक है। "
+            f"बिक्री का अच्छा अवसर।{stamp_suffix}"
+        )
+        advice_text_ta = (
+            f"தற்போதைய சந்தை விலை (₹{mandi_price}) அரசு ஆதரவு விலையை விட {pct_above_msp}% அதிகமாக உள்ளது.{stamp_suffix}"
+        )
+    elif abs(diff_per_q) / msp <= 0.05:
+        if trend == "UPWARD":
+            advice = "HOLD_FOR_TARGET"
+            advice_text_en = (
+                f"Mandi price (₹{mandi_price}/q) is within 5% of MSP (₹{msp}/q) with an upward trend. "
+                f"Hold for higher target price.{stamp_suffix}"
+            )
+            advice_text_hi = (
+                f"मंडी भाव (₹{mandi_price}) एमएसपी (₹{msp}) के 5% के भीतर है और बढ़त पर है। "
+                f"रुकें और बेहतर मूल्य का लाभ उठाएं।{stamp_suffix}"
+            )
+            advice_text_ta = (
+                f"விலை நிலையாக உள்ளது. ஏற்றத்துடன் காணப்படுகிறது.{stamp_suffix}"
+            )
+        else:
+            advice = "HOLD_FOR_TARGET"
+            advice_text_en = (
+                f"Mandi price (₹{mandi_price}/q) is stable around MSP (₹{msp}/q). Consider holding if storage is available.{stamp_suffix}"
+            )
+            advice_text_hi = (
+                f"मंडी भाव (₹{mandi_price}) स्थिर है। यदि भंडारण संभव हो तो प्रतीक्षा करें।{stamp_suffix}"
+            )
+            advice_text_ta = (
+                f"விலை நிலையாக உள்ளது. சேமிப்பு வசதி இருந்தால் சில நாட்கள் காத்திருக்கலாம்.{stamp_suffix}"
+            )
     else:
-        advice = "HOLD_FOR_TARGET"
-        advice_text_en = f"Mandi price (₹{mandi}/q) is stable around MSP (₹{msp}/q). Consider holding if storage is available."
-        advice_text_hi = f"मंडी भाव (₹{mandi}) स्थिर है। यदि भंडारण संभव हो तो कुछ दिन प्रतीक्षा करें।"
-        advice_text_ta = f"விலை நிலையாக உள்ளது. சேமிப்பு வசதி இருந்தால் சில நாட்கள் காத்திருக்கலாம்."
+        advice = "SELL_TO_GOVT_PROCUREMENT"
+        advice_text_en = (
+            f"Below MSP floor — MSP procurement applies (Mandi price ₹{mandi_price}/q vs MSP ₹{msp}/q). "
+            f"Register at nearest government procurement center.{stamp_suffix}"
+        )
+        advice_text_hi = (
+            f"मंडी भाव (₹{mandi_price}) एमएसपी (₹{msp}) से कम है। "
+            f"सरकारी खरीद केंद्र पर पंजीकरण कराएं।{stamp_suffix}"
+        )
+        advice_text_ta = (
+            f"சந்தை விலை ஆதரவு விலையை விட குறைவு. அரசு கொள்முதல் மையத்தில் விற்கவும்.{stamp_suffix}"
+        )
 
     return {
         "crop_type": crop_type,
         "state": state,
         "msp_inr": msp,
-        "mandi_avg_inr": mandi,
+        "mandi_avg_inr": mandi_price,
+        "min_price_inr": mandi_data["min_price"],
+        "max_price_inr": mandi_data["max_price"],
+        "market": mandi_data["market"],
+        "price_date": mandi_data["date"],
+        "source": mandi_data["source"],
+        "fallback_stamp": fallback_stamp,
         "price_trend": trend,
         "difference_from_msp_inr": diff_per_q,
         "percentage_above_msp": pct_above_msp,
@@ -466,3 +607,4 @@ def get_market_advisory(crop_type: str, state: str = "Punjab") -> Dict[str, Any]
         "advice_hindi": advice_text_hi,
         "advice_tamil": advice_text_ta
     }
+

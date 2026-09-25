@@ -58,9 +58,31 @@ def test_yield_estimate_sanity():
 
 
 def test_market_advisory():
-    rice_mkt = get_market_advisory("Rice")
-    assert rice_mkt["msp_inr"] == 2300
-    assert rice_mkt["recommendation"] in ["SELL_NOW", "HOLD_FOR_TARGET", "SELL_TO_GOVT_PROCUREMENT"]
+    from app.copilot.ml_models import fetch_mandi_prices, MANDI_PRICE_CACHE
+
+    # 1. Fetch prices schema & caching test
+    data1 = fetch_mandi_prices("Wheat", "Punjab")
+    assert "modal_price" in data1
+    assert "market" in data1
+    assert "source" in data1
+    assert data1["source"] in ["AGMARKNET_LIVE", "STATIC_FALLBACK"]
+
+    # 2. Verify cache hit
+    cache_key = "wheat_punjab"
+    assert cache_key in MANDI_PRICE_CACHE
+    data2 = fetch_mandi_prices("Wheat", "Punjab")
+    assert data2 == data1
+
+    # 3. Advisory calculation & stamp verification
+    adv = get_market_advisory("Wheat", "Punjab")
+    assert adv["msp_inr"] == 2425
+    assert adv["recommendation"] in ["SELL_NOW", "HOLD_FOR_TARGET", "SELL_TO_GOVT_PROCUREMENT"]
+    assert "percentage_above_msp" in adv
+    if adv["source"] == "STATIC_FALLBACK":
+        assert adv["fallback_stamp"] is not None
+        assert "prices as of" in adv["fallback_stamp"]
+        assert "live feed unavailable" in adv["fallback_stamp"]
+
 
 
 def test_leaf_diagnose_fallback():
