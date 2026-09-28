@@ -1,9 +1,12 @@
-import random
 from datetime import date
+from app.core.config import settings
 
 
 def get_rainfall_history(district: str, start_date: date, end_date: date) -> float:
     """Mock IMD API returning total rainfall in mm over period."""
+    if not settings.DEMO_MODE:
+        raise ValueError("IMD integration not configured in production mode.")
+
     # Pre-coded demo scenarios
     if district.lower() == "mumbai" or district.lower() == "warangal":
         return 350.0 # Flood trigger (350mm)

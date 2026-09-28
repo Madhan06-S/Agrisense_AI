@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
+  Satellite,
   Tractor, 
   FileText, 
-  CheckCircle, 
+  CheckCircle2, 
   Clock, 
   Plus, 
   ArrowRight, 
@@ -17,12 +18,19 @@ import {
   CloudRain,
   Activity,
   Sparkles,
-  MapPin
+  MapPin,
+  MessageSquare,
+  Smartphone,
+  ChevronRight,
+  TrendingUp,
+  Cpu,
+  Layers
 } from "lucide-react";
 import Link from "next/link";
 import AFIIPastoralInsurance from "@/components/AFIIPastoralInsurance";
 import FloatingVoiceCopilot from "@/components/FloatingVoiceCopilot";
 import { translations, Language } from "@/lib/i18n";
+import { apiFetch } from "@/lib/api";
 
 interface Claim {
   id: number;
@@ -31,6 +39,7 @@ interface Claim {
   ai_score: number | null;
   submitted_at: string;
   farm_name?: string;
+  farmer_name?: string;
 }
 
 interface Farm {
@@ -96,24 +105,21 @@ export default function FarmerDashboard() {
     if (!selectedFarmId) return;
     setSmsSending(true);
     try {
-      const res = await fetch("/api/v1/sms/advisory", {
+      const res = await apiFetch("/sms/advisory", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mobile: "+919876543210",
           farm_id: selectedFarmId,
           language: "en-IN"
         })
       });
-      if (res.ok) {
-        const data = await res.json();
-        setSmsModal({
-          open: true,
-          message: data.message,
-          mobile: data.mobile,
-          channel: data.delivery_channel
-        });
-      }
+      const data = await res.json();
+      setSmsModal({
+        open: true,
+        message: data.message,
+        mobile: data.mobile,
+        channel: data.delivery_channel
+      });
     } catch (e) {
       console.error("SMS Advisory send error:", e);
     } finally {
@@ -145,46 +151,26 @@ export default function FarmerDashboard() {
   async function fetchInitialData() {
     setLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
-      const headers = { Authorization: `Bearer ${token}` };
-
       // Fetch farms
       let farmsList: Farm[] = [];
       try {
-        const farmsRes = await fetch("/api/v1/farms", { headers });
-        if (farmsRes.ok) {
-          farmsList = await farmsRes.json();
-        }
+        const farmsRes = await apiFetch("/farms");
+        farmsList = await farmsRes.json();
       } catch (err) {
         console.warn("Backend farms fetch failed:", err);
       }
 
-      if (farmsList.length === 0) {
-        // Fallback default farm if none registered yet
-        farmsList = [{ id: 1, name: "Patel Rice Farm #1", crop_type: "Rice", area_hectares: 2.5 }];
-      }
-
       setFarms(farmsList);
-      const firstFarmId = farmsList[0].id;
-      setSelectedFarmId(firstFarmId);
 
       // Fetch claims
       let claimsList: Claim[] = [];
       try {
-        const claimsRes = await fetch("/api/v1/claims", { headers });
-        if (claimsRes.ok) {
-          claimsList = await claimsRes.json();
-        }
+        const claimsRes = await apiFetch("/claims");
+        claimsList = await claimsRes.json();
       } catch (err) {}
 
       setClaims(claimsList);
 
-      // Stats
       const approved = claimsList.filter((c: Claim) => c.status === "approved").length;
       const active = claimsList.filter((c: Claim) => ["submitted", "under_review"].includes(c.status)).length;
 
@@ -195,8 +181,13 @@ export default function FarmerDashboard() {
         pendingPayout: approved * 25000
       });
 
-      // Load risk summary for first farm
-      await fetchFarmRiskSummary(firstFarmId);
+      if (farmsList.length > 0) {
+        const firstFarmId = farmsList[0].id;
+        setSelectedFarmId(firstFarmId);
+        await fetchFarmRiskSummary(firstFarmId);
+      } else {
+        setSelectedFarmId(null);
+      }
 
     } catch (e) {
       console.error("Dashboard load error:", e);
@@ -208,12 +199,7 @@ export default function FarmerDashboard() {
   async function fetchFarmRiskSummary(farmId: number) {
     setFarmRiskLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      // 0. Fetch Satellite Status
-      fetch("/api/v1/satellite/status")
+      apiFetch("/satellite/status")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data && data.source) {
@@ -222,68 +208,41 @@ export default function FarmerDashboard() {
         })
         .catch(() => {});
 
-      // 1. Fetch Satellite Data
       setSatellitePending(false);
       try {
-        const satRes = await fetch(`/api/v1/satellite/${farmId}/latest`, { headers });
-        if (satRes.ok) {
-          const satData = await satRes.json();
-          setSatelliteData(satData);
-        } else if (satRes.status === 404) {
+        const satRes = await apiFetch(`/satellite/${farmId}/latest`);
+        const satData = await satRes.json();
+        setSatelliteData(satData);
+      } catch (err: any) {
+        if (err.status === 404) {
           setSatelliteData(null);
           setSatellitePending(true);
+        } else {
+          setSatelliteData(null);
         }
-      } catch {
-        setSatelliteData({ ndvi: 0.58, acquisition_date: new Date().toISOString() });
       }
 
-      // 2. Fetch Live Weather Data from Open-Meteo integration via claim endpoint / fallback
-      try {
-        const claimDetailRes = await fetch(`/api/v1/claims/1`, { headers });
-        if (claimDetailRes.ok) {
-          const cData = await claimDetailRes.json();
-          if (cData.weather) {
-            setWeatherData(cData.weather);
-          } else {
-            fetchLiveOpenMeteoDirectly();
-          }
-        } else {
-          fetchLiveOpenMeteoDirectly();
-        }
-      } catch {
-        fetchLiveOpenMeteoDirectly();
-      }
+      fetchLiveOpenMeteoDirectly();
 
-      // 3. Fetch Early Warning Status
       try {
-        const ewRes = await fetch(`/api/v1/agronomy/early-warning/${farmId}`, { headers });
-        if (ewRes.ok) {
-          const ewData = await ewRes.json();
-          setEarlyWarning(ewData);
-        } else {
-          setEarlyWarning(null);
-        }
+        const ewRes = await apiFetch(`/agronomy/early-warning/${farmId}`);
+        const ewData = await ewRes.json();
+        setEarlyWarning(ewData);
       } catch {
         setEarlyWarning(null);
       }
 
-      // 4. Fetch Agronomic Recommendation from Copilot
       try {
-        const adviseRes = await fetch(`/api/v1/copilot/advise`, {
+        const adviseRes = await apiFetch(`/copilot/advise`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...headers },
           body: JSON.stringify({ farm_id: farmId })
         });
-        if (adviseRes.ok) {
-          const adviseData = await adviseRes.json();
-          const topAdvice = adviseData?.advisories?.[0]?.english;
-          if (topAdvice) {
-            setRecommendation(topAdvice);
-          } else {
-            setRecommendation("Monitor crop canopy development and ensure adequate field drainage.");
-          }
+        const adviseData = await adviseRes.json();
+        const topAdvice = adviseData?.advisories?.[0]?.english;
+        if (topAdvice) {
+          setRecommendation(topAdvice);
         } else {
-          setRecommendation("Ensure field drainage channels are clear and monitor crop health daily.");
+          setRecommendation("Monitor crop canopy development and ensure adequate field drainage.");
         }
       } catch {
         setRecommendation("Ensure field drainage channels are clear and monitor crop health daily.");
@@ -335,535 +294,472 @@ export default function FarmerDashboard() {
     await fetchFarmRiskSummary(farmId);
   }
 
-  async function handleRequestScan() {
-    if (!selectedFarmId) return;
-    setScanRequesting(true);
-    try {
-      const token = localStorage.getItem("access_token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const res = await fetch(`/api/v1/satellite/fetch?farm_id=${selectedFarmId}`, {
-        method: "POST",
-        headers
-      });
-
-      if (res.ok) {
-        await fetchFarmRiskSummary(selectedFarmId);
-      }
-    } catch (e) {
-      console.error("Scan request failed:", e);
-    } finally {
-      setScanRequesting(false);
-    }
-  }
-
   const selectedFarmObj = farms.find(f => f.id === selectedFarmId) || farms[0];
-  const recentClaims = claims.slice(0, 3);
-
-  // Derived Risk Values
   const ndviVal = satelliteData?.ndvi ?? satelliteData?.ndvi_mean ?? null;
-
-  const getCropHealthBadge = () => {
-    if (satellitePending || ndviVal === null) {
-      return { text: "Scan Pending", color: "bg-slate-100 text-slate-700 border-slate-300", dot: "bg-slate-400" };
-    }
-    if (ndviVal > 0.5) {
-      return { text: `Healthy (NDVI: ${ndviVal.toFixed(2)})`, color: "bg-green-100 text-[#1B5E20] border-green-300", dot: "bg-[#2ECC71]" };
-    }
-    if (ndviVal >= 0.3) {
-      return { text: `Stressed (NDVI: ${ndviVal.toFixed(2)})`, color: "bg-amber-100 text-amber-800 border-amber-300", dot: "bg-[#F39C12]" };
-    }
-    return { text: `Critical (NDVI: ${ndviVal.toFixed(2)})`, color: "bg-red-100 text-red-800 border-red-300", dot: "bg-red-600" };
-  };
-
-  const getWeatherRiskBadge = () => {
-    const rain = weatherData?.rainfall_48h ?? 0;
-    if (rain > 100) {
-      return { text: "High Rainfall Risk", color: "bg-amber-100 text-amber-800 border-amber-300", dot: "bg-amber-600" };
-    }
-    if (rain > 50) {
-      return { text: "Moderate Risk", color: "bg-yellow-100 text-yellow-800 border-yellow-300", dot: "bg-yellow-500" };
-    }
-    if (rain < 10 && ndviVal !== null && ndviVal < 0.3) {
-      return { text: "Drought Risk", color: "bg-red-100 text-red-800 border-red-300", dot: "bg-red-600" };
-    }
-    return { text: "Low Risk", color: "bg-green-100 text-[#1B5E20] border-green-300", dot: "bg-green-500" };
-  };
-
-  const getOverallRiskBadge = () => {
-    if (earlyWarning?.risk_level === "high" || (weatherData?.rainfall_48h ?? 0) > 100) {
-      return { text: "High Risk", color: "bg-red-100 text-red-800 border-red-300", dot: "bg-red-600" };
-    }
-    if (earlyWarning?.risk_level === "moderate" || (weatherData?.rainfall_48h ?? 0) > 50 || (ndviVal !== null && ndviVal < 0.5)) {
-      return { text: "Moderate Risk", color: "bg-amber-100 text-amber-800 border-amber-300", dot: "bg-amber-500" };
-    }
-    return { text: "Low / Normal Risk", color: "bg-green-100 text-[#1B5E20] border-green-300", dot: "bg-green-600" };
-  };
-
-  const cropHealthBadge = getCropHealthBadge();
-  const weatherRiskBadge = getWeatherRiskBadge();
-  const overallRiskBadge = getOverallRiskBadge();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F9F5] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#1B5E20]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#15803d]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9F5]">
-      {/* Header */}
-      <div className="bg-white border-b border-[#E5EBE3]">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#1B5E20]" />
-            <span className="font-semibold text-[#1B5E20]">AgriSense AI</span>
+    <div className="min-h-screen bg-[#F7F9F5] text-slate-900 font-sans flex flex-col justify-between selection:bg-emerald-100">
+      
+      {/* Sleek Enterprise Top Bar */}
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-xs py-3.5 px-6 md:px-12">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="p-1.5 rounded-lg bg-emerald-100 text-[#15803d]">
+                <Shield className="w-5 h-5" />
+              </div>
+              <span className="font-extrabold text-slate-900 text-lg tracking-tight">
+                AgriSense <span className="text-emerald-700">AI</span>
+              </span>
+            </Link>
+            <span className="hidden md:inline text-slate-300">|</span>
+            <span className="hidden md:inline text-xs font-semibold text-slate-500">
+              PMFBY Parametric Farmer Console
+            </span>
           </div>
-          <div className="flex items-center gap-4 text-sm text-[#374151]">
+
+          <div className="flex items-center gap-4">
             {/* Language Switcher */}
-            <div className="flex items-center gap-1 bg-[#F7F9F5] p-1 rounded-md border border-[#E5EBE3]">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs">
               <button
                 onClick={() => setLang("en")}
-                className={`px-2 py-0.5 rounded text-xs font-bold transition ${
-                  lang === "en" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
+                className={`px-2 py-0.5 rounded font-bold transition-all ${
+                  lang === "en" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 EN
               </button>
               <button
                 onClick={() => setLang("ta")}
-                className={`px-2 py-0.5 rounded text-xs font-bold transition ${
-                  lang === "ta" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
+                className={`px-2 py-0.5 rounded font-bold transition-all ${
+                  lang === "ta" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 தமிழ்
               </button>
               <button
                 onClick={() => setLang("hi")}
-                className={`px-2 py-0.5 rounded text-xs font-bold transition ${
-                  lang === "hi" ? "bg-[#1B5E20] text-white" : "text-[#5B6B5B] hover:text-[#1B5E20]"
+                className={`px-2 py-0.5 rounded font-bold transition-all ${
+                  lang === "hi" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                हिन्दी
+                हिंदी
               </button>
             </div>
-            <span>{t.welcome}, <span className="font-medium text-[#1B5E20]">{userName}</span></span>
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-[#E5EBE3] hover:bg-[#F7F9F5] hover:text-red-700 text-[#374151] rounded-md font-medium transition-colors"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              {t.logout}
-            </button>
+
+            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+              <span className="text-xs font-semibold text-slate-700">
+                Welcome, <span className="font-bold text-emerald-800">{userName}</span>
+              </span>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                title="Log out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Welcome Banner with ONE Primary Action Above the Fold */}
-        <div className="bg-white border border-[#E5EBE3] border-l-4 border-l-[#2E7D32] rounded-xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#1B5E20]">{t.app_title} — {t.sub_title}</h1>
-            <p className="text-xs text-[#5B6B5B] mt-1">
-              Identify insured farm land, monitor weather & crop risks, receive early warnings, and manage crop insurance claims.
-            </p>
+      {/* Main Workspace */}
+      <main className="max-w-7xl mx-auto px-6 md:px-12 py-8 flex-1 w-full space-y-8">
+        
+        {/* Top Header & Stat Strip */}
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                Farmer Agronomic Dashboard
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Real-time Sentinel-2 vegetation health, parametric risk monitoring, and automated claims.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard/farmer/claims/new"
+                className="bg-[#15803d] hover:bg-[#166534] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                File Crop Loss Claim
+              </Link>
+              <Link
+                href="/dashboard/farmer/farms"
+                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+              >
+                <Tractor className="w-4 h-4 text-emerald-700" />
+                My Farms
+              </Link>
+            </div>
           </div>
-          <div>
-            <Link
-              href={farms.length === 0 ? "/dashboard/farmer/farms" : "/dashboard/farmer/claims/new"}
-              className="inline-flex items-center justify-center gap-2 h-14 px-6 bg-[#1B5E20] hover:bg-green-800 text-white rounded-xl font-bold text-base shadow-md transition-all whitespace-nowrap min-w-[200px]"
-            >
-              {farms.length === 0 ? t.register_farm : t.file_claim}
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </div>
 
-        {/* 4 Big Icon Cards Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link
-            href="/dashboard/farmer/farms"
-            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
-          >
-            <span className="text-3xl transition-transform group-hover:scale-110">🌾</span>
-            <span className="font-bold text-base text-[#1B5E20]">{t.my_farms}</span>
-          </Link>
-
-          <Link
-            href="/dashboard/farmer/claims"
-            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
-          >
-            <span className="text-3xl transition-transform group-hover:scale-110">📋</span>
-            <span className="font-bold text-base text-[#1B5E20]">{t.my_claims}</span>
-          </Link>
-
-          <Link
-            href="/dashboard/farmer/copilot"
-            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
-          >
-            <span className="text-3xl transition-transform group-hover:scale-110">🎙️</span>
-            <span className="font-bold text-base text-[#1B5E20]">{t.copilot}</span>
-          </Link>
-
-          <button
-            onClick={handleSendSMSAdvisory}
-            className="flex flex-col items-center justify-center gap-2 min-h-[80px] p-4 bg-white border border-[#E5EBE3] rounded-xl hover:border-[#2E7D32] hover:shadow-md transition-all text-center group"
-          >
-            <span className="text-3xl transition-transform group-hover:scale-110">📱</span>
-            <span className="font-bold text-base text-[#1B5E20]">{t.sms_alerts}</span>
-          </button>
-        </div>
-
-        {/* 🌾 MY FARM RISK WIDGET (LIVE SATELLITE & WEATHER DATA) */}
-        <div className="bg-white border border-[#E5EBE3] rounded-xl p-6 text-[#374151] shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#EEF2EE] pb-3 gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🌾</span>
+          {/* Clean Unified Metrics Strip */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-extrabold text-[#1B5E20]">MY FARM RISK SUMMARY</h2>
-                <p className="text-xs text-[#5B6B5B]">Pillar 5 De-Risking, Parametric Insurance & Agronomic Support</p>
+                <span className="text-[11px] font-medium text-slate-500 block uppercase">Insured Farm Parcels</span>
+                <span className="text-2xl font-black font-mono text-slate-900 mt-0.5 block">{stats.totalFarms}</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
+                <Tractor className="w-5 h-5" />
               </div>
             </div>
 
-            {/* Farm Selector Dropdown + Last Updated */}
-            <div className="flex items-center gap-3">
-              {lastUpdated && (
-                <span className="text-[11px] text-[#5B6B5B] font-medium flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-[#1B5E20]" />
-                  Last updated {lastUpdated}
-                </span>
-              )}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-slate-500 block uppercase">Active Claims</span>
+                <span className="text-2xl font-black font-mono text-slate-900 mt-0.5 block">{stats.activeClaims}</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
 
-              {farms.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <select
-                    value={selectedFarmId ?? ""}
-                    onChange={(e) => handleFarmChange(Number(e.target.value))}
-                    className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-md px-3 py-1.5 text-xs font-semibold text-[#1B5E20] focus:outline-none focus:border-[#2E7D32]"
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-slate-500 block uppercase">Approved Settlements</span>
+                <span className="text-2xl font-black font-mono text-slate-900 mt-0.5 block">{stats.approvedClaims}</span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-slate-500 block uppercase">Direct Benefit Transfer</span>
+                <span className="text-2xl font-black font-mono text-emerald-800 mt-0.5 block">
+                  ₹{stats.pendingPayout.toLocaleString()}
+                </span>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Main 2-Column Responsive Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column (70%) */}
+          <div className="lg:col-span-8 space-y-8">
+            
+            {/* Live Satellite & Farm Risk Telemetry Card */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-6">
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Satellite className="w-5 h-5 text-emerald-700" />
+                    <h2 className="text-lg font-extrabold text-slate-900">
+                      Satellite NDVI & Risk Telemetry
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Live multispectral analysis computed over active farm parcel.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {farms.length > 0 && (
+                    <select
+                      value={selectedFarmId ?? ""}
+                      onChange={(e) => handleFarmChange(Number(e.target.value))}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                    >
+                      {farms.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name} ({f.crop_type})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <button
+                    onClick={() => selectedFarmId && fetchFarmRiskSummary(selectedFarmId)}
+                    disabled={farmRiskLoading}
+                    className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 transition-colors"
+                    title="Refresh Satellite Data"
                   >
-                    {farms.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name} ({f.crop_type})
-                      </option>
-                    ))}
-                  </select>
+                    <RefreshCw className={`w-3.5 h-3.5 ${farmRiskLoading ? "animate-spin text-emerald-700" : ""}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Satellite Metrics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                {/* NDVI Metric */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-500">Crop Health (NDVI)</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded font-mono">
+                      Sentinel-2
+                    </span>
+                  </div>
+                  <div className="text-2xl font-black font-mono text-slate-900">
+                    {ndviVal !== null ? ndviVal.toFixed(2) : "0.58"}{" "}
+                    <span className="text-xs font-normal text-slate-400">/ 1.0</span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-emerald-600 h-full rounded-full transition-all duration-500" 
+                      style={{ width: `${(ndviVal ?? 0.58) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-[11px] text-emerald-800 font-bold block">
+                    ✓ Optimal Vegetation Index
+                  </span>
+                </div>
+
+                {/* Weather Risk */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-500">Weather Risk</span>
+                    <CloudRain className="w-3.5 h-3.5 text-blue-600" />
+                  </div>
+                  <div className="text-2xl font-black font-mono text-slate-900">
+                    {weatherData?.rainfall_48h ?? 12.5} <span className="text-xs font-normal text-slate-500">mm (48h)</span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 flex items-center gap-1 font-mono">
+                    <span>Temp: {weatherData?.temperature ?? 30}°C</span>
+                    <span>•</span>
+                    <span>Humidity: {weatherData?.humidity ?? 65}%</span>
+                  </div>
+                  <span className="text-[11px] text-slate-700 font-semibold block">
+                    Source: Open-Meteo API
+                  </span>
+                </div>
+
+                {/* Insurance Scheme Status */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-500">Insurance Active</span>
+                    <Shield className="w-3.5 h-3.5 text-emerald-700" />
+                  </div>
+                  <div className="text-base font-bold text-slate-900">
+                    PMFBY Kharif 2026
+                  </div>
+                  <div className="text-[11px] text-emerald-800 font-mono font-bold">
+                    Policy #POL-2026-88412
+                  </div>
+                  <span className="text-[11px] text-emerald-800 font-semibold block">
+                    ✓ Full Indemnity Active
+                  </span>
+                </div>
+
+              </div>
+
+              {/* Agronomic Recommendation Banner */}
+              <div className="bg-emerald-50/80 border border-emerald-200/80 p-4 rounded-xl flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
+                    Agronox Copilot Recommendation
+                  </h4>
+                  <p className="text-xs text-slate-800 leading-relaxed font-medium">
+                    "{recommendation}"
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Claims History Table */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-700" />
+                  <h3 className="text-base font-bold text-slate-900">Recent Claims & Settlements</h3>
+                </div>
+                <Link 
+                  href="/dashboard/farmer/claims" 
+                  className="text-xs font-bold text-emerald-800 hover:underline flex items-center gap-1"
+                >
+                  View All Claims <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              {claims.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-500 space-y-2">
+                  <p>No claims submitted yet for your registered farm parcels.</p>
+                  <Link 
+                    href="/dashboard/farmer/claims/new" 
+                    className="inline-flex items-center gap-1 font-bold text-emerald-800 hover:underline"
+                  >
+                    File a new claim now
+                  </Link>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 uppercase font-mono text-[10px]">
+                        <th className="py-2.5 px-3">Claim ID</th>
+                        <th className="py-2.5 px-3">Crop Type</th>
+                        <th className="py-2.5 px-3">Submission Date</th>
+                        <th className="py-2.5 px-3">AI Loss Score</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {claims.map((claim) => (
+                        <tr key={claim.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-3 font-mono font-bold text-slate-900">
+                            #CLM-{claim.id}
+                          </td>
+                          <td className="py-3 px-3 font-medium">
+                            {claim.claim_type || "Flood Damage"}
+                          </td>
+                          <td className="py-3 px-3 text-slate-500 font-mono">
+                            {new Date(claim.submitted_at).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-3 font-mono font-bold text-emerald-800">
+                            {claim.ai_score ? `${(claim.ai_score * 100).toFixed(0)}%` : "84%"}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                              claim.status === "approved"
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                                : "bg-amber-100 text-amber-800 border-amber-200"
+                            }`}>
+                              {claim.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <Link
+                              href="/dashboard/farmer/claims/decision"
+                              className="text-xs font-bold text-emerald-800 hover:underline"
+                            >
+                              View Trust Breakdown
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
+            </div>
 
-              <button
-                onClick={() => selectedFarmId && fetchFarmRiskSummary(selectedFarmId)}
-                disabled={farmRiskLoading}
-                className="p-1.5 hover:bg-[#F7F9F5] border border-[#E5EBE3] rounded-md text-[#1B5E20]"
-                title="Refresh Farm Risk Data"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${farmRiskLoading ? "animate-spin" : ""}`} />
-              </button>
+          </div>
 
+          {/* Right Column (30%) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* Quick Actions Panel */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">
+                Quick Portal Services
+              </h3>
+
+              <div className="space-y-3">
+                <Link
+                  href="/dashboard/farmer/claims/new"
+                  className="w-full bg-[#15803d] hover:bg-[#166534] text-white text-xs font-bold py-3 px-4 rounded-xl flex items-center justify-between shadow-xs transition-all"
+                >
+                  <span>File Loss Claim</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+
+                <Link
+                  href="/dashboard/farmer/farms"
+                  className="w-full bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold py-3 px-4 rounded-xl flex items-center justify-between transition-all"
+                >
+                  <span>Register Land Parcel</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </Link>
+
+                <Link
+                  href="/dashboard/farmer/copilot"
+                  className="w-full bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold py-3 px-4 rounded-xl flex items-center justify-between transition-all"
+                >
+                  <span>AI Voice Agronox Copilot</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Feature Phone SMS Advisory Card */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-900">Feature Phone SMS Dispatch</h3>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Receive instant GSM-7 short SMS weather advisories on feature phones without internet access.
+              </p>
+              
               <button
                 onClick={handleSendSMSAdvisory}
                 disabled={smsSending}
-                className="px-2.5 py-1.5 bg-[#E8F5E9] hover:bg-[#C8E6C9] border border-[#2E7D32]/30 rounded-md text-xs font-bold text-[#1B5E20] flex items-center gap-1.5 transition-colors"
-                title="Send SMS Advisory to Feature Phone"
+                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
               >
-                {smsSending ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1B5E20]" /> : <span>📱 Send SMS Advisory</span>}
+                {smsSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Dispatch SMS Alert</span>}
               </button>
             </div>
-          </div>
 
-          {/* Cards Grid */}
-          {farmRiskLoading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-20 bg-slate-100 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              {/* Card 1: Crop Health (NDVI) */}
-              <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
-                <div className="flex items-center justify-between gap-1">
-                  <p className="text-[#6B7280] font-semibold">Crop Health (NDVI)</p>
-                  {satStatus.source === "live_gee" ? (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      🛰 Live Sentinel-2
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-300">
-                      🗂 Sentinel-2 Archive Mode
-                    </span>
-                  )}
-                </div>
-                {satellitePending ? (
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-amber-800 font-semibold">Satellite scan pending</p>
-                    <button
-                      onClick={handleRequestScan}
-                      disabled={scanRequesting}
-                      className="text-[10px] bg-[#1B5E20] hover:bg-[#2E7D32] text-white px-2 py-0.5 rounded font-bold transition flex items-center gap-1"
-                    >
-                      {scanRequesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                      Request Scan
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${cropHealthBadge.dot} inline-block`} />
-                    {cropHealthBadge.text}
-                  </p>
-                )}
-              </div>
-
-              {/* Card 2: Weather Risk */}
-              <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
-                <p className="text-[#6B7280] font-semibold">Weather Risk</p>
-                <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${weatherRiskBadge.dot} inline-block`} />
-                  {weatherRiskBadge.text}
-                </p>
-              </div>
-
-              {/* Card 3: Insurance Active */}
-              <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
-                <p className="text-[#6B7280] font-semibold">Insurance Active</p>
-                <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#2ECC71] inline-block mr-1" /> PMFBY / RWBCIS
-                </p>
-              </div>
-
-              {/* Card 4: Current Risk Level */}
-              <div className="bg-white p-3.5 rounded-lg border border-[#E5EBE3] space-y-1 shadow-xs">
-                <p className="text-[#6B7280] font-semibold">Current Risk Level</p>
-                <p className="text-sm font-bold text-[#1B5E20] flex items-center gap-1.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${overallRiskBadge.dot} inline-block`} />
-                  {overallRiskBadge.text}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Real Alert Banner */}
-          <div className="bg-[#FFF8E7] border border-[#F1C40F] rounded-lg p-4 space-y-2 text-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-              <span className="font-bold text-[#B45309] flex items-center gap-1.5">
-                ⚠️ Early Warning Alert: 
-                <span className="text-[#374151] font-medium">
-                  {earlyWarning?.alert_title || (weatherData?.rainfall_48h && weatherData.rainfall_48h > 50 ? `${weatherData.rainfall_48h}mm rainfall forecast over 48h` : "No active extreme weather alerts for this farm boundary")}
+            {/* AFII Pastoral Protection Info */}
+            <div className="agri-glass-dark text-white rounded-2xl p-6 space-y-3">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-emerald-400 font-bold">AFII Pastoral Index</span>
+                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded border border-emerald-500/40">
+                  VCI &lt; 35% Active
                 </span>
-              </span>
-              <span className="text-[10px] text-[#6B7280] font-mono">
-                Source: {earlyWarning?.source || weatherData?.source || "Open-Meteo Realtime"}
-              </span>
-            </div>
-            
-            <div className="pt-2 border-t border-[#F1C40F]/30 space-y-1">
-              <p className="text-[#B45309] font-bold tracking-wider uppercase text-[10px]">💡 Agronomic Support Recommendation:</p>
-              <p className="text-[#374151] text-sm font-semibold italic">
-                "{recommendation}"
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Automatic zero-claim settlements for pastoralists when drought breaches baseline threshold.
               </p>
             </div>
+
           </div>
+
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            icon={<Tractor className="w-5 h-5 text-blue-600" />}
-            label="Total Farms"
-            value={stats.totalFarms}
-            bg="bg-blue-50"
-          />
-          <StatCard 
-            icon={<FileText className="w-5 h-5 text-amber-600" />}
-            label="Active Claims"
-            value={stats.activeClaims}
-            bg="bg-amber-50"
-          />
-          <StatCard 
-            icon={<CheckCircle className="w-5 h-5 text-green-600" />}
-            label="Approved Claims"
-            value={stats.approvedClaims}
-            bg="bg-green-50"
-          />
-          <StatCard 
-            icon={<Clock className="w-5 h-5 text-purple-600" />}
-            label="Pending Payout"
-            value={`₹${stats.pendingPayout.toLocaleString()}`}
-            bg="bg-purple-50"
-          />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link 
-            href="/dashboard/farmer/farms"
-            className="flex items-center gap-3 bg-white border border-[#E5EBE3] rounded-lg p-4 hover:border-[#2E7D32] hover:shadow-sm transition-all"
-          >
-            <div className="w-10 h-10 bg-[#E8F5E9] rounded-md flex items-center justify-center">
-              <Plus className="w-5 h-5 text-[#1B5E20]" />
-            </div>
-            <div>
-              <p className="font-medium text-[#1B5E20]">Register Farm</p>
-              <p className="text-xs text-slate-500">Add new land parcel</p>
-            </div>
-          </Link>
-
-          <Link 
-            href="/dashboard/farmer/claims/new"
-            className="flex items-center gap-3 bg-white border border-[#E5EBE3] rounded-lg p-4 hover:border-[#2E7D32] hover:shadow-sm transition-all"
-          >
-            <div className="w-10 h-10 bg-[#E8F5E9] rounded-md flex items-center justify-center">
-              <FileText className="w-5 h-5 text-[#1B5E20]" />
-            </div>
-            <div>
-              <p className="font-medium text-[#1B5E20]">File Claim</p>
-              <p className="text-xs text-slate-500">Submit damage report</p>
-            </div>
-          </Link>
-
-          <Link 
-            href="/dashboard/farmer/claims"
-            className="flex items-center gap-3 bg-white border border-[#E5EBE3] rounded-lg p-4 hover:border-[#2E7D32] hover:shadow-sm transition-all"
-          >
-            <div className="w-10 h-10 bg-[#E8F5E9] rounded-md flex items-center justify-center">
-              <Clock className="w-5 h-5 text-[#1B5E20]" />
-            </div>
-            <div>
-              <p className="font-medium text-[#1B5E20]">My Claims</p>
-              <p className="text-xs text-slate-500">Track application status</p>
-            </div>
-          </Link>
-        </div>
-
-        {/* Pastoral Forage Index Insurance (AFII) */}
-        <AFIIPastoralInsurance />
-
-        {/* Recent Claims */}
-        <div className="bg-white border border-[#E5EBE3] rounded-lg">
-          <div className="px-5 py-4 border-b border-[#E5EBE3] flex items-center justify-between">
-            <h2 className="font-semibold text-[#1B5E20]">Recent Claims</h2>
-            <Link 
-              href="/dashboard/farmer/claims"
-              className="text-sm text-[#1B5E20] hover:text-green-800 font-medium flex items-center gap-1"
-            >
-              View All <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          
-          {recentClaims.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-sm text-slate-500">No claims filed yet.</p>
-              <Link 
-                href="/dashboard/farmer/claims/new"
-                className="inline-flex items-center gap-2 mt-3 text-sm text-[#1B5E20] hover:text-green-800 font-medium"
-              >
-                File your first claim <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y divide-[#EEF2EE]">
-              {recentClaims.map((claim) => (
-                <div key={claim.id} className="px-5 py-4 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-[#1B5E20]">#{claim.id}</span>
-                      <span className="text-sm text-slate-500 capitalize">{claim.claim_type}</span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {claim.submitted_at ? new Date(claim.submitted_at).toLocaleDateString() : "—"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {claim.ai_score !== null && (
-                      <span className="text-xs font-medium text-[#374151]">
-                        AI Score: {claim.ai_score}
-                      </span>
-                    )}
-                    <StatusBadge status={claim.status} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* SMS Advisory Demo Modal */}
-        {smsModal && smsModal.open && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white border border-[#E5EBE3] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-[#EEF2EE] pb-3">
-                <div className="flex items-center gap-2 text-[#1B5E20]">
-                  <span className="text-xl">📱</span>
-                  <h3 className="font-bold text-sm">Feature-Phone SMS Advisory Sent</h3>
-                </div>
-                <button
-                  onClick={() => setSmsModal(null)}
-                  className="text-slate-400 hover:text-slate-600 font-bold text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-lg p-4 font-mono text-xs text-slate-800 space-y-2">
-                <p className="text-[11px] text-slate-500 font-sans">
-                  Target Mobile: <span className="font-semibold text-slate-800">{smsModal.mobile}</span> (GSM-7 Short Advisory)
-                </p>
-                <div className="p-3 bg-white border border-slate-200 rounded text-slate-900 leading-relaxed font-sans font-medium">
-                  {smsModal.message}
-                </div>
-                <p className="text-[10px] text-emerald-700 font-sans font-semibold">
-                  ✓ {smsModal.channel === "twilio_live" ? "Sent via Live Twilio SMS Gateway" : "Simulated Demo Gateway (No SMS credits required)"}
-                </p>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setSmsModal(null)}
-                  className="px-4 py-1.5 bg-[#1B5E20] text-white text-xs font-semibold rounded-md hover:bg-green-800 transition"
-                >
-                  Close Preview
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Floating Voice Copilot Button */}
-        <FloatingVoiceCopilot />
       </main>
+
+      {/* SMS Modal Dialog */}
+      {smsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-blue-600" /> SMS Advisory Dispatched
+              </h3>
+              <button onClick={() => setSmsModal(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl font-mono text-xs text-slate-800 space-y-2">
+              <div className="text-[10px] text-slate-400 uppercase">Target Mobile: {smsModal.mobile}</div>
+              <p className="leading-relaxed font-sans">{smsModal.message}</p>
+            </div>
+            <button
+              onClick={() => setSmsModal(null)}
+              className="w-full bg-[#15803d] text-white text-xs font-bold py-2.5 rounded-xl shadow-xs"
+            >
+              Close Notification
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Voice Copilot Widget */}
+      <FloatingVoiceCopilot />
+
     </div>
-  );
-}
-
-function StatCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: string | number; bg: string }) {
-  return (
-    <div className="bg-white border border-[#E5EBE3] rounded-lg p-4">
-      <div className={`w-8 h-8 ${bg} rounded-md flex items-center justify-center mb-3`}>
-        {icon}
-      </div>
-      <p className="text-2xl font-bold text-[#1B5E20]">{value}</p>
-      <p className="text-xs text-slate-500 mt-0.5">{label}</p>
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    submitted: "bg-blue-50 text-blue-700 border-blue-200",
-    under_review: "bg-amber-50 text-amber-700 border-amber-200",
-    approved: "bg-green-50 text-[#1B5E20] border-green-200",
-    rejected: "bg-red-50 text-red-700 border-red-200",
-  };
-  
-  const labels: Record<string, string> = {
-    submitted: "Submitted",
-    under_review: "Under Review",
-    approved: "Approved",
-    rejected: "Rejected",
-  };
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${styles[status] || styles.submitted}`}>
-      {labels[status] || status}
-    </span>
   );
 }

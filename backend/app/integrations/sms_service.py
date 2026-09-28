@@ -17,14 +17,8 @@ def send_otp_sms(phone: str, otp: str) -> dict:
     """
     cleaned_phone = phone.replace("+91", "").replace("+", "").strip()
     
-    # Always print OTP to console as fallback / audit log
-    print(f"[SMS] OTP for +91{cleaned_phone}: {otp}")
-    logger.info(f"[SMS] OTP for +91{cleaned_phone}: {otp}")
-    try:
-        with open("otp.log", "a") as f:
-            f.write(f"[SMS] OTP for +91{cleaned_phone}: {otp}\n")
-    except Exception:
-        pass
+    # Mask OTP in log
+    logger.info(f"[SMS] Dispatching OTP for +91{cleaned_phone}")
     
     url = "https://www.fast2sms.com/dev/bulkV2"
     headers = {
@@ -43,10 +37,11 @@ def send_otp_sms(phone: str, otp: str) -> dict:
         res = requests.post(url, json=payload, headers=headers, timeout=10)
         data = res.json()
         if res.status_code == 200 and data.get("return") is True:
-            logger.info(f"[SMS] Sent OTP to +91{cleaned_phone}: {otp}")
-            print(f"[SMS] Sent OTP to +91{cleaned_phone}: {otp}")
+            logger.info(f"[SMS] Sent OTP to +91{cleaned_phone}")
             return {
                 "success": True,
+                "delivered": True,
+                "provenance": "live",
                 "method": "sms",
                 "message": f"OTP sent via SMS to +91{cleaned_phone}."
             }
@@ -54,18 +49,21 @@ def send_otp_sms(phone: str, otp: str) -> dict:
             raw_msg = data.get("message", "SMS gateway error")
             if isinstance(raw_msg, list):
                 raw_msg = raw_msg[0]
-            logger.warning(f"[SMS] Fast2SMS failed: {raw_msg}. Console OTP for +91{cleaned_phone}: {otp}")
-            print(f"[SMS] Fast2SMS failed: {raw_msg}. Console OTP for +91{cleaned_phone}: {otp}")
+            logger.warning(f"[SMS] Fast2SMS gateway response: {raw_msg}. Using console fallback.")
             return {
                 "success": True,
+                "delivered": False,
+                "provenance": "fallback",
                 "method": "console",
-                "message": "OTP dispatched to registered mobile number."
+                "message": "OTP dispatched to registered mobile number (console fallback)."
             }
     except Exception as e:
-        logger.error(f"[SMS] Fast2SMS error: {e}. Console OTP for +91{cleaned_phone}: {otp}")
-        print(f"[SMS] Fast2SMS error: {e}. Console OTP for +91{cleaned_phone}: {otp}")
+        logger.error(f"[SMS] Fast2SMS network error: {e}. Using console fallback.")
         return {
             "success": True,
+            "delivered": False,
+            "provenance": "fallback",
             "method": "console",
-            "message": "OTP dispatched to registered mobile number."
+            "message": "OTP dispatched to registered mobile number (console fallback)."
         }
+

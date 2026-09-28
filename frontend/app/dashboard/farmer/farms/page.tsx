@@ -1290,7 +1290,7 @@ function DashboardContent() {
                   <p>📍 Location: <span className="text-[#374151] font-medium">{farm.village}, {farm.district}</span></p>
                   <p>📐 Area: <span className="text-[#5B6B5B] font-bold">{farm.area_hectares} hectares</span> ({calculateAreaAcres(farm.area_hectares || 0)} acres)</p>
                   <p>🧾 Land Record: <span className="font-mono text-[#374151]">{farm.khasra_number || "223/4"}</span></p>
-                  <p>🛡 Insurance Scheme: <span className="font-bold text-[#374151]">{"insurance_scheme" in farm && farm.insurance_scheme ? farm.insurance_scheme : "PMFBY"}</span></p>
+                  <p>🛡 Insurance Scheme: <span className="font-bold text-[#374151]">{(farm as any).insurance_scheme || "PMFBY"}</span></p>
                   <p>📄 Policy Number: <span className="font-mono text-[#374151]">{farm.insurance_policy_number || "INS-772819"}</span></p>
                 </div>
 

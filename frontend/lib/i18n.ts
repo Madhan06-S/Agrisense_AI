@@ -2,13 +2,13 @@ export type Language = "en" | "ta" | "hi";
 
 export const translations: Record<Language, Record<string, string>> = {
   en: {
-    app_title: "AgriSense AI",
-    sub_title: "AI-powered Agricultural Risk & Parametric Insurance",
+    app_title: "AgriSense",
+    sub_title: "Satellite-Powered Agricultural Risk & Parametric Insurance",
     welcome: "Welcome",
     logout: "Logout",
     my_farms: "My Farms",
     my_claims: "My Claims",
-    copilot: "AI Copilot 🎙",
+    copilot: "Agronox Advisory 🎙",
     sms_alerts: "SMS Advisory 📱",
     file_claim: "🚨 File a Claim",
     register_farm: "➕ Register Farm",
@@ -38,13 +38,13 @@ export const translations: Record<Language, Record<string, string>> = {
     stop: "STOP",
   },
   ta: {
-    app_title: "அக்ரிசென்ஸ் AI",
-    sub_title: "செயற்கை நுண்ணறிவு விவசாய காப்பீடு மற்றும் பாதுகாப்பு",
+    app_title: "அக்ரிசென்ஸ்",
+    sub_title: "செயற்கைக்கோள் விவசாய காப்பீடு மற்றும் பாதுகாப்பு",
     welcome: "வரவேற்கிறோம்",
     logout: "வெளியேறு",
     my_farms: "எனது பண்ணைகள்",
     my_claims: "எனது கோரிக்கைகள்",
-    copilot: "AI உதவி 🎙",
+    copilot: "அக்ரோனாக்ஸ் உதவி 🎙",
     sms_alerts: "SMS தகவல்கள் 📱",
     file_claim: "🚨 இழப்பீடு கோரவும்",
     register_farm: "➕ பண்ணை பதிவு",

@@ -81,14 +81,14 @@ export default function GlobeViewer() {
               bottomRadius: 15000.0,
               material: Cesium.Color.fromCssColorString("rgba(16, 185, 129, 0.6)"),
               outline: true,
-              outlineColor: Cesium.Color.EMERALD,
+              outlineColor: Cesium.Color.fromCssColorString("#10b981"),
             },
           });
         });
 
         // 3. Draw Orbit Tracks (Sentinel-1: Red, Sentinel-2: Green, LISS-IV: Orange)
         const drawOrbit = (color: any, offsetLng: number) => {
-          const positions = [];
+          const positions: any[] = [];
           for (let lat = -80; lat <= 80; lat += 5) {
             // Simplified polar orbit trajectory calculations
             const lng = 78.9629 + Math.sin(lat * Math.PI / 180.0) * 30.0 + offsetLng;
@@ -117,7 +117,7 @@ export default function GlobeViewer() {
           let step = 0;
           setInterval(() => {
             step = (step + 1) % positions.length;
-            satEntity.position = positions[step];
+            (satEntity.position as any) = positions[step];
           }, 1000);
         };
 
@@ -127,7 +127,7 @@ export default function GlobeViewer() {
 
         setLoading(false);
       } catch (err) {
-        logger.error("Cesium loading failed: %s", err);
+        console.error("Cesium loading failed: %s", err);
         setLoading(false);
       }
     };

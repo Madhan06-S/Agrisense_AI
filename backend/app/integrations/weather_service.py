@@ -40,8 +40,10 @@ def get_farm_weather(lat: float, lon: float) -> Dict:
             "wind_speed": round(wind_speed, 1),
             "humidity": humidity,
             "source": "Open-Meteo API",
-            "status": "live"
+            "status": "live",
+            "provenance": "live"
         }
+
     except Exception as e:
         print(f"Open-Meteo API error: {e}")
         return _fallback_weather(lat, lon)
@@ -91,5 +93,7 @@ def _fallback_weather(lat: float, lon: float) -> Dict:
         "wind_speed": wind,
         "humidity": humidity,
         "source": "IMD Estimate (Fallback)",
-        "status": "fallback"
+        "status": "fallback",
+        "provenance": "fallback"
     }
+

@@ -1,18 +1,48 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { ShieldCheck, Calendar, AlertOctagon, Volume2, ArrowRight, HelpCircle, Layers, FileText, ChevronRight, Tractor, ArrowLeft } from "lucide-react";
-import { Farm } from "@/components/MapComponent";
+import { useSearchParams } from "next/navigation";
+import { ShieldCheck, AlertOctagon, Volume2, Layers, ChevronRight, Tractor, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import TrafficLight3D from "@/components/decision/TrafficLight3D";
 import Explainability3D from "@/components/ml/Explainability3D";
 import FarmTerrain3D from "@/components/maps/FarmTerrain3D";
+import { apiFetch, ApiError } from "@/lib/api";
 
-const queryClient = new QueryClient();
+interface DecisionData {
+  claim_id: number;
+  farm_name?: string;
+  crop_type?: string;
+  status?: string;
+  payout_amount?: number;
+  recommended_payout_amount?: number;
+  analysis_status?: string;
+  analysis_error_reason?: string;
+  routing?: {
+    color: string;
+    status: string;
+    message: string;
+    payout_amount: number;
+  };
+  payout?: {
+    payout_amount: number;
+    trigger_rules?: string[];
+  };
+  prediction?: {
+    damage_probability: number;
+    confidence: number;
+    damage_class: string;
+  };
+}
 
 function DecisionDashboardContent() {
-  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const searchParams = useSearchParams();
+  const claimIdParam = searchParams.get("claim_id") || "1";
+  
+  const [decisionData, setDecisionData] = useState<DecisionData | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [hasWebGL, setHasWebGL] = useState(true);
   const [speechLanguage, setSpeechLanguage] = useState<"en" | "hi">("en");
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -25,89 +55,48 @@ function DecisionDashboardContent() {
         !!(window.WebGLRenderingContext && 
           (canvas.getContext("webgl") || canvas.getContext("experimental-webgl")))
       );
-    } catch (e) {
+    } catch {
       setHasWebGL(false);
     }
   }, []);
 
-  // Fetch Farms
-  const { data: farms = [] } = useQuery<Farm[]>({
-    queryKey: ["farms"],
-    queryFn: async () => {
-      try {
-        const res = await fetch("http://localhost:8000/api/v1/farms/");
-        if (!res.ok) throw new Error("API Offline");
-        return await res.json();
-      } catch (err) {
-        const cached = localStorage.getItem("agrisense_cached_farms");
-        return cached ? JSON.parse(cached) : [];
-      }
-    },
-  });
-
-  // Select first farm by default
+  // Fetch specific claim decision from backend
   useEffect(() => {
-    if (farms.length > 0 && !selectedFarm) {
-      setSelectedFarm(farms[0]);
-    }
-  }, [farms, selectedFarm]);
-
-  // Fetch Claim routing evaluation
-  const { data: claimEvaluation = null, isLoading } = useQuery({
-    queryKey: ["claim_evaluation", selectedFarm?.id],
-    queryFn: async () => {
-      if (!selectedFarm) return null;
+    async function loadDecision() {
+      setLoading(true);
+      setErrorMsg(null);
       try {
-        const res = await fetch("http://localhost:8000/api/v1/decision/evaluate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            farm_id: selectedFarm.id,
-            ndvi: 0.65,
-            vci: 65.0,
-            rainfall_anomaly_percent: -45.0,
-            flood_index: 0.42,
-            moisture_drop: 25.0,
-            ndvi_drop_2w: 28.0,
-            num_cows: 6
-          })
-        });
-        if (!res.ok) throw new Error("Evaluation API offline");
-        return await res.json();
-      } catch (err) {
-        const color = selectedFarm.crop_type === "Wheat" ? "GREEN" : "RED";
-        const payoutAmount = color === "RED" ? 6 * 5000 * 1.2 : 0.0;
-        
-        return {
-          claim_id: selectedFarm.id,
-          farm_name: selectedFarm.name,
-          crop_type: selectedFarm.crop_type,
-          routing: {
-            color,
-            status: color === "GREEN" ? "CLAIM_CLOSED_NO_DAMAGE" : "INSTANT_MICRO_PAYOUT",
-            message: color === "GREEN" ? "Pasture is healthy." : "Crop damage detected.",
-            payout_amount: payoutAmount
-          },
-          payout: {
-            payout_amount: payoutAmount,
-            trigger_rules: color === "RED" ? ["ndvi_drop_2w > 50"] : []
-          },
-          prediction: {
-            damage_probability: color === "RED" ? 0.82 : 0.08,
-            confidence: 0.91,
-            damage_class: color === "GREEN" ? "no_damage" : "severe_damage"
-          }
-        };
-      }
-    },
-    enabled: !!selectedFarm,
-  });
+        const res = await apiFetch(`/decision/claim/${claimIdParam}`);
+        const data = await res.json();
+        setDecisionData(data);
 
-  const decisionColor = ((claimEvaluation?.routing?.color as string) ?? "RED") as "GREEN" | "RED";
+        // Fetch payment status separately
+        try {
+          const payRes = await apiFetch(`/payments/${claimIdParam}/status`);
+          if (payRes.ok) {
+            const payData = await payRes.json();
+            setPaymentStatus(payData.status || "initiated");
+          }
+        } catch {
+          setPaymentStatus(data.status || "pending");
+        }
+      } catch (err: any) {
+        console.error("Error loading decision:", err);
+        setErrorMsg(err instanceof ApiError ? err.message : "data unavailable");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDecision();
+  }, [claimIdParam]);
+
+  const decisionColor = ((decisionData?.routing?.color as string) ?? "RED") as "GREEN" | "RED" | "YELLOW";
 
   // Natural Language Explanations
   const explanationTexts = useMemo(() => {
-    const payoutStr = claimEvaluation?.payout?.payout_amount?.toLocaleString("en-IN");
+    const payoutAmt = decisionData?.recommended_payout_amount ?? decisionData?.payout_amount ?? decisionData?.payout?.payout_amount;
+    const payoutStr = payoutAmt ? payoutAmt.toLocaleString("en-IN") : null;
     if (decisionColor === "GREEN") {
       return {
         eng: `Digital Trust Verification complete. The computed Pasture Health Index shows normal parameters. No major anomalies or vegetation drop detected. No micro-payout is required for this claim cycle.`,
@@ -115,10 +104,10 @@ function DecisionDashboardContent() {
       };
     }
     return {
-      eng: `Automated assessment complete. Crop damage verified based on vegetation index drop threshold and weather correlation. Instant micro-payout of ₹${payoutStr ?? "calculating..."} has been scheduled for bank transfer.`,
-      hin: `स्वचालित मूल्यांकन पूर्ण। वनस्पति सूचकांक में गिरावट और मौसम सहसंबंध के आधार पर फसल नुकसान का सत्यापन किया गया है। ₹${payoutStr ?? "गणना हो रही है..."} का तत्काल माइक्रो-भुगतान बैंक हस्तांतरण के लिए निर्धारित किया गया है।`
+      eng: `Automated assessment complete. Crop damage verified based on vegetation index drop threshold and weather correlation. Recommended payout of ₹${payoutStr ?? "calculating..."} has been recorded for review/transfer.`,
+      hin: `स्वचालित मूल्यांकन पूर्ण। वनस्पति सूचकांक में गिरावट और मौसम सहसंबंध के आधार पर फसल नुकसान का सत्यापन किया गया है। ₹${payoutStr ?? "गणना हो रही है..."} का सिफारिशी भुगतान दर्ज किया गया है।`
     };
-  }, [decisionColor, claimEvaluation]);
+  }, [decisionColor, decisionData]);
 
   const handleVoicePlay = () => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -130,7 +119,7 @@ function DecisionDashboardContent() {
     }
 
     setIsSpeaking(true);
-    const text = speechLanguage === "en" ? explanationTexts.eng : speechLanguage === "hi" ? explanationTexts.hin : "";
+    const text = speechLanguage === "en" ? explanationTexts.eng : explanationTexts.hin;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = speechLanguage === "en" ? "en-US" : "hi-IN";
     utterance.rate = 0.95;
@@ -141,13 +130,32 @@ function DecisionDashboardContent() {
     window.speechSynthesis.speak(utterance);
   };
 
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-[#166534]" />
+        <span className="text-xs font-semibold text-slate-600">Loading backend claim decision...</span>
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] p-8 flex flex-col items-center justify-center">
+        <div className="bg-white border border-red-200 rounded-2xl p-8 max-w-md w-full text-center space-y-4 shadow-sm">
+          <AlertCircle className="w-10 h-10 text-red-600 mx-auto" />
+          <h2 className="text-base font-bold text-slate-900">Decision Assessment Error</h2>
+          <p className="text-xs text-slate-600">{errorMsg}</p>
+          <Link
+            href="/dashboard/farmer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#166534] text-white text-xs font-bold rounded-lg"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 p-8 font-sans">
@@ -158,47 +166,32 @@ function DecisionDashboardContent() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-bold text-slate-800">Claim Evaluation & AI Decision Assessment</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Explore satellite analytics and parametric index validation for your crop insurance policy.</p>
+            <h1 className="text-lg font-bold text-slate-800">Claim #{claimIdParam} Evaluation & AI Decision</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Verified backend assessment and payment status tracking.</p>
           </div>
         </div>
-        
-        {/* Farm dropdown selector */}
-        {farms.length > 0 && (
-          <div className="flex gap-2 items-center text-xs">
-            <span className="text-slate-500 font-semibold uppercase">Select Farm:</span>
-            <select
-              value={selectedFarm?.id ?? ""}
-              onChange={(e) => {
-                const id = parseInt(e.target.value);
-                const found = farms.find((f) => f.id === id);
-                if (found) setSelectedFarm(found);
-              }}
-              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#166534]"
-            >
-              {farms.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
       </header>
 
       {/* Main Content Layout */}
-      {selectedFarm ? (
+      {decisionData ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Visualizers (Left column, 8 spans) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             {hasWebGL ? (
               <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#166534]" />
-                  <span className="text-xs font-bold text-slate-700 uppercase">3D Parametric Status Indicator</span>
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#166534]" />
+                    <span className="text-xs font-bold text-slate-700 uppercase">3D Parametric Status Indicator</span>
+                  </div>
+                  <span className="text-[10px] font-mono uppercase bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">
+                    Analysis: {decisionData.analysis_status || "completed"}
+                  </span>
                 </div>
                 <div className="h-[250px] relative bg-slate-50">
                   <TrafficLight3D
-                    decisionColor={decisionColor}
-                    payoutAmount={claimEvaluation?.payout?.payout_amount ?? 0}
+                    decisionColor={decisionColor === "YELLOW" ? "RED" : decisionColor}
+                    payoutAmount={decisionData?.recommended_payout_amount ?? decisionData?.payout_amount ?? 0}
                     timelineStep={decisionColor === "GREEN" ? 3 : 2}
                   />
                 </div>
@@ -218,10 +211,10 @@ function DecisionDashboardContent() {
                 </div>
                 <div className="h-[300px] relative bg-slate-50">
                   <Explainability3D
-                    farmName={selectedFarm.name}
+                    farmName={decisionData.farm_name || "Farm Parcel"}
                     shapData={{
                       base_value: 0.15,
-                      prediction_value: claimEvaluation?.prediction?.damage_probability ?? 0.42,
+                      prediction_value: decisionData?.prediction?.damage_probability ?? 0.42,
                       shap_values: {
                         ndvi: -0.28,
                         precip: 0.15,
@@ -236,6 +229,25 @@ function DecisionDashboardContent() {
 
           {/* Details Pane (Right column, 4 spans) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* Payment State Display */}
+            <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-3">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block border-b border-slate-100 pb-2">
+                Payment & Transfer Status
+              </span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-semibold">Payment State:</span>
+                <span className="font-mono font-bold uppercase text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  {paymentStatus || decisionData.status || "initiated"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-semibold">Recommended Amount:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  ₹{(decisionData.recommended_payout_amount ?? decisionData.payout_amount ?? 0).toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+
             {/* Written Assessment Card */}
             <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-4">
               <div className="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -266,35 +278,6 @@ function DecisionDashboardContent() {
                 </p>
               </div>
 
-              {/* Next Steps */}
-              <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-4">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Workflow Verification</span>
-                
-                <div className="flex gap-3 items-start text-xs">
-                  <div className="w-5 h-5 rounded-full bg-[#166534]/15 border border-[#166534]/30 flex items-center justify-center text-[10px] text-[#166534] font-bold flex-shrink-0">1</div>
-                  <div>
-                    <h5 className="font-bold text-slate-800">Satellite Analysis</h5>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Multispectral indices compared against historical crop records.</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 items-start text-xs">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[10px] text-blue-800 font-bold flex-shrink-0">2</div>
-                  <div>
-                    <h5 className="font-bold text-slate-800">Parametric Triggers</h5>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Decision system verifies criteria for auto-closure or payout transfer.</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 items-start text-xs">
-                  <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] text-slate-500 font-bold flex-shrink-0">3</div>
-                  <div>
-                    <h5 className="font-bold text-slate-700">Payment Release</h5>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Direct benefit transfer schedules release directly to Aadhaar link.</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Resolution Action */}
               <div className="mt-4 pt-4 border-t border-slate-100">
                 {decisionColor === "GREEN" ? (
@@ -308,27 +291,11 @@ function DecisionDashboardContent() {
                 )}
               </div>
             </div>
-
-            {/* Farm Terrain */}
-            {hasWebGL && (
-              <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-3">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
-                  <Layers className="w-4 h-4 text-[#166534]" />
-                  Spatial Health Map
-                </span>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Interactive representation of farm boundary and vegetation levels. Darker green shades indicate normal canopy levels.
-                </p>
-                <div className="h-[150px] rounded-lg overflow-hidden border border-slate-200 relative bg-slate-50">
-                  <FarmTerrain3D geojson={selectedFarm.boundary} livePreview={true} />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       ) : (
         <div className="p-12 text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl bg-white">
-          No farms registered yet. Please register a farm on the farm ingestion page.
+          data unavailable
         </div>
       )}
     </div>
@@ -337,8 +304,8 @@ function DecisionDashboardContent() {
 
 export default function Page() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading decision dashboard...</div>}>
       <DecisionDashboardContent />
-    </QueryClientProvider>
+    </Suspense>
   );
 }

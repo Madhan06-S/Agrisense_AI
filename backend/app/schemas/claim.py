@@ -61,6 +61,10 @@ class ClaimOut(BaseModel):
     claim_type: ClaimType
     description: Optional[str] = None
     status: ClaimStatus
+    analysis_status: Optional[str] = "pending"
+    analysis_error_reason: Optional[str] = None
+    recommended_payout_amount: Optional[float] = None
+    payout_amount: Optional[float] = None
     ai_damage_score: Optional[float] = None
     ai_decision: Optional[str] = None
     officer_remarks: Optional[str] = None
@@ -69,6 +73,7 @@ class ClaimOut(BaseModel):
     resolved_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
 
 
 class ClaimDetailOut(ClaimOut):

@@ -11,11 +11,16 @@ MOCK_COORDINATES = [
 ]
 
 
+from app.core.config import settings
+
 def fetch_land_record(state: str, district: str, tehsil: str, khasra_number: str) -> dict:
     """
     Mock land records (Bhulekh API) lookup.
     Returns: GeoJSON boundary, owner_name, area_acres, source.
     """
+    if not settings.DEMO_MODE:
+        raise ValueError("Bhulekh land registry integration not configured in production mode.")
+
     # Demo matching based on khasra numbers to simulate correct matching vs mismatching
     # Khasra "123" -> Ramesh Patel
     # Khasra "456" -> Sunita Devi

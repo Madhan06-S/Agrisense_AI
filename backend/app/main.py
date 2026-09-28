@@ -65,75 +65,17 @@ async def startup_event():
             "Continuing boot; backend GEE health will show unhealthy."
         )
     
-    # Run startup migrations/alters for SQLite database
-    logger.info("Running startup DB alters...")
-    try:
-        from app.core.database import engine, Base
-        import app.models
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Successfully ran Base.metadata.create_all on startup.")
-    except Exception as e:
-        logger.error(f"Failed metadata create_all: {e}")
-    try:
-        from app.core.database import AsyncSessionLocal
-        from sqlalchemy import text
-        async with AsyncSessionLocal() as session:
-            columns_to_add = [
-                ("users", "role", "VARCHAR DEFAULT 'farmer'"),
-                ("users", "pin", "VARCHAR"),
-                ("users", "is_active", "BOOLEAN DEFAULT 1"),
-                ("users", "aadhaar_number", "VARCHAR"),
-                ("users", "state", "VARCHAR"),
-                ("users", "district", "VARCHAR"),
-                ("users", "village", "VARCHAR"),
-                ("claims", "ai_damage_score", "FLOAT"),
-                ("claims", "ai_decision", "VARCHAR(10)"),
-                ("claims", "officer_remarks", "TEXT"),
-                ("claims", "reviewed_by", "INTEGER"),
-                ("claims", "submitted_at", "DATETIME"),
-                ("claims", "created_at", "DATETIME"),
-                ("claims", "reviewed_at", "DATETIME"),
-                ("claims", "resolved_at", "DATETIME"),
-                ("claims", "payout_amount", "FLOAT"),
-                ("claims", "damage_percent", "FLOAT"),
-                ("claims", "farm_area", "FLOAT"),
-                ("claims", "sum_insured", "FLOAT"),
-                ("claims", "pfms_transaction_id", "VARCHAR(100)"),
-                ("claims", "scheme_code", "VARCHAR(100)"),
-                ("claims", "sanction_order_no", "VARCHAR(100)"),
-                ("claims", "is_parametric", "BOOLEAN DEFAULT 0"),
-                ("claims", "trigger_source", "VARCHAR(50)"),
-                ("claims", "imd_alert_id", "INTEGER"),
-                ("claims", "policy_id", "INTEGER"),
-                ("claims", "insured_snapshot_id", "VARCHAR(100)"),
-                ("claims", "insured_boundary_version", "INTEGER DEFAULT 1"),
-                ("claims", "coverage_type", "VARCHAR(100)"),
-                ("claims", "damage_type", "VARCHAR(100)"),
-                ("farms", "sowing_date", "DATE"),
-                ("farms", "insurance_policy_number", "VARCHAR"),
-                ("farms", "khasra_number", "VARCHAR"),
-                ("farms", "state", "VARCHAR"),
-                ("farms", "district", "VARCHAR"),
-                ("farms", "taluka", "VARCHAR"),
-                ("farms", "village", "VARCHAR"),
-                ("farms", "verification_status", "VARCHAR DEFAULT 'PENDING_OFFICIAL_VERIFICATION'"),
-                ("farms", "boundary_geojson", "JSON"),
-                ("claim_images", "sha256_hash", "VARCHAR(64)"),
-                ("claim_images", "camera_model", "VARCHAR(255)"),
-                ("claim_images", "authenticity_flags", "JSON"),
-                ("claim_images", "verified", "BOOLEAN DEFAULT 0"),
-                ("claim_images", "uploaded_by_role", "VARCHAR(50) DEFAULT 'farmer'"),
-            ]
-            for tbl, col, col_type in columns_to_add:
-                try:
-                    await session.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type}"))
-                    await session.commit()
-                except Exception:
-                    await session.rollback()
-            logger.info("Successfully executed startup DB column alters.")
-    except Exception as e:
-        logger.error(f"Failed to run startup DB alters: {e}")
+    # Run startup metadata create_all ONLY for SQLite in development mode
+    if "sqlite" in settings.DATABASE_URL.lower() and settings.DEMO_MODE:
+        logger.info("Initializing SQLite database tables in development mode...")
+        try:
+            from app.core.database import engine, Base
+            import app.models
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Successfully ran Base.metadata.create_all.")
+        except Exception as e:
+            logger.error(f"Failed metadata create_all: {e}")
 
 
 # Request logger middleware
@@ -200,5 +142,49 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat()
     }
 
+@app.get("/health/readiness", tags=["health"])
+@app.get(f"{settings.API_V1_STR}/health/readiness", tags=["health"])
+async def readiness_check(response: JSONResponse = None):
+    """
+    Readiness endpoint checking Database and Redis connectivity.
+    """
+    db_ok = True
+    redis_ok = True
+    errors = []
+
+    # Database check
+    try:
+        from app.core.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception as e:
+        db_ok = False
+        errors.append(f"Database error: {e}")
+
+    # Redis check
+    try:
+        import redis
+        r = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        r.ping()
+    except Exception as e:
+        redis_ok = False
+        errors.append(f"Redis error: {e}")
+
+    is_ready = db_ok and redis_ok
+    status_code = status.HTTP_200_OK if is_ready else status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "ready": is_ready,
+            "database": "healthy" if db_ok else "unhealthy",
+            "redis": "healthy" if redis_ok else "unhealthy",
+            "errors": errors,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    )
+
 # Include API endpoints
 app.include_router(api_router, prefix=settings.API_V1_STR)
+

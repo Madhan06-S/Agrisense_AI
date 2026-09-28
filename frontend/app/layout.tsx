@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AgriSense AI — Satellite-Powered Parametric Insurance",
-  description: "Pillar 5 De-Risking: Instant micro-payouts for 500M+ smallholder farmers using Sentinel-2 NDVI, SAR flood mapping, and XGBoost AI.",
+  title: "AgriSense — Satellite-Powered Parametric Insurance",
+  description: "Pillar 5 De-Risking: Automated micro-payouts for 500M+ smallholder farmers using Sentinel-2 NDVI, SAR flood mapping, and XGBoost risk modeling.",
   keywords: ["agrisense", "parametric insurance", "satellite", "NDVI", "farmer", "micro-payout"],
 };
 

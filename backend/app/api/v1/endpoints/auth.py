@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models import User
 from app.core.otp_service import generate_otp, verify_otp, clean_phone_number
@@ -97,10 +98,17 @@ async def send_otp(data: PhoneRequest, db: AsyncSession = Depends(get_db)):
         
     otp_res = generate_otp(cleaned)
     
+    if settings.DEMO_MODE:
+        return {
+            "success": True,
+            "message": f"OTP sent to {cleaned}. (Demo OTP: {otp_res['code']})",
+            "otp_code": otp_res["code"],
+            "method": otp_res["method"]
+        }
+    
     return {
         "success": True,
-        "message": f"OTP sent to {cleaned}. (Demo OTP: {otp_res['code']})",
-        "otp_code": otp_res["code"],
+        "message": f"OTP sent to {cleaned}.",
         "method": otp_res["method"]
     }
 
@@ -152,16 +160,16 @@ async def verify_otp_endpoint(
         value=access_token,
         httponly=True,
         max_age=900,
-        samesite="lax",
-        secure=False
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         max_age=604800,
-        samesite="lax",
-        secure=False
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE
     )
     
     return {
@@ -218,7 +226,11 @@ async def refresh(request: Request, response: Response, db: AsyncSession = Depen
         
     try:
         payload = decode_token(token)
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type: refresh token required")
         user_id = int(payload.get("sub"))
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
         
@@ -234,10 +246,11 @@ async def refresh(request: Request, response: Response, db: AsyncSession = Depen
         value=access_token,
         httponly=True,
         max_age=900,
-        samesite="lax",
-        secure=False
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE
     )
     return {"access_token": access_token}
+
 
 @router.post("/logout")
 async def logout(response: Response):

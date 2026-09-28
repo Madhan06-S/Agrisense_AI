@@ -5,15 +5,15 @@ services:
     image: postgis/postgis:15-3.4
     container_name: agrisense_db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: agrisense
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-agrisense}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d agrisense"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-agrisense}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -23,11 +23,11 @@ services:
     container_name: agrisense_redis
     ports:
       - "6379:6379"
-    command: redis-server --requirepass agrisense123
+    command: redis-server --requirepass ${REDIS_PASSWORD:-agrisense123}
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-agrisense123}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,8 +37,8 @@ services:
     container_name: agrisense_minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadminpassword
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadminpassword}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -50,14 +50,98 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agrisense_backend
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      SECRET_KEY: ${SECRET_KEY:-agrisense_dev_secret_key_minimum_32_characters_long}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-agrisense}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-agrisense123}@redis:6379/0
+      STORAGE_BACKEND: minio
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadminpassword}
+      MINIO_SECURE: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agrisense_worker
+    command: celery -A app.tasks.celery_app.celery worker --loglevel=info -Q satellite_pipeline,celery
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      SECRET_KEY: ${SECRET_KEY:-agrisense_dev_secret_key_minimum_32_characters_long}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-agrisense}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-agrisense123}@redis:6379/0
+      STORAGE_BACKEND: minio
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadminpassword}
+      MINIO_SECURE: "false"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agrisense_beat
+    command: celery -A app.tasks.celery_app.celery beat --loglevel=info
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      SECRET_KEY: ${SECRET_KEY:-agrisense_dev_secret_key_minimum_32_characters_long}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-agrisense}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-agrisense123}@redis:6379/0
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agrisense_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   flower:
     image: mher/flower:latest
     container_name: agrisense_flower
-    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    command: celery --broker=redis://:${REDIS_PASSWORD:-agrisense123}@redis:6379/0 flower --port=5555
     ports:
       - "5555:5555"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:latest
@@ -67,7 +151,7 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - flower
+      - backend
 
 volumes:
   pgdata:

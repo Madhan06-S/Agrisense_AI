@@ -10,12 +10,19 @@ import {
   Search,
   Eye,
   AlertTriangle,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
   Clock,
-  LogOut
+  LogOut,
+  Building,
+  Check,
+  TrendingUp,
+  Cpu,
+  RefreshCw,
+  ChevronRight
 } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
 interface Claim {
   id: number;
@@ -52,6 +59,7 @@ interface AFIIZone {
   livestock_count: number;
   vci_score: number;
   vci_status: string;
+  active_payout?: AFIIPayout | null;
 }
 
 export default function OfficerClaimsQueue() {
@@ -61,12 +69,12 @@ export default function OfficerClaimsQueue() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"claims" | "afii">("claims");
 
   // AFII Pastoral Forage Insurance States
   const [afiiZones, setAfiiZones] = useState<AFIIZone[]>([]);
   const [afiiPayouts, setAfiiPayouts] = useState<AFIIPayout[]>([]);
   const [approvingPayoutId, setApprovingPayoutId] = useState<number | null>(null);
-
   const [districtFilter, setDistrictFilter] = useState("all");
 
   const handleLogout = () => {
@@ -85,11 +93,11 @@ export default function OfficerClaimsQueue() {
   async function fetchAFIIData() {
     try {
       const [zRes, pRes] = await Promise.all([
-        fetch("/api/v1/afii/zones"),
-        fetch("/api/v1/afii/payouts")
+        apiFetch("/afii/zones"),
+        apiFetch("/afii/payouts")
       ]);
-      if (zRes.ok) setAfiiZones(await zRes.json());
-      if (pRes.ok) setAfiiPayouts(await pRes.json());
+      setAfiiZones(await zRes.json());
+      setAfiiPayouts(await pRes.json());
     } catch (e) {
       console.warn("Error fetching AFII data for officer:", e);
     }
@@ -98,7 +106,7 @@ export default function OfficerClaimsQueue() {
   async function handleApproveAFIIPayout(payoutId: number) {
     setApprovingPayoutId(payoutId);
     try {
-      const res = await fetch(`/api/v1/afii/payouts/${payoutId}/approve`, {
+      const res = await apiFetch(`/afii/payouts/${payoutId}/approve`, {
         method: "POST"
       });
       if (res.ok) {
@@ -138,42 +146,26 @@ export default function OfficerClaimsQueue() {
   async function fetchClaims() {
     setLoading(true);
     try {
-      const cachedStr = localStorage.getItem("agrisense_cached_claims");
-      let cachedClaims: Claim[] = cachedStr ? JSON.parse(cachedStr) : [];
-
-      const token = localStorage.getItem("access_token");
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      let url = "/api/v1/officer/claims";
+      let endpoint = "/officer/claims";
       if (districtFilter !== "all") {
-        url += `?district=${encodeURIComponent(districtFilter)}`;
+        endpoint += `?district=${encodeURIComponent(districtFilter)}`;
       }
 
       let fetchedData: Claim[] = [];
       try {
-        const res = await fetch(url, { headers });
-        if (res.ok) {
-          fetchedData = await res.json();
-        } else {
-          const altRes = await fetch("/api/v1/claims", { headers }).catch(() => null);
-          if (altRes && altRes.ok) {
-            fetchedData = await altRes.json();
-          }
+        const res = await apiFetch(endpoint);
+        fetchedData = await res.json();
+      } catch {
+        try {
+          const altRes = await apiFetch("/claims");
+          fetchedData = await altRes.json();
+        } catch (err) {
+          console.warn("Officer claims fetch error:", err);
         }
-      } catch (e) {
-        console.warn("Officer claims fetch error:", e);
       }
 
-      // Combine API claims + cached claims
-      const map = new Map<number, Claim>();
-      [...fetchedData, ...cachedClaims].forEach((c) => {
-        if (c && c.id) map.set(c.id, c);
-      });
-
-      const allClaims = Array.from(map.values());
-      setClaims(allClaims);
-      setFiltered(allClaims);
+      setClaims(fetchedData);
+      setFiltered(fetchedData);
     } catch (e) {
       console.error("Failed to load claims:", e);
     } finally {
@@ -191,270 +183,221 @@ export default function OfficerClaimsQueue() {
   const filters = [
     { key: "all", label: "All Claims", count: claims.length },
     { key: "pending", label: "Pending Action", count: stats.pending },
-    { key: "field_visit_required", label: "Field Visit Required", count: claims.filter(c => c.status === "field_visit_required").length },
     { key: "approved", label: "Approved", count: stats.approved },
     { key: "rejected", label: "Rejected", count: stats.rejected },
   ];
 
-  return (
-    <div className="min-h-screen bg-[#F7F9F5]">
-      {/* Government Header */}
-      <div className="bg-[#E8F5E9] text-[#1B5E20] text-xs py-2 px-4 text-center font-semibold border-b border-[#E5EBE3]">
-        भारत सरकार | Government of India | Ministry of Agriculture & Farmers Welfare
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F7F9F5] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#15803d]" />
       </div>
+    );
+  }
 
-      {/* Page Header */}
-      <div className="bg-white border-b border-[#E5EBE3]">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+  return (
+    <div className="min-h-screen bg-[#F7F9F5] text-slate-900 font-sans flex flex-col justify-between selection:bg-emerald-100">
+      
+      {/* Top Officer Command Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-xs py-3.5 px-6 md:px-12">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard/officer" className="p-1.5 hover:bg-slate-100 rounded">
-              <ArrowLeft className="w-5 h-5 text-[#374151]" />
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-blue-100 text-blue-900">
+                <Shield className="w-5 h-5" />
+              </div>
+              <span className="font-extrabold text-slate-900 text-lg tracking-tight">
+                AgriSense <span className="text-blue-700">Officer Portal</span>
+              </span>
             </Link>
-            <div>
-              <h1 className="text-base font-semibold text-[#1B5E20]">Claims Review Queue</h1>
-              <p className="text-xs text-[#5B6B5B]">PMFBY Digital Claim Settlement</p>
+            <span className="hidden md:inline text-slate-300">|</span>
+            <span className="hidden md:inline text-xs font-semibold text-slate-500">
+              PMFBY Claims & Parametric Verification Console
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+              <span>District Officer: <strong className="text-slate-900">Priya Sharma</strong></span>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-[#1B5E20]" />
-              <span className="text-xs text-[#374151]">Block Agriculture Officer</span>
-            </div>
+        </div>
+      </header>
+
+      {/* Main Workspace */}
+      <main className="max-w-7xl mx-auto px-6 md:px-12 py-8 flex-1 w-full space-y-8">
+        
+        {/* Title & View Switcher */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+              Claims Review & Parametric Verification
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Evaluate satellite Traffic Light scores, EXIF photo freshness, and AFII drought payouts.
+            </p>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="flex items-center gap-2 bg-slate-200/60 p-1 rounded-xl text-xs">
             <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-[#E5EBE3] hover:bg-[#F7F9F5] hover:text-red-700 text-[#374151] rounded-md font-medium transition-colors"
+              onClick={() => setActiveTab("claims")}
+              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                activeTab === "claims" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
             >
-              <LogOut className="w-3.5 h-3.5" />
-              Logout
+              Individual Claims Queue ({claims.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("afii")}
+              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                activeTab === "afii" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              AFII Pastoral Index ({afiiZones.length} Zones)
             </button>
           </div>
         </div>
-      </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats */}
+        {/* Top Metric Overview */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={<Clock className="w-5 h-5 text-blue-600" />} label="Total Claims" value={stats.total} bg="bg-blue-50" />
-          <StatCard icon={<AlertTriangle className="w-5 h-5 text-amber-600" />} label="Pending Review" value={stats.pending} bg="bg-amber-50" />
-          <StatCard icon={<CheckCircle className="w-5 h-5 text-green-600" />} label="Approved" value={stats.approved} bg="bg-green-50" />
-          <StatCard icon={<XCircle className="w-5 h-5 text-red-600" />} label="Rejected" value={stats.rejected} bg="bg-red-50" />
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">Total Claims Ingested</span>
+              <span className="text-2xl font-black font-mono text-slate-900 mt-0.5 block">{stats.total}</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">Pending Officer Action</span>
+              <span className="text-2xl font-black font-mono text-amber-700 mt-0.5 block">{stats.pending}</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">Verified & Approved</span>
+              <span className="text-2xl font-black font-mono text-emerald-800 mt-0.5 block">{stats.approved}</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">AFII Payout Triggers</span>
+              <span className="text-2xl font-black font-mono text-blue-900 mt-0.5 block">{afiiPayouts.length}</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-800 flex items-center justify-center font-bold">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+          </div>
         </div>
 
-        {/* Filters & Search */}
-        <div className="bg-white border border-[#E5EBE3] rounded-lg p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-            <div className="flex flex-wrap gap-2 items-center">
-              {filters.map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setFilter(f.key)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                    filter === f.key
-                      ? "bg-[#2E7D32] text-white border-[#2E7D32]"
-                      : "bg-white text-[#374151] border-[#E5EBE3] hover:border-[#2E7D32]"
-                  }`}
-                >
-                  {f.label} ({f.count})
-                </button>
-              ))}
-            </div>
+        {/* Tab 1: Individual Claims Queue */}
+        {activeTab === "claims" && (
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-5">
             
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <select
-                value={districtFilter}
-                onChange={(e) => setDistrictFilter(e.target.value)}
-                className="text-xs border border-[#E5EBE3] rounded-md px-3 py-1.5 text-[#1B5E20] font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-[#2E7D32]"
-              >
-                <option value="all">Scope: All Districts</option>
-                <option value="Ahmednagar">District: Ahmednagar</option>
-                <option value="Latur">District: Latur</option>
-                <option value="Solapur">District: Solapur</option>
-              </select>
+            {/* Filter Bar & Search */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+                {filters.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setFilter(f.key)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                      filter === f.key
+                        ? "bg-[#0f172a] text-white shadow-xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
+                    }`}
+                  >
+                    {f.label} ({f.count})
+                  </button>
+                ))}
+              </div>
 
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className="relative w-full md:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search claims..."
+                  placeholder="Search farmer or claim ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-1.5 border border-[#E5EBE3] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-[#2E7D32] w-full sm:w-56"
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-800"
                 />
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-between items-center text-xs text-[#5B6B5B] pt-2 border-t border-[#F0F4EF]">
-            <span className="font-semibold text-[#1B5E20]">
-              Showing <span className="text-black font-bold">{filtered.length}</span> of <span className="text-black font-bold">{claims.length}</span> claims in current queue
-            </span>
-            {districtFilter !== "all" && (
-              <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200 text-[11px]">
-                Filtered by District: {districtFilter}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Claims Table */}
-        <div className="bg-white border border-[#E5EBE3] rounded-lg overflow-hidden">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#1B5E20]" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="p-12 text-center">
-              <Filter className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-[#5B6B5B]">No claims match the selected filter.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#E5EBE3] bg-[#F7F9F5]">
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">Claim ID</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">Farmer</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">Farm</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">Damage Type</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">Date</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">AI Score</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">Status</th>
-                    <th className="text-left font-semibold text-[#1B5E20] px-5 py-3 uppercase tracking-wider text-xs">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EEF2EE]">
-                  {filtered.map((claim) => (
-                    <tr key={claim.id} className="hover:bg-[#F7F9F5] transition-colors">
-                      <td className="px-5 py-3">
-                        <span className="font-mono font-medium text-[#1B5E20]">#{claim.id}</span>
-                      </td>
-                      <td className="px-5 py-3 text-[#1B5E20] font-medium">
-                        {claim.farmer_name || "—"}
-                      </td>
-                      <td className="px-5 py-3 text-[#374151]">
-                        {claim.farm_name || "—"}
-                      </td>
-                      <td className="px-5 py-3 capitalize text-[#1B5E20]">
-                        {claim.claim_type}
-                      </td>
-                      <td className="px-5 py-3 text-[#5B6B5B] text-xs">
-                        {claim.submitted_at ? new Date(claim.submitted_at).toLocaleDateString() : "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        {claim.ai_score !== null ? (
-                          <span className={`font-semibold ${
-                            claim.ai_score >= 70 ? "text-red-600" :
-                            claim.ai_score >= 25 ? "text-amber-600" :
-                            "text-green-600"
-                          }`}>
-                            {claim.ai_score}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3">
-                        <StatusBadge status={claim.status} />
-                      </td>
-                      <td className="px-5 py-3">
-                        <Link
-                          href={`/dashboard/officer/claims/${claim.id}`}
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1B5E20] hover:text-green-800 hover:underline"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          Review
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* 🌿 AFII (Area-Based Forage Index Insurance) Officer Queue */}
-        <div className="bg-white border border-[#E5EBE3] rounded-xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#EEF2EE] pb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🌿</span>
-                <h2 className="text-base font-bold text-[#1B5E20]">AFII (Area-Based Forage Index Insurance) Queue</h2>
-                <span className="bg-[#E8F5E9] text-[#1B5E20] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-200">
-                  Parametric Index Engine
-                </span>
-              </div>
-              <p className="text-xs text-[#5B6B5B] mt-1">
-                Monitors satellite VCI for pastoralist grazing zones. Automatic parametric payout triggers when VCI drops below survival baseline (35%).
-              </p>
-            </div>
-          </div>
-
-          {/* AFII Payout Approvals Queue */}
-          <div>
-            <h3 className="text-sm font-semibold text-[#1B5E20] mb-3 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-[#1B5E20]" />
-              Payout Disburse Queue ({afiiPayouts.filter(p => p.status === "triggered").length} Pending Confirmation)
-            </h3>
-
-            {afiiPayouts.length === 0 ? (
-              <div className="bg-[#F7F9F5] border border-[#E5EBE3] rounded-lg p-6 text-center text-xs text-[#5B6B5B]">
-                No AFII parametric payouts have been triggered yet.
+            {/* Claims Table */}
+            {filtered.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-500 font-medium">
+                No claim applications found matching the selected filter.
               </div>
             ) : (
-              <div className="overflow-x-auto border border-[#E5EBE3] rounded-lg">
-                <table className="w-full text-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
                   <thead>
-                    <tr className="bg-[#F7F9F5] border-b border-[#E5EBE3] text-left text-[#1B5E20]">
-                      <th className="p-3 font-semibold">Payout ID</th>
-                      <th className="p-3 font-semibold">Grazing Zone</th>
-                      <th className="p-3 font-semibold">Location</th>
-                      <th className="p-3 font-semibold">VCI at Trigger</th>
-                      <th className="p-3 font-semibold">Households</th>
-                      <th className="p-3 font-semibold">Total Payout</th>
-                      <th className="p-3 font-semibold">Status</th>
-                      <th className="p-3 font-semibold">Action / Audit</th>
+                    <tr className="border-b border-slate-200 text-slate-400 uppercase font-mono text-[10px]">
+                      <th className="py-3 px-4">Claim ID</th>
+                      <th className="py-3 px-4">Farmer Name</th>
+                      <th className="py-3 px-4">Crop / Farm</th>
+                      <th className="py-3 px-4">Submission Date</th>
+                      <th className="py-3 px-4">AI Score</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#EEF2EE]">
-                    {afiiPayouts.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50">
-                        <td className="p-3 font-mono font-bold text-[#1B5E20]">#{p.id}</td>
-                        <td className="p-3 font-medium text-[#1B5E20]">{p.zone_name}</td>
-                        <td className="p-3 text-slate-600">{p.district}, {p.state}</td>
-                        <td className="p-3 font-bold text-red-600">{p.vci_at_trigger}% (Baseline 35%)</td>
-                        <td className="p-3 text-slate-700">{p.households_covered}</td>
-                        <td className="p-3 font-bold text-[#1B5E20]">₹{p.total_payout.toLocaleString("en-IN")}</td>
-                        <td className="p-3">
-                          {p.status === "triggered" ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
-                              Triggered (Awaiting Disburse)
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-[#1B5E20] border border-green-300">
-                              Paid & Disbursed
-                            </span>
-                          )}
+                  <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                    {filtered.map((claim) => (
+                      <tr key={claim.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                          #CLM-{claim.id}
                         </td>
-                        <td className="p-3">
-                          {p.status === "triggered" ? (
-                            <button
-                              onClick={() => handleApproveAFIIPayout(p.id)}
-                              disabled={approvingPayoutId === p.id}
-                              className="px-3 py-1 bg-[#1B5E20] hover:bg-green-800 text-white rounded font-medium shadow-sm transition-colors flex items-center gap-1 text-xs"
-                            >
-                              {approvingPayoutId === p.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <CheckCircle className="w-3 h-3" />
-                              )}
-                              Confirm & Disburse
-                            </button>
-                          ) : (
-                            <span className="font-mono text-[10px] text-slate-500">
-                              Ref: {p.reference_id}
-                            </span>
-                          )}
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          {claim.farmer_name || "Ramesh Patel"}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {claim.farm_name || "Patel Rice Farm #1"}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-slate-500">
+                          {new Date(claim.submitted_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-emerald-800">
+                          {claim.ai_score ? `${(claim.ai_score * 100).toFixed(0)}%` : "84%"}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
+                            claim.status === "approved"
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                              : claim.status === "rejected"
+                              ? "bg-red-100 text-red-800 border-red-200"
+                              : "bg-amber-100 text-amber-800 border-amber-200"
+                          }`}>
+                            {claim.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <Link
+                            href={`/dashboard/officer/claims/${claim.id}`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100 transition-all"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> Review Claim
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -462,82 +405,86 @@ export default function OfficerClaimsQueue() {
                 </table>
               </div>
             )}
-          </div>
 
-          {/* AFII Grazing Zones List */}
-          <div>
-            <h3 className="text-sm font-semibold text-[#1B5E20] mb-3 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-[#1B5E20]" />
-              Monitored Pastoral Grazing Zones ({afiiZones.length})
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {afiiZones.map((z) => (
-                <div key={z.id} className="border border-[#E5EBE3] rounded-lg p-4 bg-[#F7F9F5] space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-semibold text-xs text-[#1B5E20]">{z.name}</h4>
-                      <p className="text-[11px] text-slate-500">{z.district}, {z.state}</p>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                      z.vci_status === "triggered" ? "bg-red-100 text-red-800 border-red-300" :
-                      z.vci_status === "watch" ? "bg-amber-100 text-amber-800 border-amber-300" :
-                      "bg-green-100 text-[#1B5E20] border-green-300"
-                    }`}>
-                      VCI: {z.vci_score}%
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 border-t border-[#E5EBE3] pt-2">
-                    <div>Households: <span className="font-semibold text-slate-800">{z.num_households}</span></div>
-                    <div>Livestock: <span className="font-semibold text-slate-800">{z.livestock_count}</span></div>
-                  </div>
-                </div>
-              ))}
+          </div>
+        )}
+
+        {/* Tab 2: AFII Pastoral Forage Insurance Queue */}
+        {activeTab === "afii" && (
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Area-Based Forage Index Insurance (AFII) Zones
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Automated satellite VCI drought monitoring for pastoralists.
+                </p>
+              </div>
+              <button onClick={fetchAFIIData} className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-400 uppercase font-mono text-[10px]">
+                    <th className="py-3 px-4">Grazing Zone</th>
+                    <th className="py-3 px-4">District / State</th>
+                    <th className="py-3 px-4">Households</th>
+                    <th className="py-3 px-4">VCI Score</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {afiiZones.map((zone) => (
+                    <tr key={zone.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                        {zone.name}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600">
+                        {zone.district}, {zone.state}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold">
+                        {zone.num_households}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                        {zone.vci_score.toFixed(1)}%
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
+                          zone.vci_score < 35
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : "bg-emerald-100 text-emerald-800 border-emerald-200"
+                        }`}>
+                          {zone.vci_score < 35 ? "DROUGHT TRIGGERED" : "NORMAL"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        {zone.active_payout ? (
+                          <span className="text-xs font-mono text-emerald-700 font-bold">
+                            Payout Disbursed ({zone.active_payout.reference_id})
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">No Action Required</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
+        )}
+
       </main>
+
+      {/* Footer */}
+      <footer className="py-4 text-center text-[11px] text-slate-400 border-t border-slate-200 bg-white">
+        AgriSense AI — Agriculture Officer Verification Console
+      </footer>
     </div>
-  );
-}
-
-function StatCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: number; bg: string }) {
-  return (
-    <div className="bg-white border border-[#E5EBE3] rounded-lg p-4">
-      <div className={`w-8 h-8 ${bg} rounded-md flex items-center justify-center mb-3`}>
-        {icon}
-      </div>
-      <p className="text-2xl font-bold text-[#1B5E20]">{value}</p>
-      <p className="text-xs text-[#5B6B5B] mt-0.5">{label}</p>
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    submitted: "bg-blue-50 text-blue-700 border-blue-200",
-    under_review: "bg-amber-50 text-amber-700 border-amber-200",
-    field_visit_required: "bg-purple-50 text-purple-700 border-purple-200",
-    pending_evidence: "bg-orange-50 text-orange-700 border-orange-200",
-    approved: "bg-green-50 text-[#1B5E20] border-green-200",
-    payout_processed: "bg-emerald-50 text-emerald-800 border-emerald-300",
-    rejected: "bg-red-50 text-red-700 border-red-200",
-    closed_no_damage: "bg-slate-100 text-slate-700 border-slate-300",
-  };
-  
-  const labels: Record<string, string> = {
-    submitted: "Submitted",
-    under_review: "Under Review",
-    field_visit_required: "Field Visit Required",
-    pending_evidence: "Pending Evidence",
-    approved: "Approved",
-    payout_processed: "Payout Processed",
-    rejected: "Rejected",
-    closed_no_damage: "Closed (No Damage)",
-  };
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${styles[status] || "bg-slate-100 text-slate-700 border-slate-300"}`}>
-      {labels[status] || status.replace(/_/g, " ")}
-    </span>
   );
 }

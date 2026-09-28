@@ -40,7 +40,7 @@ const TableFooter = React.forwardRef<
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
   <tfoot
-    ref={ref(null)}
+    ref={ref}
     className={cn(
       "border-t bg-slate-500 font-medium [&_tr]:last-child:border-b-0",
       className
@@ -97,7 +97,7 @@ const TableCaption = React.forwardRef<
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
   <caption
-    ref={ref(null)}
+    ref={ref as any}
     className={cn("mt-4 text-sm text-slate-500", className)}
     {...props}
   />

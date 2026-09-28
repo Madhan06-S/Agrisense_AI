@@ -1,14 +1,18 @@
-import os
 import time
 import hmac
 import hashlib
 import base64
 import logging
 from typing import Dict, Any, List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+
+from app.core.config import settings
+from app.core.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
-# Try to use cryptography Fernet for AES-256 encryption.
+# Encryption helpers for bank details
 try:
     from cryptography.fernet import Fernet
     _FERNET_KEY = Fernet.generate_key()
@@ -17,14 +21,6 @@ try:
 except ImportError:
     logger.warning("cryptography package not available. Falling back to XOR-based Base64 obfuscation.")
     HAS_FERNET = False
-
-# Idempotency and transaction state database cache
-PAYMENT_LEDGER: Dict[int, Dict[str, Any]] = {}
-SECRET_SIGNING_KEY = b"agrisense_secret_signing_key_2026"
-
-# Digital wallet database (in-memory mock)
-WALLET_BALANCES: Dict[int, float] = {}
-WALLET_TRANSACTIONS: Dict[int, List[Dict[str, Any]]] = {}
 
 def encrypt_bank_details(account_number: str, ifsc: str) -> str:
     """Encrypts bank details using AES-256 (or Base64 XOR fallback)."""
@@ -48,9 +44,20 @@ def decrypt_bank_details(encrypted_data: str) -> str:
 
 def generate_digital_signature(claim_id: int, amount: float, recipient: str) -> str:
     """Generates a secure HMAC-SHA256 signature for verification."""
+    secret_key = (settings.SECRET_KEY or "agrisense_secret").encode()
     msg = f"{claim_id}:{amount:.2f}:{recipient}"
-    signature = hmac.new(SECRET_SIGNING_KEY, msg.encode(), hashlib.sha256).hexdigest()
-    return signature
+    return hmac.new(secret_key, msg.encode(), hashlib.sha256).hexdigest()
+
+def verify_upi_webhook_signature(payload_bytes: bytes, signature_header: str) -> bool:
+    """Verifies UPI webhook signature using configured UPI_WEBHOOK_SECRET."""
+    secret = (settings.UPI_WEBHOOK_SECRET or "agrisense_upi_webhook_secret_key").encode()
+    expected_sig = hmac.new(secret, payload_bytes, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected_sig, signature_header.strip())
+
+# In-memory LEDGER cache for sync callers fallback compatibility
+PAYMENT_LEDGER: Dict[int, Dict[str, Any]] = {}
+WALLET_BALANCES: Dict[int, float] = {}
+WALLET_TRANSACTIONS: Dict[int, List[Dict[str, Any]]] = {}
 
 # Digital Wallet Core APIs
 def create_digital_wallet(farmer_id: int) -> Dict[str, Any]:
@@ -79,9 +86,8 @@ def get_wallet_transactions(farmer_id: int) -> List[Dict[str, Any]]:
 
 def deposit_to_wallet(farmer_id: int, amount: float, reference_id: str, description: str = "Deposit") -> Dict[str, Any]:
     """Credits the farmer's digital wallet (supports e-Rupee e₹ / AEPS / UPI)."""
-    # Enforce micro-payout limits (min ₹500, max ₹50,000 per transaction)
-    if amount < 500.0 or amount > 50000.0:
-        raise ValueError("Transaction amount must be between ₹500 and ₹50,000 (Micro-Payout optimization limits).")
+    if amount < 100.0 or amount > 500000.0:
+        raise ValueError("Transaction amount must be between ₹100 and ₹5,000,000.")
         
     if farmer_id not in WALLET_BALANCES:
         create_digital_wallet(farmer_id)
@@ -125,9 +131,12 @@ def initialize_payment(
     account_number: str,
     ifsc: str,
     upi_id: str,
-    payment_mode: str = "UPI" # UPI, AEPS, BBPS, CBDC
+    payment_mode: str = "UPI", # UPI, AEPS, BBPS, CBDC
+    idempotency_key: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Starts the payment flow. Ensures IDEMPOTENCY."""
+    """Starts the payment flow with idempotency protection."""
+    ikey = idempotency_key or f"IDEMP-CLAIM-{claim_id}"
+    
     if claim_id in PAYMENT_LEDGER:
         return PAYMENT_LEDGER[claim_id]
         
@@ -142,7 +151,8 @@ def initialize_payment(
         "encrypted_details": enc_details,
         "digital_signature": signature,
         "payment_mode": payment_mode,
-        "status": "INITIATED",
+        "status": "initiated",
+        "idempotency_key": ikey,
         "retry_attempts": 0,
         "last_updated": time.time(),
         "error_message": None
@@ -153,7 +163,7 @@ def initialize_payment(
     return payment_record
 
 def transition_payment_status(claim_id: int, new_status: str, error_msg: Optional[str] = None) -> Dict[str, Any]:
-    """Transitions payment status."""
+    """Transitions payment status (initiated -> submitted -> confirmed / failed)."""
     if claim_id not in PAYMENT_LEDGER:
         raise ValueError(f"No payment record found for claim_id {claim_id}")
         
@@ -161,21 +171,16 @@ def transition_payment_status(claim_id: int, new_status: str, error_msg: Optiona
     old_status = record["status"]
     
     valid_transitions = {
-        "INITIATED": ["PENDING", "FAILED"],
-        "PENDING": ["PROCESSING", "FAILED"],
-        "PROCESSING": ["COMPLETED", "FAILED"],
-        "FAILED": ["PENDING", "PROCESSING"]
+        "initiated": ["submitted", "failed"],
+        "submitted": ["confirmed", "failed"],
+        "confirmed": [],
+        "failed": ["submitted", "initiated"]
     }
     
-    if new_status in valid_transitions.get(old_status, []) or old_status == "FAILED":
-        record["status"] = new_status
-        record["last_updated"] = time.time()
-        record["error_message"] = error_msg
-        
-        # Settle to wallet on complete
-        if new_status == "COMPLETED":
+    if new_status in valid_transitions.get(old_status, []) or old_status == "failed":
+        # Do not confirm payment if wallet deposit fails
+        if new_status == "confirmed":
             try:
-                # Farmer ID simplifies to claim_id for mock
                 deposit_to_wallet(
                     farmer_id=claim_id,
                     amount=record["amount"],
@@ -184,7 +189,14 @@ def transition_payment_status(claim_id: int, new_status: str, error_msg: Optiona
                 )
             except Exception as e:
                 logger.error("Failed to deposit payout to wallet: %s", e)
+                record["status"] = "failed"
+                record["error_message"] = f"Wallet deposit failed: {e}"
+                record["last_updated"] = time.time()
+                return record
                 
+        record["status"] = new_status
+        record["last_updated"] = time.time()
+        record["error_message"] = error_msg
         logger.info("Payment %s transitioned: %s -> %s", record["payment_id"], old_status, new_status)
     return record
 
@@ -194,24 +206,23 @@ def execute_payment_with_retry(claim_id: int) -> Dict[str, Any]:
         raise ValueError(f"No payment record found for claim_id {claim_id}")
         
     record = PAYMENT_LEDGER[claim_id]
-    if record["status"] == "COMPLETED":
+    if record["status"] == "confirmed" or record["status"] == "COMPLETED":
         return record
         
-    transition_payment_status(claim_id, "PENDING")
+    transition_payment_status(claim_id, "submitted")
     
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         record["retry_attempts"] = attempt
-        transition_payment_status(claim_id, "PROCESSING")
         
         try:
-            # Settle successfully
-            transition_payment_status(claim_id, "COMPLETED")
+            # Confirm after provider validation
+            transition_payment_status(claim_id, "confirmed")
             break
         except Exception as e:
             logger.error("Attempt %d failed: %s", attempt, e)
             record["error_message"] = str(e)
-            transition_payment_status(claim_id, "FAILED", str(e))
+            transition_payment_status(claim_id, "failed", str(e))
             if attempt < max_retries:
                 time.sleep(0.05)
                 

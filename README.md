@@ -53,11 +53,85 @@ Verify ML booster health via API: `GET http://localhost:8000/api/v1/ml/health`
 
 ---
 
+---
+
+## 🛠️ Environment Configuration & Hardening
+
+AgriSense AI supports dual environment execution modes: **Development/Demo Mode** (`ENVIRONMENT=development`) and **Production Mode** (`ENVIRONMENT=production`).
+
+### Environment Variables (.env)
+Copy `.env.example` to `.env` in `backend/` and configure:
+
+| Variable | Development Default | Production Requirement |
+| :--- | :--- | :--- |
+| `ENVIRONMENT` | `development` | `production` |
+| `SECRET_KEY` | Dev string | 32+ character strong cryptographic key |
+| `DATABASE_URL` | `sqlite+aiosqlite:///agrisense.db` | PostgreSQL/PostGIS connection string |
+| `REDIS_URL` | `redis://localhost:6379/0` | Secured Redis URI |
+| `STORAGE_BACKEND` | `local` | `minio` or Cloud Object Storage (TLS mandatory) |
+| `COOKIE_SECURE` | `false` | `true` |
+| `COOKIE_SAMESITE` | `lax` | `lax` / `strict` |
+| `UPI_WEBHOOK_SECRET` | `agrisense_upi_webhook_secret_key` | Strong random secret string |
+
+> [!IMPORTANT]
+> In `production` mode:
+> - Demo features (master OTP `123456`, `/test-inject-vci`, direct OTP responses in `/send-otp`) are **automatically disabled**.
+> - System startup fails immediately if insecure `SECRET_KEY`, SQLite `DATABASE_URL`, or default MinIO credentials are used.
+> - Unconfigured external services (Aadhaar, Bhulekh land registry, IMD weather, PM-KISAN) return standard `503 Service Unavailable` with explicit integration provenance tags (`live` vs `fallback`).
+
+---
+
+## 🐳 Docker Compose Deployment
+
+Spin up the entire microservice ecosystem with a single command:
+
+```bash
+# Copy & update environment configuration
+cp backend/.env.example backend/.env
+
+# Build and launch containers
+docker compose up -d --build
+```
+
+### Services Included in Docker Compose:
+- **`backend`**: FastAPI application (`http://localhost:8000`)
+- **`worker`**: Celery asynchronous satellite ingestion & preprocessing worker
+- **`beat`**: Celery scheduled cron beat runner
+- **`frontend`**: Next.js 15 client dashboard (`http://localhost:3000`)
+- **`db`**: PostGIS 15 spatial database (`5432`)
+- **`redis`**: Task broker & OTP cache (`6379`)
+- **`minio`**: S3-compatible object storage (`9000` / Console `9001`)
+- **`flower`**: Celery task monitoring dashboard (`http://localhost:5555`)
+- **`prometheus`**: Pipeline telemetry & metrics collector (`http://localhost:9090`)
+
+### Readiness & Health Check Endpoints
+- **System Readiness**: `GET /api/v1/health/readiness` (Verifies DB, Redis, & Storage connectivity)
+- **Prometheus Telemetry**: `GET /metrics` (Queue depth, pipeline duration histograms, worker count)
+
+---
+
+## 🗄️ Database Migrations (Alembic)
+
+Run database migrations to initialize or upgrade PostgreSQL/PostGIS tables:
+
+```bash
+cd backend
+PYTHONPATH=. alembic upgrade head
+```
+
+To generate new schema migration revisions:
+```bash
+PYTHONPATH=. alembic revision --autogenerate -m "describe_changes"
+```
+
+---
+
 ## ⚡ How to Run Locally
 
 ### 1. Prerequisites
-- Python 3.9+
-- Node.js 18+ & npm
+- Python 3.11+
+- Node.js 20+ & npm
+- PostgreSQL 15+ with PostGIS (or SQLite for local dev)
 
 ### 2. Backend Setup
 ```bash
@@ -70,6 +144,9 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Run migrations
+PYTHONPATH=. alembic upgrade head
 
 # Run FastAPI Server (port 8000)
 PYTHONPATH=. uvicorn app.main:app --reload --port 8000
@@ -143,3 +220,4 @@ Follow this sequence to test the platform end-to-end:
 | **Feature Phone SMS Advisory** | GSM-7 <=160 char SMS advisory engine | ✅ 100% |
 | **Credit Scoring & 3D Analytics** | SHAP breakdown, loan limit estimator | ✅ 100% |
 | **Cryptographic Audit Log** | Immutable SHA-256 block chain | ✅ 100% |
+

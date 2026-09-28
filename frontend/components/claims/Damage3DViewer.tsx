@@ -28,7 +28,8 @@ export default function Damage3DViewer() {
     const initThree = async () => {
       try {
         const THREE = await import("three");
-        const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls");
+        // @ts-ignore
+        const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls.js");
 
         if (!containerRef.current) return;
         const width = containerRef.current.clientWidth;

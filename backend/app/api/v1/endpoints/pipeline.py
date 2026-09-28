@@ -94,10 +94,10 @@ async def get_metrics_summary(db: AsyncSession = Depends(get_db)):
     queue_depth = 0
     try:
         r = redis.Redis.from_url(settings.REDIS_URL)
-        queue_depth = r.llen("celery")
+        queue_depth = r.llen("satellite_pipeline") + r.llen("celery")
     except Exception:
         pass
-        
+
     avg_stmt = select(
         func.count(DataPipelineRun.id).label("total"),
         func.count(DataPipelineRun.id).filter(DataPipelineRun.status.in_(["COMPLETED", "SUCCESS", "success"])).label("success"),
@@ -147,28 +147,37 @@ async def get_metrics_summary(db: AsyncSession = Depends(get_db)):
 
 @router.post("/retry/{run_id}")
 async def retry_pipeline_run(run_id: int, db: AsyncSession = Depends(get_db)):
-    """Retries a failed pipeline run."""
+    """Retries a failed pipeline run using existing run_id."""
     result = await db.execute(select(DataPipelineRun).where(DataPipelineRun.id == run_id))
     run = result.scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Pipeline run not found.")
         
-    if run.status != "FAILED" and run.status != "failed":
+    if run.status.upper() not in ["FAILED", "FAILURE"]:
         raise HTTPException(status_code=400, detail="Only failed pipeline runs can be retried.")
         
-    run.status = "IDLE"
-    run.started_at = datetime.utcnow()
-    run.completed_at = None
-    run.error_log = None
-    await db.commit()
-    
-    # Trigger GEE fetch task asynchronously
     from datetime import date, timedelta
     today = date.today()
     start_date = (today - timedelta(days=15)).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
-    fetch_satellite_data.delay(run.farm_id, start_date, end_date)
+    # Publish task to Celery FIRST before committing DB state
+    try:
+        fetch_satellite_data.delay(run.farm_id, start_date, end_date, run_id=run.id)
+    except Exception as broker_err:
+        logger.error(f"Failed to publish retry task to Celery broker: {broker_err}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Task broker is currently unavailable. Pipeline retry was not scheduled."
+        )
+
+    # Commit state changes ONLY after successful task publication
+    run.status = "PENDING"
+    run.started_at = datetime.utcnow()
+    run.completed_at = None
+    run.error_log = None
+    await db.commit()
+
     return {"status": "retrying", "run_id": run.id}
 
 @router.post("/acknowledge/{run_id}")

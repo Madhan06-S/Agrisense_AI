@@ -164,10 +164,12 @@ async def officer_decision(
             farmer_res = await db.execute(farmer_stmt)
             farmer = farmer_res.scalar_one()
 
+            sanction_amount = getattr(claim, "recommended_payout_amount", None) or getattr(claim, "payout_amount", None) or getattr(claim, "sum_insured", None) or 50000.00
+
             await PFMSEngine.create_sanction(
                 claim=claim,
                 beneficiary_name=farmer.full_name,
-                amount=25000.00,
+                amount=sanction_amount,
                 db=db,
             )
 
@@ -205,12 +207,13 @@ async def mark_payout_processed(
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
     
-    if claim.status != ClaimStatus.approved and str(claim.status) != "approved":
+    valid_statuses = [ClaimStatus.approved, ClaimStatus.approved_pending_sanction, "approved", "approved_pending_sanction"]
+    if claim.status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Claim must be approved before processing payout")
     
+    payout_amt = getattr(claim, "recommended_payout_amount", None) or getattr(claim, "payout_amount", None) or getattr(claim, "sum_insured", None) or 50000.0
+    claim.payout_amount = payout_amt
     claim.status = ClaimStatus.payout_processed
-    if getattr(claim, "payout_amount", None) is None:
-        claim.payout_amount = 25000.0
     await db.commit()
     await db.refresh(claim)
     
@@ -230,6 +233,7 @@ async def mark_payout_processed(
         "status": claim.status,
         "payout_amount": claim.payout_amount
     }
+
 
 
 @router.get("/fraud-flags")

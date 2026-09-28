@@ -48,8 +48,8 @@ def update_celery_gauges():
         import redis
         from app.core.config import settings
         r = redis.Redis.from_url(settings.REDIS_URL)
-        # Check depth of the default Celery queue
-        depth = r.llen("celery")
+        # Check depth of satellite_pipeline and celery queues
+        depth = r.llen("satellite_pipeline") + r.llen("celery")
         QUEUE_DEPTH.set(depth)
     except Exception as e:
         logger.warning(f"Could not check Redis queue depth: {e}")

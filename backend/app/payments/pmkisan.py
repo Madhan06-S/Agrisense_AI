@@ -19,10 +19,21 @@ def validate_aadhaar(aadhaar: str) -> bool:
     """Checks if Aadhaar matches standard format."""
     return bool(AADHAAR_REGEX.match(aadhaar))
 
+from app.core.config import settings
+
 def verify_pm_kisan_dbt(aadhaar: str) -> Dict[str, Any]:
     """
     Checks the status of the farmer's DBT registration against the PM-KISAN database.
     """
+    if not settings.DEMO_MODE:
+        return {
+            "verified": False,
+            "error": "NOT_CONFIGURED",
+            "pm_kisan_id": None,
+            "status": "NOT_CONFIGURED",
+            "detail": "PM-KISAN DBT integration not configured in production mode."
+        }
+
     if not validate_aadhaar(aadhaar):
         logger.warning("Aadhaar validation failed for input: %s", aadhaar)
         return {

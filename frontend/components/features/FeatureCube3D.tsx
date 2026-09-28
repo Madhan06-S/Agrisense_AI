@@ -7,7 +7,11 @@ import * as THREE from "three";
 import { Loader2, Info } from "lucide-react";
 
 interface FeatureCube3DProps {
+  farmId?: number;
   farmName?: string;
+  cropType?: string;
+  areaHectares?: number;
+  sowingDate?: string;
   farmGeoJSON?: any;
   ndviData?: any; // List of timeseries indices or latest feature vector
 }

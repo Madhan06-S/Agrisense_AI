@@ -182,14 +182,15 @@ export default function InsuranceDashboard() {
       try {
         // Fetch last SMS message log
         const smsRes = await fetch("http://localhost:8000/api/v1/auth/last-sms");
+        const defaultSMS = "No recent SMS notifications logged.";
         if (smsRes.ok) {
           const smsData = await smsRes.json();
-          setLastSMS(smsData.message || "No messages sent yet.");
+          setLastSMS(smsData.message || defaultSMS);
         } else {
-          setLastSMS(MOCK_LAST_SMS);
+          setLastSMS(defaultSMS);
         }
       } catch {
-        setLastSMS(MOCK_LAST_SMS);
+        setLastSMS("No recent SMS notifications logged.");
       }
     };
 

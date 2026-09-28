@@ -8,6 +8,11 @@ interface FarmTerrain3DProps {
   ndviData?: any; // Single feature vector or timeseries list
   livePreview?: boolean;
   points?: [number, number][]; // Leaflet coordinate array [lat, lon]
+  farmId?: number;
+  farmName?: string;
+  cropType?: string;
+  boundaryCoordinates?: any;
+  hasWebGL?: boolean;
 }
 
 // Point-in-Polygon Ray Casting algorithm
@@ -85,7 +90,8 @@ export default function FarmTerrain3D({ geojson, ndviData, livePreview = false, 
     const initThree = async () => {
       try {
         const THREE = await import("three");
-        const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls");
+        // @ts-ignore
+        const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls.js");
 
         if (!containerRef.current) return;
         

@@ -170,8 +170,19 @@ async def evaluate_traffic_light(
             p_severe = float(exp["damage_probabilities"][2])
             has_explicit_probs = True
 
+    # Check for fallback provenance in assessment explanation
+    is_fallback = False
+    if assessment and assessment.explanation_json and isinstance(assessment.explanation_json, dict):
+        if assessment.explanation_json.get("provenance") == "fallback" or assessment.explanation_json.get("weather_provenance") == "fallback" or assessment.explanation_json.get("gee_provenance") == "fallback":
+            is_fallback = True
+
+    if is_fallback:
+        light = TrafficLight.YELLOW
+        message = "Assessment relies on fallback provenance data. Routed for human officer field visit."
+        auto_action = "field_visit_required"
+        basis = "fallback_provenance_routing"
     # Apply XGBoost Probability Decision Rule
-    if (model_available or has_explicit_probs) and (p_no_damage > 0 or p_moderate > 0 or p_severe > 0):
+    elif (model_available or has_explicit_probs) and (p_no_damage > 0 or p_moderate > 0 or p_severe > 0):
         basis = "xgboost_probs"
         if p_severe >= 0.60:
             light = TrafficLight.RED
@@ -231,7 +242,7 @@ async def apply_traffic_light_decision(claim_id: int, db: AsyncSession) -> Dict[
     Traffic light verification logic:
     - GREEN (low damage / NDVI normal) -> claim.status = "closed_no_damage"
     - YELLOW (moderate) -> claim.status = "field_visit_required" and attach GPS coordinates from farm boundary centroid for officer dispatch
-    - RED (severe vegetation drop) -> claim.status = "approved" and trigger payout
+    - RED (severe vegetation drop) -> claim.status = "approved_pending_sanction", store recommended_payout_amount
     """
     result = await evaluate_traffic_light(claim_id, db)
 
@@ -256,10 +267,7 @@ async def apply_traffic_light_decision(claim_id: int, db: AsyncSession) -> Dict[
         claim.officer_remarks = f"Field visit required: Moderate damage flagged. Dispatched field agent to Farm Centroid GPS ({lat}, {lng})."
 
     elif result["light"] == "red":
-        claim.status = "approved"
-        claim.officer_remarks = "Auto-approved: Satellite imagery confirms severe vegetation drop anomaly."
-
-        # Calculate and trigger payout
+        # Calculate payout recommendation
         insured_val = claim.sum_insured or 50000.0
         crop = farm.crop_type if farm else "Rice"
         payout_res = calculate_parametric_payout(
@@ -267,8 +275,12 @@ async def apply_traffic_light_decision(claim_id: int, db: AsyncSession) -> Dict[
             insured_value=insured_val,
             crop_type=crop
         )
-        claim.payout_amount = payout_res.get("payout_amount", insured_val)
-        claim.status = "payout_processed"
+        rec_amount = payout_res.get("payout_amount", insured_val)
+        claim.recommended_payout_amount = rec_amount
+        claim.payout_amount = rec_amount
+        claim.status = "approved_pending_sanction"
+        claim.officer_remarks = f"Auto-approved (Pending Sanction): Severe vegetation drop anomaly. Recommended payout: ₹{rec_amount:,.2f}."
 
     await db.commit()
     return result
+

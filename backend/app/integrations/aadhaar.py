@@ -30,9 +30,14 @@ def name_fuzzy_match(name1: str, name2: str) -> float:
 _aadhaar_sessions: dict[str, dict] = {}
 
 
+from app.core.config import settings
+
 def send_aadhaar_otp(aadhaar_number: str) -> str:
     """Simulate sending OTP from UIDAI. Returns request_id."""
+    if not settings.DEMO_MODE:
+        raise ValueError("Aadhaar UIDAI integration not configured in production mode.")
     request_id = str(uuid.uuid4())
+
     
     # Mock database profiles based on mock Aadhaar numbers for demo
     # We will auto-fill name, gender, address, photo for the eKYC

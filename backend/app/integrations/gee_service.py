@@ -176,6 +176,7 @@ async def get_farm_ndvi_data(farm_id: int, db: AsyncSession) -> Dict:
                         "ndvi_score": ndvi_score,
                         "ndvi_mean": round(mean_ndvi, 3),
                         "status": "success",
+                        "provenance": "live",
                         "farm_name": farm_name
                     }
         except Exception as e:
@@ -189,5 +190,7 @@ async def get_farm_ndvi_data(farm_id: int, db: AsyncSession) -> Dict:
         "ndvi_score": ndvi_score,
         "ndvi_mean": ndvi_mean,
         "status": "fallback",
+        "provenance": "fallback",
         "farm_name": farm_name
     }
+

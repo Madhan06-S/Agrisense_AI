@@ -58,6 +58,7 @@ function TimelineTrajectory() {
   return (
     <group position={[0, -2.5, 0]}>
       {/* Historical line path */}
+      {/* @ts-ignore */}
       <line geometry={lineGeometry}>
         <lineBasicMaterial color="#38bdf8" linewidth={3} />
       </line>

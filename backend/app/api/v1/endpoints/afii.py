@@ -242,12 +242,17 @@ async def scan_zone_vci(zone_id: int, db: AsyncSession = Depends(get_db)):
     }
 
 
+from app.core.config import settings
+
 @router.post("/test-inject-vci")
 async def inject_low_vci_test(payload: InjectVCITestRequest, db: AsyncSession = Depends(get_db)):
     """
     DEMO TEST ENDPOINT: Injects a low VCI value (e.g. VCI = 30%) to trigger the AFII forage payout live.
     """
+    if not settings.DEMO_MODE:
+        raise HTTPException(status_code=403, detail="Test VCI injection route is available only in demo mode.")
     reading = await compute_zone_vci(payload.zone_id, db, injected_vci=payload.vci_score)
+
     payouts = await auto_trigger_check(db)
 
     return {

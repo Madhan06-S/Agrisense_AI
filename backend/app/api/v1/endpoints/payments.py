@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import get_current_user, require_officer
+from app.models.user import User
 from app.payments.pmkisan import verify_pm_kisan_dbt
 from app.payments.upi import generate_upi_link, generate_qr_code_mock
 from app.payments.state_machine import (
@@ -44,7 +46,7 @@ class MicroPayoutRequest(BaseModel):
     description: str = "Automated De-Risking Micro-Payout"
 
 @router.post("/initiate", response_model=Dict[str, Any])
-async def start_dbt_payment(payload: InitiatePaymentRequest):
+async def start_dbt_payment(payload: InitiatePaymentRequest, current_user: User = Depends(require_officer)):
     """
     Initiates a Digital Wallet Transfer for an approved claim.
     Supports: UPI, AEPS, BBPS, e₹ (CBDC).
@@ -105,7 +107,7 @@ async def start_dbt_payment(payload: InitiatePaymentRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{payment_id}/status", response_model=Dict[str, Any])
-async def get_payment_status(payment_id: str):
+async def get_payment_status(payment_id: str, current_user: User = Depends(get_current_user)):
     """Checks the status of an ongoing transaction."""
     record = None
     for claim_id, rec in PAYMENT_LEDGER.items():
@@ -117,7 +119,7 @@ async def get_payment_status(payment_id: str):
     return record
 
 @router.post("/{payment_id}/retry", response_model=Dict[str, Any])
-async def retry_payment(payment_id: str):
+async def retry_payment(payment_id: str, current_user: User = Depends(require_officer)):
     """Retries a failed payment."""
     claim_id = None
     for cid, rec in PAYMENT_LEDGER.items():
@@ -130,7 +132,7 @@ async def retry_payment(payment_id: str):
     return p_res
 
 @router.get("/reconciliation", response_model=Dict[str, Any])
-async def daily_reconciliation_report():
+async def daily_reconciliation_report(current_user: User = Depends(require_officer)):
     """Generates daily Digital Wallet Transfer reconciliation logs."""
     ledger_records = list(PAYMENT_LEDGER.values())
     total_amount = sum(r["amount"] for r in ledger_records if r["status"] == "COMPLETED")
@@ -146,8 +148,10 @@ async def daily_reconciliation_report():
 # --- Digital Wallet Routes ---
 
 @router.post("/wallet/create", response_model=Dict[str, Any])
-async def create_wallet(payload: WalletCreateRequest):
+async def create_wallet(payload: WalletCreateRequest, current_user: User = Depends(get_current_user)):
     """Creates a digital wallet for a farmer (e₹ / AEPS enabled)."""
+    if current_user.role not in ["officer", "admin"] and current_user.id != payload.farmer_id:
+        raise HTTPException(status_code=403, detail="Access denied: Cannot create wallet for another user.")
     try:
         wallet = create_digital_wallet(payload.farmer_id)
         return wallet
@@ -155,8 +159,10 @@ async def create_wallet(payload: WalletCreateRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/wallet/{farmer_id}/balance", response_model=Dict[str, Any])
-async def get_balance(farmer_id: int):
+async def get_balance(farmer_id: int, current_user: User = Depends(get_current_user)):
     """Retrieves the farmer's digital wallet balance."""
+    if current_user.role not in ["officer", "admin"] and current_user.id != farmer_id:
+        raise HTTPException(status_code=403, detail="Access denied: Cannot read wallet balance of another user.")
     balance = get_wallet_balance(farmer_id)
     return {
         "farmer_id": farmer_id,
@@ -165,8 +171,10 @@ async def get_balance(farmer_id: int):
     }
 
 @router.post("/wallet/withdraw", response_model=Dict[str, Any])
-async def withdraw(payload: WalletWithdrawRequest):
+async def withdraw(payload: WalletWithdrawRequest, current_user: User = Depends(get_current_user)):
     """Withdraws balance from the digital wallet to a linked bank account."""
+    if current_user.role not in ["officer", "admin"] and current_user.id != payload.farmer_id:
+        raise HTTPException(status_code=403, detail="Access denied: Cannot withdraw from another user's wallet.")
     try:
         txn = withdraw_from_wallet(payload.farmer_id, payload.amount, payload.recipient_bank)
         return {
@@ -178,11 +186,14 @@ async def withdraw(payload: WalletWithdrawRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/wallet/transactions", response_model=Dict[str, Any])
-async def get_transactions(farmer_id: int):
+async def get_transactions(farmer_id: int, current_user: User = Depends(get_current_user)):
     """Retrieves full transaction history for the farmer's digital wallet."""
+    if current_user.role not in ["officer", "admin"] and current_user.id != farmer_id:
+        raise HTTPException(status_code=403, detail="Access denied: Cannot read transactions of another user.")
     txns = get_wallet_transactions(farmer_id)
     return {
         "farmer_id": farmer_id,
         "total_transactions": len(txns),
         "transactions": txns
     }
+

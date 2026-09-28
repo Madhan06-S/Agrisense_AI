@@ -110,8 +110,10 @@ async def create_claim(
         db.add(farm)
         await db.flush()
     elif farm.farmer_id != current_user.id:
-        farm.farmer_id = current_user.id
-        await db.flush()
+        raise HTTPException(status_code=403, detail="Farm belongs to another user")
+
+
+
 
     now_time = datetime.now(timezone.utc)
     claim = Claim(
@@ -120,6 +122,8 @@ async def create_claim(
         claim_type=payload.claim_type,
         description=payload.description,
         status=ClaimStatus.submitted,
+        analysis_status="pending",
+        analysis_error_reason=None,
         submitted_at=now_time,
         created_at=now_time,
         coverage_type=getattr(payload, "coverage_type", None) or "Standing Crop / Yield Loss",
@@ -143,19 +147,29 @@ async def create_claim(
     except Exception as e:
         print(f"Audit chain note: {e}")
     
-    # Run AI pipeline
+    # Run AI pipeline and record analysis status
     assessment = None
     try:
         assessment = await run_fusion_pipeline(claim.id, db)
         await apply_traffic_light_decision(claim.id, db)
+        claim.analysis_status = "completed"
+        claim.analysis_error_reason = None
+        await db.commit()
         await db.refresh(claim)
     except Exception as e:
-        print(f"AI pipeline note: {e}")
+        print(f"AI pipeline failure: {e}")
+        claim.analysis_status = "failed"
+        claim.analysis_error_reason = str(e)
+        await db.commit()
+        await db.refresh(claim)
     
     return {
         "claim_id": claim.id,
         "status": claim.status,
-        "ai_score": assessment.combined_score if assessment else 75.0,
+        "analysis_status": claim.analysis_status,
+        "analysis_error_reason": claim.analysis_error_reason,
+        "recommended_payout_amount": getattr(claim, "recommended_payout_amount", None),
+        "ai_score": assessment.combined_score if assessment else (claim.ai_damage_score or 0.0),
         "message": "Claim submitted and analyzed. Check dashboard for decision."
     }
 
@@ -174,40 +188,33 @@ async def get_my_claims(
         .order_by(Claim.id.desc())
     )
     claims = result_claims.scalars().all()
-
-    # Fallback to all claims if user has no specific claim records yet
-    if not claims:
-        all_claims_res = await db.execute(select(Claim).order_by(Claim.id.desc()))
-        claims = all_claims_res.scalars().all()
     
-    # Include assessment scores in response
     result = []
     for claim in claims:
         stmt_da = select(DamageAssessment).where(DamageAssessment.claim_id == claim.id)
         res_da = await db.execute(stmt_da)
         assessment = res_da.scalars().first()
         
-        payout_amt = getattr(claim, "payout_amount", None)
-        if payout_amt is None and str(claim.status) in ["approved", "payout_processed", "ClaimStatus.approved", "ClaimStatus.payout_processed"]:
-            payout_amt = 25000.0
-            
         result.append({
             "id": claim.id,
             "farm_id": claim.farm_id,
             "claim_type": claim.claim_type,
             "description": claim.description,
             "status": claim.status,
+            "analysis_status": getattr(claim, "analysis_status", "completed"),
+            "analysis_error_reason": getattr(claim, "analysis_error_reason", None),
             "submitted_at": claim.submitted_at.isoformat() if claim.submitted_at else None,
-            "ai_score": assessment.combined_score if assessment else (claim.ai_damage_score or 75.0),
+            "ai_score": assessment.combined_score if assessment else (claim.ai_damage_score or 0.0),
             "officer_remarks": claim.officer_remarks,
-            # Payout fields
-            "payout_amount": payout_amt,
+            "recommended_payout_amount": getattr(claim, "recommended_payout_amount", None),
+            "payout_amount": claim.payout_amount,
             "damage_percent": getattr(claim, "damage_percent", None),
             "farm_area": getattr(claim, "farm_area", None),
             "sum_insured": getattr(claim, "sum_insured", None)
         })
     
     return result
+
 
 
 

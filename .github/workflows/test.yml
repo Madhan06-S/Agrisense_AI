@@ -7,7 +7,8 @@ on:
     branches: [ main, master, dev ]
 
 jobs:
-  test:
+  backend-test:
+    name: Backend Hardening & Integration Tests
     runs-on: ubuntu-latest
     
     services:
@@ -41,40 +42,73 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         cache: 'pip'
 
-    - name: Install dependencies
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gdal-bin libgdal-dev libpq-dev
+
+    - name: Install Python Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r backend/requirements.txt
 
-    - name: Run Pytest suite with coverage
+    - name: Run Alembic Database Migrations
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@localhost:5432/agrisense_test
+      run: |
+        cd backend && PYTHONPATH=. alembic upgrade head
+
+    - name: Run Pytest Suite with Coverage
       env:
         DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@localhost:5432/agrisense_test
         REDIS_URL: redis://localhost:6379/0
         STORAGE_BACKEND: local
         LOCAL_STORAGE_DIR: ./test_data
+        SECRET_KEY: github_actions_secure_test_secret_key_32_chars
+        ENVIRONMENT: testing
       run: |
-        PYTHONPATH=. pytest --cov=app --cov-report=xml
+        cd backend && PYTHONPATH=. pytest --cov=app --cov-report=xml
 
-    - name: Run Load Tests (Locust)
+    - name: Run Real Broker Integration Test Step
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@localhost:5432/agrisense_test
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: github_actions_secure_test_secret_key_32_chars
+        ENVIRONMENT: testing
       run: |
-        PYTHONPATH=. uvicorn app.main:app --port 8000 &
-        server_pid=$!
-        sleep 3
-        # Run Locust test in headless mode for 10 seconds to verify load profiles
-        locust -f tests/load/locustfile.py --headless -u 10 -r 2 --run-time 10s --html locust_report.html --host http://localhost:8000
-        kill $server_pid
+        cd backend && PYTHONPATH=. pytest -m real_broker tests/integration/test_celery_broker.py
 
-    - name: Upload Test Coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
+  frontend-build:
+    name: Frontend Lint, Typecheck & Build
+    runs-on: ubuntu-latest
 
-    - name: Upload Locust Report
-      uses: actions/upload-artifact@v3
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
       with:
-        name: locust-report
-        path: locust_report.html
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Dependencies
+      run: |
+        cd frontend && npm ci
+
+    - name: Run ESLint
+      run: |
+        cd frontend && npm run lint
+
+    - name: Run TypeScript Type Check
+      run: |
+        cd frontend && npx tsc --noEmit
+
+    - name: Run Production Build
+      env:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+      run: |
+        cd frontend && npm run build

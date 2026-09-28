@@ -1,6 +1,8 @@
 import os
 import logging
 import tempfile
+from typing import Optional
+from datetime import datetime
 from app.core.storage import get_storage_backend
 
 logger = logging.getLogger(__name__)
@@ -17,11 +19,38 @@ class InvalidDataError(Exception):
     """Exception raised when inputs fail validation (no retry)."""
     pass
 
-def move_to_failed_dlq(farm_id: int, folder_prefix: str) -> None:
+def send_pipeline_alert(farm_id: int, stage: str, error_msg: str, run_id: Optional[int] = None) -> bool:
+    """Dispatches webhook / SMS notification on pipeline stage failure."""
+    from app.core.config import settings
+    import requests
+    
+    payload = {
+        "event": "pipeline_failure",
+        "farm_id": farm_id,
+        "run_id": run_id,
+        "stage": stage,
+        "error": error_msg,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    logger.warning(f"[PIPELINE ALERT] Pipeline failure on farm {farm_id} during stage '{stage}': {error_msg}")
+    
+    if settings.ALERT_WEBHOOK_URL:
+        try:
+            res = requests.post(settings.ALERT_WEBHOOK_URL, json=payload, timeout=5)
+            return res.status_code < 400
+        except Exception as err:
+            logger.error(f"[PIPELINE ALERT] Webhook notification failed: {err}")
+            return False
+    return True
+
+def move_to_failed_dlq(farm_id: int, folder_prefix: str, error_msg: str = "", run_id: Optional[int] = None) -> None:
     """
     Moves files associated with a failed run in the storage backend
-    to the 'failed/' prefix.
+    to the 'failed/' prefix and triggers alert notifications.
     """
+    send_pipeline_alert(farm_id, folder_prefix, error_msg, run_id)
+
     storage = get_storage_backend()
     # List files matching the farm prefix
     target_prefix = f"farm-{farm_id}/{folder_prefix}" if folder_prefix else f"farm-{farm_id}"

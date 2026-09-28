@@ -22,6 +22,7 @@ class ClaimStatus(str, enum.Enum):
     submitted = "submitted"
     under_review = "under_review"
     approved = "approved"
+    approved_pending_sanction = "approved_pending_sanction"
     rejected = "rejected"
     closed_no_damage = "closed_no_damage"
     field_visit_required = "field_visit_required"
@@ -40,6 +41,10 @@ class Claim(Base):
     description = Column(Text, nullable=True)
     status = Column(SAEnum(ClaimStatus), nullable=False, default=ClaimStatus.submitted, index=True)
 
+    analysis_status = Column(String(20), default="pending", nullable=True)  # pending | completed | failed
+    analysis_error_reason = Column(Text, nullable=True)
+    recommended_payout_amount = Column(Float, nullable=True)
+
     ai_damage_score = Column(Float, nullable=True)  # 0-100
     ai_decision = Column(String(10), nullable=True)  # green | yellow | red
     officer_remarks = Column(Text, nullable=True)
@@ -50,6 +55,7 @@ class Claim(Base):
     damage_percent = Column(Float, nullable=True)
     farm_area = Column(Float, nullable=True)
     sum_insured = Column(Float, nullable=True)
+
 
     # PFMS & Parametric Trigger fields
     pfms_transaction_id = Column(String(100), nullable=True)
