@@ -9,14 +9,19 @@ from sqlalchemy import select, desc
 
 from app.core.database import get_db
 from app.models.afii import GrazingZone, VCIReading, AFIIPolicy, AFIIPayout
-from app.services.afii_engine import compute_vci_formula, compute_zone_vci, auto_trigger_check
+from app.services.afii_engine import (
+    compute_vci_formula,
+    compute_zone_vci,
+    auto_trigger_check,
+    evaluate_zone_forage_and_warning,
+    WATCH_PRE_ALERTS
+)
 from app.compliance.audit_chain import AuditChainEngine
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/afii", tags=["AFII Forage Index Insurance"])
 
 
-# Pydantic Schemas
 class GrazingZoneCreate(BaseModel):
     name: str
     state: str
@@ -26,6 +31,7 @@ class GrazingZoneCreate(BaseModel):
     centroid_lng: float = 73.8567
     num_households: int = 120
     livestock_count: int = 850
+    area_hectares: float = 100.0
 
 
 class AFIIPolicyCreate(BaseModel):
@@ -52,13 +58,13 @@ async def create_grazing_zone(payload: GrazingZoneCreate, db: AsyncSession = Dep
         centroid_lat=payload.centroid_lat,
         centroid_lng=payload.centroid_lng,
         num_households=payload.num_households,
-        livestock_count=payload.livestock_count
+        livestock_count=payload.livestock_count,
+        area_hectares=payload.area_hectares
     )
     db.add(zone)
     await db.commit()
     await db.refresh(zone)
 
-    # Auto-create active policy for zone
     policy = AFIIPolicy(
         zone_id=zone.id,
         premium_amount=1500.0,
@@ -68,7 +74,6 @@ async def create_grazing_zone(payload: GrazingZoneCreate, db: AsyncSession = Dep
     )
     db.add(policy)
 
-    # Initial VCI reading
     initial_vci = VCIReading(
         zone_id=zone.id,
         vci_score=62.5,
@@ -84,11 +89,13 @@ async def create_grazing_zone(payload: GrazingZoneCreate, db: AsyncSession = Dep
 
 @router.get("/zones")
 async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
-    """Lists all pastoral grazing zones with latest VCI score, active policy, and payout status."""
+    """
+    Lists all pastoral grazing zones with VCI, DM/ha vs baseline, days to breach,
+    Watch pre-alert status, and active payout flow (triggered -> approved -> paid).
+    """
     res_zones = await db.execute(select(GrazingZone).order_by(GrazingZone.id.asc()))
     zones = res_zones.scalars().all()
 
-    # Seed demo zones if empty
     if not zones:
         demo_zones = [
             GrazingZone(
@@ -99,7 +106,8 @@ async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
                 centroid_lat=23.4000,
                 centroid_lng=69.5000,
                 num_households=150,
-                livestock_count=1200
+                livestock_count=1200,
+                area_hectares=120.0
             ),
             GrazingZone(
                 id=2,
@@ -109,7 +117,8 @@ async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
                 centroid_lat=26.9157,
                 centroid_lng=70.9083,
                 num_households=210,
-                livestock_count=1850
+                livestock_count=1850,
+                area_hectares=150.0
             ),
             GrazingZone(
                 id=3,
@@ -119,15 +128,15 @@ async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
                 centroid_lat=11.0168,
                 centroid_lng=76.9558,
                 num_households=95,
-                livestock_count=640
+                livestock_count=640,
+                area_hectares=90.0
             )
         ]
         for dz in demo_zones:
             db.add(dz)
         await db.commit()
 
-        # Seed policies and initial readings
-        vci_scores = [58.0, 42.0, 68.0]
+        vci_scores = [58.0, 32.0, 68.0]  # Thar Pastoral Belt breaches VCI (<35%)
         for i, dz in enumerate(demo_zones):
             pol = AFIIPolicy(
                 zone_id=dz.id,
@@ -140,7 +149,7 @@ async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
             read = VCIReading(
                 zone_id=dz.id,
                 vci_score=vci_scores[i],
-                ndvi_current=0.15 + (vci_scores[i]/100.0)*0.60,
+                ndvi_current=0.15 + (vci_scores[i] / 100.0) * 0.60,
                 ndvi_long_term_mean=0.55
             )
             db.add(read)
@@ -151,19 +160,13 @@ async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
 
     result = []
     for z in zones:
-        # Fetch latest VCI reading
-        res_vci = await db.execute(select(VCIReading).where(VCIReading.zone_id == z.id).order_by(desc(VCIReading.date)).limit(1))
-        latest_vci = res_vci.scalars().first()
-
-        # Fetch active policy
         res_pol = await db.execute(select(AFIIPolicy).where(AFIIPolicy.zone_id == z.id, AFIIPolicy.active == True).limit(1))
         policy = res_pol.scalars().first()
 
-        # Fetch latest payout
+        eval_res = await evaluate_zone_forage_and_warning(z, policy, db)
+
         res_pay = await db.execute(select(AFIIPayout).where(AFIIPayout.zone_id == z.id).order_by(desc(AFIIPayout.trigger_date)).limit(1))
         latest_payout = res_pay.scalars().first()
-
-        vci_val = latest_vci.vci_score if latest_vci else 50.0
 
         result.append({
             "id": z.id,
@@ -174,10 +177,17 @@ async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
             "centroid_lng": z.centroid_lng,
             "num_households": z.num_households,
             "livestock_count": z.livestock_count,
-            "vci_score": vci_val,
-            "ndvi_current": latest_vci.ndvi_current if latest_vci else 0.48,
-            "vci_status": "normal" if vci_val > 50 else ("watch" if vci_val >= 35 else "triggered"),
-            "survival_baseline_vci": policy.survival_baseline_vci if policy else 35.0,
+            "area_hectares": getattr(z, "area_hectares", 100.0),
+            "vci_score": eval_res["vci_score"],
+            "ndvi_current": eval_res["ndvi_current"],
+            "survival_baseline_vci": eval_res["survival_baseline_vci"],
+            "dm_available_kg_ha": eval_res["dm_available_kg_ha"],
+            "dm_required_kg_ha": eval_res["dm_required_kg_ha"],
+            "vci_breach": eval_res["vci_breach"],
+            "dm_shortfall_breach": eval_res["dm_shortfall_breach"],
+            "days_to_breach": eval_res["days_to_breach"],
+            "vci_status": eval_res["vci_status"].lower(),
+            "status_reason": eval_res["status_reason"],
             "sum_insured_per_household": policy.sum_insured_per_household if policy else 25000.0,
             "active_payout": {
                 "id": latest_payout.id,
@@ -194,7 +204,7 @@ async def list_grazing_zones(db: AsyncSession = Depends(get_db)):
 
 @router.get("/zones/{zone_id}")
 async def get_zone_detail(zone_id: int, db: AsyncSession = Depends(get_db)):
-    """Returns zone details and 90-day VCI historical time series."""
+    """Returns zone forage details, survival baseline, and VCI historical time series."""
     res_zone = await db.execute(select(GrazingZone).where(GrazingZone.id == zone_id))
     zone = res_zone.scalars().first()
     if not zone:
@@ -203,9 +213,10 @@ async def get_zone_detail(zone_id: int, db: AsyncSession = Depends(get_db)):
     res_vci = await db.execute(select(VCIReading).where(VCIReading.zone_id == zone_id).order_by(VCIReading.date.asc()))
     readings = res_vci.scalars().all()
 
-    # Fetch policy
     res_pol = await db.execute(select(AFIIPolicy).where(AFIIPolicy.zone_id == zone_id).limit(1))
     policy = res_pol.scalars().first()
+
+    eval_res = await evaluate_zone_forage_and_warning(zone, policy, db)
 
     return {
         "id": zone.id,
@@ -214,8 +225,13 @@ async def get_zone_detail(zone_id: int, db: AsyncSession = Depends(get_db)):
         "district": zone.district,
         "num_households": zone.num_households,
         "livestock_count": zone.livestock_count,
+        "area_hectares": getattr(zone, "area_hectares", 100.0),
         "survival_baseline_vci": policy.survival_baseline_vci if policy else 35.0,
         "sum_insured_per_household": policy.sum_insured_per_household if policy else 25000.0,
+        "dm_available_kg_ha": eval_res["dm_available_kg_ha"],
+        "dm_required_kg_ha": eval_res["dm_required_kg_ha"],
+        "days_to_breach": eval_res["days_to_breach"],
+        "vci_status": eval_res["vci_status"],
         "vci_history": [
             {
                 "id": r.id,
@@ -230,7 +246,7 @@ async def get_zone_detail(zone_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/zones/{zone_id}/scan")
 async def scan_zone_vci(zone_id: int, db: AsyncSession = Depends(get_db)):
-    """Triggers fresh VCI computation and checks auto-payout breach."""
+    """Triggers fresh VCI & DM computation and checks auto-payout breach."""
     reading = await compute_zone_vci(zone_id, db)
     payouts = await auto_trigger_check(db)
     return {
@@ -244,10 +260,12 @@ async def scan_zone_vci(zone_id: int, db: AsyncSession = Depends(get_db)):
 
 from app.core.config import settings
 
+
 @router.post("/test-inject-vci")
 async def inject_low_vci_test(payload: InjectVCITestRequest, db: AsyncSession = Depends(get_db)):
     """
     DEMO TEST ENDPOINT: Injects a low VCI value (e.g. VCI = 30%) to trigger the AFII forage payout live.
+    Sets status to 'triggered' (NEVER 'paid').
     """
     if not settings.DEMO_MODE:
         raise HTTPException(status_code=403, detail="Test VCI injection route is available only in demo mode.")
@@ -264,7 +282,7 @@ async def inject_low_vci_test(payload: InjectVCITestRequest, db: AsyncSession = 
             {
                 "id": p.id,
                 "zone_id": p.zone_id,
-                "status": p.status,
+                "status": p.status,  # Must be 'triggered'
                 "total_payout": p.total_payout,
                 "reference_id": p.reference_id
             }
@@ -316,7 +334,47 @@ async def list_afii_payouts(db: AsyncSession = Depends(get_db)):
 
 @router.post("/payouts/{payout_id}/approve")
 async def approve_afii_payout(payout_id: int, db: AsyncSession = Depends(get_db)):
-    """Officer review & disburse AFII payout (sets status=paid and logs to audit chain)."""
+    """
+    Officer status transition 1: 'triggered' -> 'approved'.
+    A triggered row transitions to 'approved' (not directly 'paid').
+    """
+    res_p = await db.execute(select(AFIIPayout).where(AFIIPayout.id == payout_id))
+    payout = res_p.scalars().first()
+    if not payout:
+        raise HTTPException(status_code=404, detail="AFII Payout record not found.")
+
+    payout.status = "approved"
+    payout.reviewed_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(payout)
+
+    try:
+        await AuditChainEngine.add_block(
+            claim_id=payout.id,
+            action="AFII_FORAGE_PAYOUT_APPROVED",
+            actor_id=3,
+            actor_role="Officer",
+            actor_name=f"Officer Approved AFII Forage Payout (₹{payout.total_payout:,.2f})",
+            db=db,
+        )
+    except Exception as e:
+        logger.warning(f"Audit chain note: {e}")
+
+    return {
+        "status": "success",
+        "payout_id": payout.id,
+        "new_status": payout.status,
+        "total_payout": payout.total_payout,
+        "reference_id": payout.reference_id
+    }
+
+
+@router.post("/payouts/{payout_id}/disburse")
+async def disburse_afii_payout(payout_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Officer status transition 2: 'approved' -> 'paid'.
+    Disburses funds to household bank accounts and sets final status to 'paid'.
+    """
     res_p = await db.execute(select(AFIIPayout).where(AFIIPayout.id == payout_id))
     payout = res_p.scalars().first()
     if not payout:
@@ -327,14 +385,13 @@ async def approve_afii_payout(payout_id: int, db: AsyncSession = Depends(get_db)
     await db.commit()
     await db.refresh(payout)
 
-    # Log to audit chain
     try:
         await AuditChainEngine.add_block(
             claim_id=payout.id,
             action="AFII_FORAGE_PAYOUT_DISBURSED",
             actor_id=3,
             actor_role="Officer",
-            actor_name=f"Officer Approved AFII Forage Payout (₹{payout.total_payout:,.2f})",
+            actor_name=f"Disbursed AFII Forage Payout (₹{payout.total_payout:,.2f})",
             db=db,
         )
     except Exception as e:

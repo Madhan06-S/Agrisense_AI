@@ -5,7 +5,8 @@ import {
   AlertTriangle, 
   RefreshCw, 
   Zap, 
-  Sparkles
+  Sparkles,
+  Bell
 } from "lucide-react";
 
 interface AFIIZone {
@@ -15,10 +16,17 @@ interface AFIIZone {
   district: string;
   num_households: number;
   livestock_count: number;
+  area_hectares?: number;
   vci_score: number;
   ndvi_current: number;
-  vci_status: "normal" | "watch" | "triggered";
+  vci_status: "normal" | "watch" | "triggered" | string;
   survival_baseline_vci: number;
+  dm_available_kg_ha?: number;
+  dm_required_kg_ha?: number;
+  vci_breach?: boolean;
+  dm_shortfall_breach?: boolean;
+  days_to_breach?: number | null;
+  status_reason?: string;
   sum_insured_per_household: number;
   active_payout?: {
     id: number;
@@ -91,14 +99,14 @@ export default function AFIIPastoralInsurance() {
     }
   }
 
-  const getVciBadge = (score: number) => {
-    if (score > 50) {
-      return { label: "Normal (Healthy Forage)", color: "bg-green-100 text-[#1B5E20] border-green-300", dot: "bg-green-600" };
+  const getVciBadge = (score: number, status?: string) => {
+    if (score < 35 || status === "triggered") {
+      return { label: "CRITICAL (Payout Triggered)", color: "bg-red-100 text-red-800 border-red-300", dot: "bg-red-600" };
     }
-    if (score >= 35) {
-      return { label: "Watch (Moderate Stress)", color: "bg-amber-100 text-amber-800 border-amber-300", dot: "bg-amber-600" };
+    if (status === "watch" || (score >= 35 && score <= 45)) {
+      return { label: "Watch (Pre-alert Active)", color: "bg-amber-100 text-amber-800 border-amber-300", dot: "bg-amber-600" };
     }
-    return { label: "CRITICAL (Payout Triggered)", color: "bg-red-100 text-red-800 border-red-300", dot: "bg-red-600" };
+    return { label: "Normal (Healthy Forage)", color: "bg-green-100 text-[#1B5E20] border-green-300", dot: "bg-green-600" };
   };
 
   if (loading) {
@@ -118,14 +126,14 @@ export default function AFIIPastoralInsurance() {
           <span className="text-2xl">🐪</span>
           <div>
             <h2 className="text-lg font-extrabold text-[#1B5E20]">AREA-BASED FORAGE INDEX INSURANCE (AFII)</h2>
-            <p className="text-xs text-[#5B6B5B]">Automated Satellite VCI Index Protection for Livestock & Pastoralists</p>
+            <p className="text-xs text-[#5B6B5B]">Pay Before Livestock Starve — Parametric VCI & Biomass Dual-Trigger Protection</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-mono bg-[#E8F5E9] text-[#1B5E20] px-2.5 py-1 rounded-full border border-[#2E7D32]/20 font-bold flex items-center gap-1">
             <Zap className="w-3 h-3 text-[#1B5E20]" />
-            PARAMETRIC AUTO-TRIGGER
+            PARAMETRIC DUAL-TRIGGER
           </span>
           <button
             onClick={fetchAFIIZones}
@@ -147,14 +155,15 @@ export default function AFIIPastoralInsurance() {
       {/* Pastoral Grazing Zones Grid */}
       <div className="space-y-4">
         {zones.map((zone) => {
-          const badge = getVciBadge(zone.vci_score);
-          const hasTriggeredPayout = zone.active_payout !== null;
+          const badge = getVciBadge(zone.vci_score, zone.vci_status);
+          const hasTriggeredPayout = zone.active_payout !== null && zone.active_payout !== undefined;
+          const isWatch = zone.vci_status === "watch";
 
           return (
             <div 
               key={zone.id} 
               className={`p-4 rounded-xl border transition-all ${
-                zone.vci_score < 35 ? "bg-red-50/50 border-red-300" : "bg-[#F7F9F5] border-[#E5EBE3]"
+                zone.vci_score < 35 || hasTriggeredPayout ? "bg-red-50/50 border-red-300" : isWatch ? "bg-amber-50/50 border-amber-300" : "bg-[#F7F9F5] border-[#E5EBE3]"
               }`}
             >
               {/* Zone Title & Badge */}
@@ -162,7 +171,7 @@ export default function AFIIPastoralInsurance() {
                 <div>
                   <h3 className="text-sm font-bold text-[#1B5E20]">{zone.name}</h3>
                   <p className="text-xs text-[#5B6B5B]">
-                    {zone.district}, {zone.state} • {zone.num_households} Pastoral Households • {zone.livestock_count} Livestock
+                    {zone.district}, {zone.state} • {zone.num_households} Households • {zone.livestock_count} Livestock ({zone.area_hectares ?? 100} ha)
                   </p>
                 </div>
 
@@ -174,25 +183,51 @@ export default function AFIIPastoralInsurance() {
                 </div>
               </div>
 
-              {/* VCI & Policy Metrics Grid */}
+              {/* VCI, Biomass DM & Baseline Metrics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-3">
                 <div className="bg-white p-2.5 rounded-lg border border-[#E5EBE3]">
                   <span className="text-[#6B7280] text-[11px] block">Current VCI Score</span>
                   <span className="font-extrabold text-sm text-[#1B5E20]">{zone.vci_score}%</span>
+                  <span className="text-[10px] text-[#6B7280]">Baseline: 35.0%</span>
                 </div>
                 <div className="bg-white p-2.5 rounded-lg border border-[#E5EBE3]">
-                  <span className="text-[#6B7280] text-[11px] block">Survival Baseline</span>
-                  <span className="font-extrabold text-sm text-[#374151]">&le; {zone.survival_baseline_vci}% VCI</span>
+                  <span className="text-[#6B7280] text-[11px] block">DM Available vs Req.</span>
+                  <span className={`font-extrabold text-sm ${zone.dm_shortfall_breach ? "text-red-700" : "text-[#1B5E20]"}`}>
+                    {(zone.dm_available_kg_ha ?? 0).toFixed(0)} <span className="text-xs font-normal text-[#6B7280]">/ {(zone.dm_required_kg_ha ?? 0).toFixed(0)} kg DM/ha</span>
+                  </span>
+                  <span className="text-[10px] text-[#6B7280] block">6.25 kg DM/TLU/day</span>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-[#E5EBE3]">
+                  <span className="text-[#6B7280] text-[11px] block">Trend & Breach Projection</span>
+                  <span className={`font-extrabold text-sm ${zone.days_to_breach !== null && zone.days_to_breach !== undefined && zone.days_to_breach <= 30 ? "text-amber-800" : "text-[#374151]"}`}>
+                    {zone.days_to_breach !== null && zone.days_to_breach !== undefined ? `${zone.days_to_breach.toFixed(0)} Days` : "Stable (>60d)"}
+                  </span>
+                  <span className="text-[10px] text-[#6B7280] block">4-6 acquisition trend</span>
                 </div>
                 <div className="bg-white p-2.5 rounded-lg border border-[#E5EBE3]">
                   <span className="text-[#6B7280] text-[11px] block">Cover / Household</span>
                   <span className="font-extrabold text-sm text-[#1B5E20]">₹{zone.sum_insured_per_household.toLocaleString()}</span>
-                </div>
-                <div className="bg-white p-2.5 rounded-lg border border-[#E5EBE3]">
-                  <span className="text-[#6B7280] text-[11px] block">Total Zone Cover</span>
-                  <span className="font-extrabold text-sm text-[#1B5E20]">₹{(zone.sum_insured_per_household * zone.num_households).toLocaleString()}</span>
+                  <span className="text-[10px] text-[#6B7280] block">Total: ₹{(zone.sum_insured_per_household * zone.num_households).toLocaleString()}</span>
                 </div>
               </div>
+
+              {/* Watch Early Warning Pre-Alert Banner */}
+              {isWatch && !hasTriggeredPayout && (
+                <div className="mb-3 p-3 bg-amber-100 border border-amber-300 rounded-lg text-xs space-y-1">
+                  <div className="flex items-center justify-between font-bold text-amber-900">
+                    <span className="flex items-center gap-1.5">
+                      <Bell className="w-4 h-4 text-amber-700" />
+                      ⚠️ EARLY WARNING: WATCH STATE (PROJECTED BREACH IN {zone.days_to_breach?.toFixed(0) ?? 30} DAYS)
+                    </span>
+                    <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-mono uppercase">
+                      SMS Advisory Dispatched
+                    </span>
+                  </div>
+                  <p className="text-amber-800 leading-relaxed font-medium">
+                    Pre-alert dispatched to agricultural officers and SMS advisory sent to {zone.num_households} pastoralist households. No financial payout is triggered during Watch state.
+                  </p>
+                </div>
+              )}
 
               {/* Active Payout Banner if Triggered */}
               {hasTriggeredPayout && (
@@ -207,11 +242,11 @@ export default function AFIIPastoralInsurance() {
                     </span>
                   </div>
                   <p className="text-red-800 leading-relaxed font-medium">
-                    VCI dropped to <span className="font-bold">{zone.active_payout?.vci_at_trigger}%</span> (breached survival baseline of {zone.survival_baseline_vci}%). Parametric payout of <span className="font-bold">₹{zone.active_payout?.total_payout.toLocaleString()}</span> generated for {zone.num_households} pastoralist households.
+                    Breach detected: VCI <span className="font-bold">{zone.active_payout?.vci_at_trigger}%</span> (or forage DM shortfall). Parametric payout of <span className="font-bold">₹{zone.active_payout?.total_payout.toLocaleString()}</span> generated for {zone.num_households} pastoralist households.
                   </p>
                   <div className="flex items-center justify-between pt-1 border-t border-red-200 text-[11px] text-red-700">
-                    <span>Status: <strong className="uppercase">{zone.active_payout?.status}</strong></span>
-                    <span>No claim filing required. Disbursing via PFMS.</span>
+                    <span>Status: <strong className="uppercase font-mono bg-red-200 px-1.5 py-0.5 rounded text-red-900">{zone.active_payout?.status}</strong></span>
+                    <span>Pay before livestock starve — Disbursing via DBT / PFMS.</span>
                   </div>
                 </div>
               )}
@@ -246,3 +281,4 @@ export default function AFIIPastoralInsurance() {
     </div>
   );
 }
+

@@ -3,27 +3,24 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  ArrowRight, 
   Shield, 
   Satellite, 
-  Zap,
+  Database, 
+  Globe, 
+  Radio, 
+  CheckCircle, 
+  Check, 
+  AlertCircle, 
+  XCircle, 
+  Zap, 
+  FileText,
   Lock,
-  MessageSquare,
-  Activity,
-  Layers,
-  Radio,
-  CheckCircle,
-  Database,
-  Globe,
-  Sliders,
-  Sparkles
+  MessageSquare
 } from "lucide-react";
 
 export default function HomePage() {
   const [lang, setLang] = useState<"en" | "hi">("en");
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [activeBand, setActiveBand] = useState<"ndvi" | "sar" | "thermal" | "soil">("ndvi");
-  const [ndviPulse, setNdviPulse] = useState<number>(0.74);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -35,21 +32,14 @@ export default function HomePage() {
     }
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNdviPulse((prev) => +(prev + (Math.random() * 0.04 - 0.02)).toFixed(2));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#F7F9F5] text-slate-900 font-sans flex flex-col justify-between selection:bg-emerald-100 selection:text-emerald-900">
       
       {/* 1. Official Government Dateline Header */}
-      <div className="bg-[#144723] text-emerald-100 text-xs px-6 md:px-14 py-2.5 flex justify-between items-center border-b border-emerald-900/50 font-mono">
+      <div className="bg-[#144723] text-emerald-100 text-xs px-4 sm:px-6 md:px-14 py-2.5 flex justify-between items-center border-b border-emerald-900/50 font-mono">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 font-bold text-white tracking-widest uppercase">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="flex items-center gap-1.5 font-bold text-white tracking-widest uppercase text-[11px] sm:text-xs">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
             PMFBY Pillar 5 · Parametric Index 2026
           </span>
           <span className="hidden md:inline text-emerald-400/40">|</span>
@@ -74,233 +64,205 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 2. Main Inspo-Styled Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 py-4 px-6 md:px-14">
+      {/* 2. Main Navigation Header */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 py-3.5 px-4 sm:px-6 md:px-14">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-[#15803d]">
-              <Shield className="w-6 h-6" />
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight leading-none">
+              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-none">
                 AgriSense <span className="text-emerald-700">AI</span>
               </h1>
-              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mt-1">
-                Parametric Satellite Insurance Platform
+              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-1">
+                Parametric Satellite Insurance
               </p>
             </div>
           </Link>
           
           <nav className="hidden md:flex items-center gap-8 text-xs font-mono font-bold uppercase tracking-wider text-slate-600">
-            <a href="#stat-hero" className="hover:text-emerald-700 transition-colors">01 Index</a>
-            <a href="#telemetry" className="hover:text-emerald-700 transition-colors">02 Telemetry</a>
-            <a href="#features" className="hover:text-emerald-700 transition-colors">03 Stack</a>
-            <a href="#how-it-works" className="hover:text-emerald-700 transition-colors">04 Mechanics</a>
-            <a href="#portals" className="hover:text-emerald-700 transition-colors">05 Console</a>
+            <a href="#hero" className="hover:text-emerald-700 transition-colors">Overview</a>
+            <a href="#features" className="hover:text-emerald-700 transition-colors">Architecture</a>
+            <a href="#how-it-works" className="hover:text-emerald-700 transition-colors">Workflow</a>
+            <a href="#portals" className="hover:text-emerald-700 transition-colors">Portals</a>
           </nav>
 
           <div className="flex items-center gap-3">
             {userRole ? (
               <Link 
                 href={userRole === 'officer' || userRole === 'admin' ? '/dashboard/officer/claims' : '/dashboard/farmer'} 
-                className="bg-[#15803d] hover:bg-[#166534] text-white text-xs font-bold font-mono px-4.5 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-2"
+                className="bg-[#15803d] hover:bg-[#166534] text-white text-xs font-bold font-mono px-4 py-2.5 rounded-xl shadow-xs transition-colors"
               >
-                Console <ArrowRight className="w-3.5 h-3.5" />
+                Go to Console
               </Link>
             ) : (
               <Link 
                 href="/login" 
-                className="bg-[#15803d] hover:bg-[#166534] text-white text-xs font-bold font-mono px-5 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-2"
+                className="bg-[#15803d] hover:bg-[#166534] text-white text-xs font-bold font-mono px-4 py-2.5 rounded-xl shadow-xs transition-colors"
               >
-                Sign In <ArrowRight className="w-3.5 h-3.5" />
+                Sign In
               </Link>
             )}
           </div>
         </div>
       </header>
 
-      {/* 3. Inspo Stat-Led Hero Section */}
-      <section id="stat-hero" className="relative bg-white py-14 md:py-20 px-6 md:px-14 border-b border-slate-200/80 agri-grid-pattern">
-        <div className="max-w-7xl mx-auto space-y-12">
+      {/* 3. NEW HERO SECTION (left-aligned, single column on mobile) */}
+      <section id="hero" className="bg-white py-10 sm:py-14 md:py-16 px-4 sm:px-6 md:px-14 border-b border-slate-200/80 agri-grid-pattern">
+        <div className="max-w-7xl mx-auto space-y-10">
           
-          {/* Stat-Led Archetype Header Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 items-end gap-8 border-b border-slate-200/80 pb-12">
+          {/* Main Hero Content Block */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
             
-            {/* Massive Quantified Stat Figure */}
-            <div className="lg:col-span-7">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                <p className="text-xs font-mono text-emerald-800 font-bold uppercase tracking-widest">
-                  PMFBY Coverage Index 2026 · Source: PMFBY National Crop Portal (2024-2026)
-                </p>
-              </div>
-              <h1 
-                className="font-black text-slate-900 leading-[0.85] tracking-tight tabular-nums"
-                style={{ fontSize: "clamp(4.2rem, 10.5vw, 9rem)" }}
-              >
-                500M<span className="text-emerald-700">+</span>
-              </h1>
-              <p className="text-[11px] font-mono text-slate-500 mt-2">
-                *500M+ Hectares cumulative risk tracked across PMFBY Kharif/Rabi seasons
-              </p>
-            </div>
-
-            {/* Right Supporting Editorial Title */}
-            <div className="lg:col-span-5 lg:pb-2 space-y-4">
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight text-balance">
-                Smallholder farmers de-risked via{" "}
-                <em className="italic text-emerald-800 font-serif">satellite parametric indices</em>.
-              </h2>
-              <p className="text-xs font-mono text-slate-500 leading-relaxed max-w-md">
-                Sentinel-2 multispectral vegetation monitoring, SAR flood indexing, and 48-hour Direct Benefit Transfer (DBT) claim settlement.
-              </p>
+            {/* Left Column: Context, Headline, Supporting Sentence, Buttons & 3-Step Strip */}
+            <div className="lg:col-span-7 space-y-6 text-left">
               
-              <div className="flex flex-wrap gap-3 pt-2">
+              {/* 1. Context line (small) */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs font-mono font-bold tracking-wide">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                PMFBY Pillar 5, Government of India
+              </div>
+
+              {/* 2. Headline (largest element, plain words) - NO animation, NO gradient background */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.12] tracking-tight">
+                Crop insurance that pays in 48 hours. Decided by satellite, not by site visits.
+              </h1>
+
+              {/* 3. One supporting sentence (max 20 words) */}
+              <p className="text-base sm:text-lg text-slate-700 font-medium leading-relaxed max-w-2xl">
+                Monitors crop greenness, rainfall, and floods via satellite to deliver instant parametric payouts directly to bank accounts.
+              </p>
+
+              {/* 4. Two Buttons: Plain labels, NO arrow icons */}
+              <div className="flex flex-wrap items-center gap-3.5 pt-1">
                 <Link 
                   href="/login?role=farmer" 
-                  className="bg-[#15803d] hover:bg-[#166534] text-white font-mono font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-all flex items-center gap-2"
+                  className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-xs transition-colors text-center min-w-[160px]"
                 >
-                  Farmer Portal <ArrowRight className="w-4 h-4" />
+                  I'm a farmer
                 </Link>
                 <Link 
                   href="/login?role=officer" 
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-mono font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-all flex items-center gap-2"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm sm:text-base px-6 py-3.5 rounded-xl transition-colors text-center min-w-[160px]"
                 >
-                  Officer Queue
+                  I'm an officer
                 </Link>
               </div>
-            </div>
 
-          </div>
+              {/* 5. 3-step Strip explaining the flow */}
+              <div className="pt-6 border-t border-slate-200/80 space-y-4">
+                <p className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">
+                  How Payout Decision Works
+                </p>
 
-          {/* Institutional Partner Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-6 pt-2 pb-6 border-b border-slate-200/60 text-slate-500 text-xs font-mono">
-            <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Integrated Infrastructures:</span>
-            <div className="flex flex-wrap items-center gap-8 text-slate-700 font-semibold text-xs">
-              <span className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5 text-emerald-700" /> PMFBY National Crop Portal</span>
-              <span className="flex items-center gap-1.5"><Satellite className="w-3.5 h-3.5 text-blue-700" /> Copernicus Sentinel-2 L2A</span>
-              <span className="flex items-center gap-1.5"><Database className="w-3.5 h-3.5 text-amber-700" /> ISRO Bhuvan Spatial Hub</span>
-              <span className="flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-purple-700" /> Open-Meteo Weather Mesh</span>
-            </div>
-          </div>
+                {/* 3-Step Flow Summary Strip */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 flex flex-wrap items-center gap-2 leading-relaxed">
+                  <span className="font-bold text-slate-900">1. Satellite reads your field</span>
+                  <span className="text-slate-400 font-normal">→</span>
+                  <span className="font-bold text-slate-900">2. System decides: green, yellow or red</span>
+                  <span className="text-slate-400 font-normal">→</span>
+                  <span className="font-bold text-slate-900">3. Direct payout on severe loss</span>
+                </div>
 
-          {/* Inspo Split-Screen Telemetry Sandbox Panel */}
-          <div id="telemetry" className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-4">
-            
-            <div className="lg:col-span-5 space-y-5">
-              <div className="inline-flex items-center gap-2 bg-emerald-100/80 border border-emerald-300 text-emerald-900 text-xs font-mono font-bold px-3 py-1 rounded-full">
-                <Zap className="w-3.5 h-3.5 text-emerald-700 animate-pulse" />
-                Live Satellite Telemetry Terminal
-              </div>
-              <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-                Real-Time Multispectral Vegetation & Parametric Index Sandbox
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-lg">
-                Automated index computation over active GeoJSON farm boundaries with zero-claim parametric payouts on drought breach (VCI below 35%).
-              </p>
+                {/* Labeled Dots (green / yellow / red) according to backend source of truth */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/60 flex items-start gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-emerald-600 shrink-0 mt-0.5"></span>
+                    <div className="text-xs">
+                      <span className="font-bold text-emerald-950 block">Green dot</span>
+                      <span className="text-emerald-800 font-medium">Healthy crop (claim closed, no payout)</span>
+                    </div>
+                  </div>
 
-              {/* Band Spectrum Selector Buttons */}
-              <div className="space-y-2 pt-2">
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Select Active Imagery Layer:</span>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono font-semibold">
-                  <button
-                    onClick={() => setActiveBand("ndvi")}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${activeBand === "ndvi" ? "bg-emerald-50 border-emerald-500 text-emerald-900 shadow-xs" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    <span>🌱 Sentinel-2 NDVI</span>
-                    {activeBand === "ndvi" && <CheckCircle className="w-3.5 h-3.5 text-emerald-700" />}
-                  </button>
+                  <div className="p-3 rounded-xl border border-amber-200 bg-amber-50/60 flex items-start gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-amber-500 shrink-0 mt-0.5"></span>
+                    <div className="text-xs">
+                      <span className="font-bold text-amber-950 block">Yellow dot</span>
+                      <span className="text-amber-800 font-medium">Send an officer (field visit required)</span>
+                    </div>
+                  </div>
 
-                  <button
-                    onClick={() => setActiveBand("sar")}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${activeBand === "sar" ? "bg-blue-50 border-blue-500 text-blue-900 shadow-xs" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    <span>📡 SAR Flood Radar</span>
-                    {activeBand === "sar" && <CheckCircle className="w-3.5 h-3.5 text-blue-700" />}
-                  </button>
-
-                  <button
-                    onClick={() => setActiveBand("thermal")}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${activeBand === "thermal" ? "bg-amber-50 border-amber-500 text-amber-900 shadow-xs" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    <span>🌡️ Landsat Thermal</span>
-                    {activeBand === "thermal" && <CheckCircle className="w-3.5 h-3.5 text-amber-700" />}
-                  </button>
-
-                  <button
-                    onClick={() => setActiveBand("soil")}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${activeBand === "soil" ? "bg-purple-50 border-purple-500 text-purple-900 shadow-xs" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-                  >
-                    <span>💧 NISAR Moisture</span>
-                    {activeBand === "soil" && <CheckCircle className="w-3.5 h-3.5 text-purple-700" />}
-                  </button>
+                  <div className="p-3 rounded-xl border border-red-200 bg-red-50/60 flex items-start gap-2.5">
+                    <span className="w-3 h-3 rounded-full bg-red-600 shrink-0 mt-0.5"></span>
+                    <div className="text-xs">
+                      <span className="font-bold text-red-950 block">Red dot</span>
+                      <span className="text-red-800 font-medium">Auto-pay (severe damage / instant payout)</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+
             </div>
 
-            {/* Telemetry Visual Card */}
-            <div className="lg:col-span-7">
-              <div className="bg-slate-950 rounded-2xl p-6 text-white space-y-4 border border-slate-800 shadow-2xl">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3 text-xs font-mono">
-                  <span className="text-emerald-400 font-bold flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    {activeBand === "ndvi" && "Sentinel-2 L2A Multispectral (10m Resolution)"}
-                    {activeBand === "sar" && "Sentinel-1 C-Band SAR Synthetic Aperture Radar"}
-                    {activeBand === "thermal" && "Landsat-9 TIRS Surface Temperature Sensor"}
-                    {activeBand === "soil" && "NISAR L-Band Polarimetric Soil Moisture"}
+            {/* Right Column: 6. Real Product Artifact (Static Example - NO 3D) */}
+            <div className="lg:col-span-5 w-full">
+              <div className="bg-slate-950 text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-xl space-y-5">
+                
+                {/* Product Artifact Header */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span className="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">
+                      Live Product Verdict Example
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-900 bg-slate-200 px-2 py-0.5 rounded font-bold uppercase">
+                    Example result
                   </span>
-                  <span className="text-slate-400">TARGET: 18.5204° N, 73.8567° E</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 font-mono">
-                  <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl space-y-1">
-                    <span className="text-[10px] text-slate-400 block uppercase">
-                      {activeBand === "ndvi" ? "NDVI Vegetation Index" : activeBand === "sar" ? "Radar Backscatter (VV/VH)" : activeBand === "thermal" ? "Canopy Surface Temp" : "Volumetric Soil Water"}
-                    </span>
-                    <span className="text-2xl font-black text-emerald-400">
-                      {activeBand === "ndvi" && `${ndviPulse} / 1.0`}
-                      {activeBand === "sar" && `-21.4 dB`}
-                      {activeBand === "thermal" && `31.2 °C`}
-                      {activeBand === "soil" && `28.4 %`}
-                    </span>
-                    <span className="text-[10px] text-emerald-300 block">
-                      {activeBand === "ndvi" && "✓ Vigorous Biomass Growth"}
-                      {activeBand === "sar" && "✓ Normal Water Extent (No Inundation)"}
-                      {activeBand === "thermal" && "✓ Thermal Stress Within Limits"}
-                      {activeBand === "soil" && "✓ Adequate Root Zone Moisture"}
-                    </span>
+                {/* Single Farm Result Content */}
+                <div className="space-y-4 font-sans text-xs">
+                  
+                  {/* Farm Name */}
+                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-mono text-slate-400 uppercase block font-semibold">Farm Registered</span>
+                    <p className="text-sm font-bold text-white">Rajesh Kumar — Survey No. 402/A</p>
+                    <p className="text-slate-300 text-[11px]">Kolhapur District, Maharashtra (Soybean 2.4 Hectares)</p>
                   </div>
 
-                  <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl space-y-1">
-                    <span className="text-[10px] text-slate-400 block uppercase">Parametric VCI Score</span>
-                    <span className="text-2xl font-black text-white">68.4%</span>
-                    <span className="text-[10px] text-emerald-300 block">✓ Safe Threshold (&gt; 35.0%)</span>
+                  {/* NDVI Value */}
+                  <div className="grid grid-cols-2 gap-3 font-mono">
+                    <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 uppercase block">NDVI Vegetation Value</span>
+                      <p className="text-xl font-extrabold text-red-400">0.24</p>
+                      <span className="text-[10px] text-red-300 block">Below the 0.35 drought threshold</span>
+                    </div>
+
+                    <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 uppercase block">Satellite Source</span>
+                      <p className="text-sm font-bold text-slate-200 mt-1">Sentinel-2 L2A</p>
+                      <span className="text-[10px] text-slate-400 block">10m resolution imagery</span>
+                    </div>
                   </div>
+
+                  {/* Traffic Light Verdict (RED for NDVI 0.24 severe loss) */}
+                  <div className="bg-red-950/80 border border-red-600/70 p-3.5 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-3.5 h-3.5 rounded-full bg-red-500"></span>
+                      <div>
+                        <span className="text-[10px] font-mono text-red-300 uppercase block font-bold">Traffic Light Verdict</span>
+                        <span className="text-xs font-extrabold text-red-100">RED — SEVERE LOSS (PAYOUT AUTO-APPROVED)</span>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-red-400 bg-red-900/60 px-2 py-1 rounded border border-red-700/50">Auto-Pay</span>
+                  </div>
+
+                  {/* Payout Status */}
+                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-1.5 font-mono">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-slate-400 uppercase">Payout Status</span>
+                      <span className="text-xs font-bold text-emerald-400">DISPATCHED (48 HRS)</span>
+                    </div>
+                    <p className="text-xl font-black text-white">₹24,500.00</p>
+                    <p className="text-[10px] text-slate-400">
+                      Bank A/C ending in <span className="text-slate-200 font-bold">4082</span> · Ref: DBT-2026-8941
+                    </p>
+                  </div>
+
                 </div>
 
-                {/* Simulated Spectral Chart Bar */}
-                <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl space-y-2 font-mono text-xs">
-                  <div className="flex justify-between items-center text-[10px] text-slate-400">
-                    <span>14-DAY SPECTRAL HEALTH SPECTRUM</span>
-                    <span className="text-emerald-400 font-bold">ORBIT PASS #142 CONFIRMED</span>
-                  </div>
-                  <div className="h-4 w-full bg-slate-950 rounded-full overflow-hidden flex p-0.5 border border-slate-800">
-                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${ndviPulse * 100}%` }}></div>
-                  </div>
-                  <div className="flex justify-between text-[9px] text-slate-500">
-                    <span>0.0 (Severe Stress)</span>
-                    <span>0.35 (Breach Level)</span>
-                    <span>1.0 (Dense Canopy)</span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between text-xs font-mono">
-                  <div>
-                    <span className="text-slate-400 text-[10px] uppercase block">Traffic Light Verification</span>
-                    <span className="text-emerald-400 font-bold">GREEN — PARCEL STANDING HEALTHY</span>
-                  </div>
-                  <span className="text-emerald-400 font-bold text-sm">₹24,500.00 Max Cover</span>
-                </div>
               </div>
             </div>
 
@@ -309,20 +271,42 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. Inspo Feature-Stack Section */}
-      <section id="features" className="py-20 px-6 md:px-14 bg-[#F7F9F5] border-b border-slate-200/80">
+      {/* 4. SECTION DIRECTLY BELOW THE HERO */}
+      <section className="bg-slate-50 py-6 px-4 sm:px-6 md:px-14 border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto space-y-4">
+          
+          {/* Quiet Integrated Infrastructures Row (small, grey) */}
+          <div className="flex flex-wrap items-center justify-between gap-4 text-[11px] font-mono text-slate-400">
+            <span className="font-semibold uppercase tracking-wider text-slate-400">Integrated Infrastructures:</span>
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-slate-500 font-medium">
+              <span>PMFBY National Crop Portal</span>
+              <span className="text-slate-300">•</span>
+              <span>Copernicus Sentinel-2 L2A</span>
+              <span className="text-slate-300">•</span>
+              <span>ISRO Bhuvan Spatial Hub</span>
+              <span className="text-slate-300">•</span>
+              <span>Open-Meteo Weather Mesh</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+
+      {/* 5. Feature Stack Section */}
+      <section id="features" className="py-16 sm:py-20 px-4 sm:px-6 md:px-14 bg-[#F7F9F5] border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto space-y-12">
           
           <div className="space-y-2">
             <p className="text-xs font-mono text-emerald-800 font-bold uppercase tracking-widest">Architecture Stack</p>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Enterprise De-Risking Capabilities
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 hover:border-emerald-600 transition-colors shadow-xs">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 shadow-2xs">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#15803d] flex items-center justify-center font-bold">
                 <Satellite className="w-5 h-5" />
               </div>
@@ -332,7 +316,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 hover:border-emerald-600 transition-colors shadow-xs">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 shadow-2xs">
               <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
                 <Shield className="w-5 h-5" />
               </div>
@@ -342,7 +326,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 hover:border-emerald-600 transition-colors shadow-xs">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 shadow-2xs">
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
                 <Lock className="w-5 h-5" />
               </div>
@@ -352,7 +336,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 hover:border-emerald-600 transition-colors shadow-xs">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 shadow-2xs">
               <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold">
                 <MessageSquare className="w-5 h-5" />
               </div>
@@ -366,93 +350,52 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Inspo 4-Step Narrative Process */}
-      <section id="how-it-works" className="py-20 px-6 md:px-14 bg-white border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto space-y-12">
-          
-          <div className="space-y-2">
-            <p className="text-xs font-mono text-emerald-800 font-bold uppercase tracking-widest">Workflow Mechanics</p>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              Transparent 4-Step Claim Settlement
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 font-mono text-xs">
-            
-            <div className="bg-[#F7F9F5] border border-slate-200/80 rounded-2xl p-6 space-y-3">
-              <span className="text-xs font-bold text-emerald-800 block uppercase">Step 01</span>
-              <h4 className="text-sm font-bold text-slate-900 font-sans">Register Parcel</h4>
-              <p className="text-slate-600 font-sans leading-relaxed">Draw GeoJSON land boundaries and link Khasra land record identifiers.</p>
-            </div>
-
-            <div className="bg-[#F7F9F5] border border-slate-200/80 rounded-2xl p-6 space-y-3">
-              <span className="text-xs font-bold text-emerald-800 block uppercase">Step 02</span>
-              <h4 className="text-sm font-bold text-slate-900 font-sans">Monitor Risk</h4>
-              <p className="text-slate-600 font-sans leading-relaxed">Daily satellite vegetation health updates and Open-Meteo weather alerts.</p>
-            </div>
-
-            <div className="bg-[#F7F9F5] border border-slate-200/80 rounded-2xl p-6 space-y-3">
-              <span className="text-xs font-bold text-emerald-800 block uppercase">Step 03</span>
-              <h4 className="text-sm font-bold text-slate-900 font-sans">File Claim</h4>
-              <p className="text-slate-600 font-sans leading-relaxed">Upload EXIF geotagged photo reports following extreme weather events.</p>
-            </div>
-
-            <div className="bg-[#F7F9F5] border border-slate-200/80 rounded-2xl p-6 space-y-3">
-              <span className="text-xs font-bold text-emerald-800 block uppercase">Step 04</span>
-              <h4 className="text-sm font-bold text-slate-900 font-sans">Direct Payout</h4>
-              <p className="text-slate-600 font-sans leading-relaxed">Automated Traffic Light verification dispatches Aadhaar DBT transfers.</p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
       {/* 6. Portals Selection */}
-      <section id="portals" className="py-20 px-6 md:px-14 bg-[#F7F9F5] border-b border-slate-200/80">
+      <section id="portals" className="py-16 sm:py-20 px-4 sm:px-6 md:px-14 bg-white border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto space-y-10">
           
           <div className="space-y-2 text-center max-w-xl mx-auto">
             <p className="text-xs font-mono text-emerald-800 font-bold uppercase tracking-widest">Authentication Gateway</p>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Select Role Account</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Select Role Account</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-8 space-y-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="bg-[#F7F9F5] border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xs flex flex-col justify-between">
               <div className="space-y-3">
                 <span className="text-xs font-mono text-emerald-800 font-bold uppercase tracking-widest">Role 01 · Farmer</span>
                 <h3 className="text-xl font-bold text-slate-900">Farmer & Pastoralist Login</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   View satellite NDVI health, file crop loss claims, and track direct benefit transfer payouts.
                 </p>
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-mono text-slate-700">
+                <div className="bg-white border border-slate-200 p-3 rounded-xl text-xs font-mono text-slate-700">
                   Demo Mobile: <strong>9876543210</strong>
                 </div>
               </div>
               <Link
                 href="/login?role=farmer"
-                className="w-full bg-[#15803d] text-white text-xs font-mono font-bold py-3 rounded-xl text-center shadow-xs hover:bg-[#166534] transition-all flex items-center justify-center gap-2"
+                className="w-full bg-[#15803d] text-white text-xs font-mono font-bold py-3.5 rounded-xl text-center shadow-2xs hover:bg-[#166534] transition-colors"
               >
-                Farmer Login <ArrowRight className="w-4 h-4" />
+                Farmer Login
               </Link>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-8 space-y-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="bg-[#F7F9F5] border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xs flex flex-col justify-between">
               <div className="space-y-3">
                 <span className="text-xs font-mono text-slate-500 font-bold uppercase tracking-widest">Role 02 · Agriculture Officer</span>
                 <h3 className="text-xl font-bold text-slate-900">Agriculture Officer Login</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Evaluate Traffic Light decision scores, review GPS photo authenticity, and approve parametric settlements.
                 </p>
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-mono text-slate-700">
+                <div className="bg-white border border-slate-200 p-3 rounded-xl text-xs font-mono text-slate-700">
                   Demo Mobile: <strong>9876543299</strong>
                 </div>
               </div>
               <Link
                 href="/login?role=officer"
-                className="w-full bg-slate-900 text-white text-xs font-mono font-bold py-3 rounded-xl text-center shadow-xs hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                className="w-full bg-slate-900 text-white text-xs font-mono font-bold py-3.5 rounded-xl text-center shadow-2xs hover:bg-slate-800 transition-colors"
               >
-                Officer Login <ArrowRight className="w-4 h-4" />
+                Officer Login
               </Link>
             </div>
 
@@ -461,7 +404,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-6 md:px-14 bg-white text-xs text-slate-500 font-mono">
+      <footer className="py-8 px-4 sm:px-6 md:px-14 bg-white text-xs text-slate-500 font-mono">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <span>AgriSense National Portal · Department of Agriculture & Farmers Welfare</span>
           <span>Digital India · NIC Enabled</span>

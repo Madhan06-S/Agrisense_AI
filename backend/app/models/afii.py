@@ -19,6 +19,7 @@ class GrazingZone(Base):
     centroid_lng = Column(Float, nullable=False, default=73.8567)
     num_households = Column(Integer, default=120)
     livestock_count = Column(Integer, default=850)
+    area_hectares = Column(Float, nullable=False, default=100.0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     vci_readings = relationship("VCIReading", back_populates="zone", cascade="all, delete-orphan")

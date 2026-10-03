@@ -409,32 +409,34 @@ export default function MapComponent({
         {activeStep === 6 && <span>🔍 Review all farm details before final submission.</span>}
       </div>
 
-      {/* Compact Map Legend Overlay */}
-      <div className="absolute bottom-4 left-4 z-[1000] bg-[#0a1f0a]/95 border border-emerald-800/90 p-2.5 rounded-lg text-[11px] text-[#e2ebd5] shadow-xl backdrop-blur-md space-y-1">
-        <div className="font-semibold text-emerald-400 border-b border-emerald-800/80 pb-1 mb-1">Map Legend</div>
+      {/* Map Legend (Below Map Container) */}
+      <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 font-sans flex flex-wrap items-center gap-6">
+        <span className="font-semibold text-slate-900 uppercase text-[11px]">Map Legend:</span>
         {farmerCurrentLocation && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span>📍</span> <span>Your Current Location</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span>📌</span> <span>Insured Farm Center Pin</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-sm bg-emerald-500/60 border border-emerald-400 inline-block"></span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-emerald-600 inline-block"></span>
           <span>Your Field Boundary</span>
         </div>
         {hasOverlap && (
-          <div className="flex items-center gap-2 text-red-300 font-semibold">
-            <span className="w-3 h-3 rounded-sm bg-red-500/60 border border-red-400 inline-block"></span>
-            <span>⚠️ Overlapping Field</span>
+          <div className="flex items-center gap-1.5 text-red-700 font-semibold">
+            <span className="w-3 h-3 rounded-sm bg-red-600 inline-block"></span>
+            <span>Overlapping Field</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-sm bg-blue-500/40 border border-blue-400 inline-block"></span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block"></span>
           <span>Registered Neighbor Farm</span>
         </div>
       </div>
     </div>
   );
 }
+
+

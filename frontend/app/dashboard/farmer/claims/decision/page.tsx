@@ -7,6 +7,7 @@ import { ShieldCheck, AlertOctagon, Volume2, Layers, ChevronRight, Tractor, Arro
 import TrafficLight3D from "@/components/decision/TrafficLight3D";
 import Explainability3D from "@/components/ml/Explainability3D";
 import FarmTerrain3D from "@/components/maps/FarmTerrain3D";
+import EvidencePanel from "@/components/EvidencePanel";
 import { apiFetch, ApiError } from "@/lib/api";
 
 interface DecisionData {
@@ -225,6 +226,9 @@ function DecisionDashboardContent() {
                 </div>
               </div>
             )}
+
+            {/* Multi-Signal Evidence Panel */}
+            <EvidencePanel evidence={(decisionData as any)?.ai_evidence} />
           </div>
 
           {/* Details Pane (Right column, 4 spans) */}

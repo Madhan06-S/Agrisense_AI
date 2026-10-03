@@ -2,7 +2,7 @@ import enum
 from typing import Optional
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, Boolean
+    Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum as SAEnum, Boolean, JSON
 )
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -47,6 +47,7 @@ class Claim(Base):
 
     ai_damage_score = Column(Float, nullable=True)  # 0-100
     ai_decision = Column(String(10), nullable=True)  # green | yellow | red
+    ai_evidence = Column(JSON, nullable=True)  # Multi-signal evidence dictionary
     officer_remarks = Column(Text, nullable=True)
     reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 

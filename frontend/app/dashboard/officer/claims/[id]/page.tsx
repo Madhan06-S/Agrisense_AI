@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import TrafficLight from "@/components/TrafficLight";
+import EvidencePanel from "@/components/EvidencePanel";
 
 interface ClaimDetail {
   id: number;
@@ -550,6 +551,8 @@ export default function OfficerClaimDetail() {
 
           {/* RIGHT: Traffic Light + Decision */}
           <div className="space-y-4">
+            <EvidencePanel evidence={(claim as any)?.ai_evidence || (decision as any)?.ai_evidence} />
+
             {decision && (
               <TrafficLight 
                 light={decision.light} 

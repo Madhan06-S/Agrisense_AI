@@ -216,11 +216,12 @@ export default function TrafficLight3D({ decisionColor, payoutAmount = 0, timeli
             <Sparkles count={60} scale={3.0} size={2.0} speed={2.0} color="#ef4444" position={[-1.2, 1.5, 0]} />
           )}
 
-          {/* GREEN: Rising Coins (micro-payout celebration) */}
-          {decisionColor === "GREEN" && <RisingCoins count={25} />}
+          {/* RED: Severe damage micro-payout celebration */}
+          {decisionColor === "RED" && <RisingCoins count={25} />}
 
           {/* RED: Devastated Terrain */}
           {decisionColor === "RED" && <DevastedTerrain />}
+
 
           {/* 3D Journey Timeline */}
           <group position={[0, -2.2, 1.5]}>

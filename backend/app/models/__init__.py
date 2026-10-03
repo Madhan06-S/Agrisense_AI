@@ -20,6 +20,8 @@ from app.models.models import DataPipelineRun, SatelliteImage, FeatureVector, Da
 from app.models.copilot_log import CopilotLog
 from app.models.payment import Payment, Wallet, WalletTransaction
 
+from app.models.credit_score import CreditScore
+
 __all__ = [
     "User", "UserRole",
     "Farm",
@@ -48,5 +50,6 @@ __all__ = [
     "Payment",
     "Wallet",
     "WalletTransaction",
+    "CreditScore",
 ]
 

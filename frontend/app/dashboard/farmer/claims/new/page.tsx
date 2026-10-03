@@ -399,17 +399,40 @@ export default function FileClaimPage() {
       </div>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        {/* Progress Bar */}
-        <div className="flex gap-2">
-          {[1, 2, 3, 4].map((s) => (
-            <div 
-              key={s}
-              className={`h-2 flex-1 rounded-full ${
-                s < step ? "bg-[#2E7D32]" : s === step ? "bg-[#1B5E20]" : "bg-[#E5EBE3]"
-              }`}
-            />
-          ))}
+        {/* Stepper showing current step (larger), completed steps, and what's next */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white p-3 border border-slate-200 rounded-xl">
+          {[
+            { id: 1, label: "Select Farm" },
+            { id: 2, label: "Damage Type" },
+            { id: 3, label: "Evidence Photo" },
+            { id: 4, label: "Review Claim" }
+          ].map((s) => {
+            const isCompleted = s.id < step;
+            const isCurrent = s.id === step;
+            return (
+              <button
+                key={s.id}
+                onClick={() => isCompleted && setStep(s.id)}
+                disabled={!isCompleted && !isCurrent}
+                className={`p-2.5 rounded-lg text-left transition-all ${
+                  isCurrent 
+                    ? "bg-slate-900 text-white shadow-2xs font-bold" 
+                    : isCompleted 
+                    ? "bg-slate-50 text-slate-800 hover:bg-slate-100 font-semibold" 
+                    : "bg-[#F7F9F5] text-slate-400 font-normal"
+                }`}
+              >
+                <div className="type-xs font-mono opacity-80 uppercase">
+                  {isCompleted ? `✓ Completed` : isCurrent ? `Current Step ${s.id}` : `Step ${s.id}`}
+                </div>
+                <div className={isCurrent ? "type-base font-extrabold" : "type-xs font-medium"}>
+                  {s.label}
+                </div>
+              </button>
+            );
+          })}
         </div>
+
 
         <div className="bg-white border border-[#E5EBE3] rounded-2xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
           {/* Step 1: Select Farm */}
