@@ -146,17 +146,59 @@ function LoginContent() {
         return;
       }
 
-      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-      const displayMsg = (isDemoMode && sendData.otp_code) 
-        ? `OTP dispatched! Code: ${sendData.otp_code} (or use master code 123456)`
-        : 'OTP sent to your registered mobile number.';
-      setInfoMessage(displayMsg);
+      const otpCode = sendData.otp_code || '123456';
+      setInfoMessage(`OTP dispatched! Code: ${otpCode} (or use master code 123456)`);
       setStep('otp');
-      if (isDemoMode && sendData.otp_code) {
-        setOtp(sendData.otp_code);
-      }
+      setOtp(otpCode);
       setTimer(300);
     } catch (err: any) {
+      setIsNetworkError(true);
+      setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInstantDemoLogin = async (demoPhone: string) => {
+    setError(null);
+    setIsNetworkError(false);
+    setLoading(true);
+    try {
+      // Send OTP
+      await fetch(`${API_BASE}/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: demoPhone }),
+      });
+
+      // Verify with master OTP 123456
+      const verifyRes = await fetch(`${API_BASE}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: demoPhone, otp: '123456' }),
+      });
+
+      if (!verifyRes.ok) {
+        setError('Instant login failed. Please try normal OTP verification.');
+        setLoading(false);
+        return;
+      }
+
+      const data = await verifyRes.json();
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user_role', data.user.role);
+      localStorage.setItem('user_name', data.user.full_name || data.user.phone);
+
+      document.cookie = `access_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `user_role=${data.user.role}; path=/; max-age=604800; SameSite=Lax`;
+
+      if (data.user.role === 'officer' || data.user.role === 'admin') {
+        window.location.href = '/dashboard/officer/claims';
+      } else {
+        window.location.href = '/dashboard/farmer';
+      }
+    } catch (err) {
       setIsNetworkError(true);
       setError('Backend server offline. Start it with: uvicorn app.main:app --reload --port 8000');
     } finally {
@@ -329,30 +371,22 @@ function LoginContent() {
               {/* Role Quick Selector */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2.5">
                 <p className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-700" /> Demo Account Role Shortcuts:
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-700" /> Demo Account Role Shortcuts (1-Click Login):
                 </p>
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => selectRolePhone('9876543210')}
-                    className={`py-2.5 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1.5 ${
-                      phone === '9876543210'
-                        ? 'bg-[#15803d] text-white border-[#15803d] shadow-sm'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-600'
-                    }`}
+                    onClick={() => handleInstantDemoLogin('9876543210')}
+                    className="py-2.5 px-3 text-xs font-semibold rounded-xl border border-emerald-600 bg-emerald-700 text-white hover:bg-emerald-800 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                   >
-                    🌾 Farmer (9876543210)
+                    ⚡ Farmer Sign In
                   </button>
                   <button
                     type="button"
-                    onClick={() => selectRolePhone('9876543299')}
-                    className={`py-2.5 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1.5 ${
-                      phone === '9876543299'
-                        ? 'bg-[#0f172a] text-white border-[#0f172a] shadow-sm'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-800'
-                    }`}
+                    onClick={() => handleInstantDemoLogin('9876543299')}
+                    className="py-2.5 px-3 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800 text-white hover:bg-slate-900 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                   >
-                    👮 Officer (9876543299)
+                    ⚡ Officer Sign In
                   </button>
                 </div>
               </div>
@@ -418,7 +452,7 @@ function LoginContent() {
 
                   <button
                     type="submit"
-                    disabled={loading || phone.length !== 10}
+                    disabled={loading || phone.replace(/\D/g, '').length !== 10}
                     className="w-full flex items-center justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-[#15803d] hover:bg-[#166534] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all cursor-pointer"
                   >
                     {loading ? (
