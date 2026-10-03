@@ -210,19 +210,26 @@ export default function FarmerDashboard() {
 
       setSatellitePending(false);
       try {
-        const satRes = await apiFetch(`/satellite/${farmId}/latest`);
-        const satData = await satRes.json();
-        setSatelliteData(satData);
-      } catch (err: any) {
-        if (err.status === 404) {
-          setSatelliteData(null);
-          setSatellitePending(true);
-        } else {
-          setSatelliteData(null);
+        const telemRes = await apiFetch(`/farms/${farmId}/telemetry`);
+        if (telemRes.ok) {
+          const telemData = await telemRes.json();
+          setSatelliteData({
+            ndvi: telemData.satellite.ndvi,
+            acquisition_date: telemData.satellite.acquisition_date,
+            source: telemData.satellite.source
+          });
+          setWeatherData({
+            rainfall_48h: telemData.weather.rainfall_48h,
+            temperature: telemData.weather.temperature,
+            wind_speed: telemData.weather.wind_speed,
+            humidity: telemData.weather.humidity,
+            source: telemData.weather.source,
+            status: telemData.weather.status
+          });
         }
+      } catch (err) {
+        console.warn("Telemetry fetch error:", err);
       }
-
-      fetchLiveOpenMeteoDirectly();
 
       try {
         const ewRes = await apiFetch(`/agronomy/early-warning/${farmId}`);

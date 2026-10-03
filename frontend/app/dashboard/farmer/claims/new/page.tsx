@@ -74,10 +74,9 @@ export default function FileClaimPage() {
 
   async function fetchFarms() {
     try {
-      const cached = localStorage.getItem("agrisense_cached_farms");
-      let loadedFarms: Farm[] = cached ? JSON.parse(cached) : [];
-
       const token = localStorage.getItem("access_token");
+      let loadedFarms: Farm[] = [];
+
       if (token) {
         try {
           const res = await fetch("/api/v1/farms", {
@@ -85,10 +84,38 @@ export default function FileClaimPage() {
           });
           if (res.ok) {
             const apiData = await res.json();
-            if (apiData.length > 0) loadedFarms = apiData;
+            if (Array.isArray(apiData)) {
+              loadedFarms = apiData.map((f: any) => ({
+                id: f.id,
+                name: f.name || f.farm_name || `Farm #${f.id}`,
+                crop_type: f.crop_type || "Rice",
+                area_hectares: f.area_hectares ? Math.round(f.area_hectares * 100) / 100 : 2.50,
+                insurance_policy_number: f.insurance_policy_number || "INS-772819",
+                khasra_number: f.khasra_number,
+                village: f.village,
+                district: f.district,
+                boundary: f.boundary_geojson || f.boundary
+              }));
+            }
           }
-        } catch {
-          console.warn("Backend offline; using cached farms.");
+        } catch (err) {
+          console.warn("Backend fetch farms error:", err);
+        }
+      }
+
+      if (loadedFarms.length === 0) {
+        const cached = localStorage.getItem("agrisense_cached_farms");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            loadedFarms = parsed.map((f: any) => ({
+              id: f.id,
+              name: f.name || f.farm_name || `Farm #${f.id}`,
+              crop_type: f.crop_type || "Rice",
+              area_hectares: f.area_hectares ? Math.round(f.area_hectares * 100) / 100 : 2.50,
+              insurance_policy_number: f.insurance_policy_number || "INS-772819"
+            }));
+          } catch {}
         }
       }
 

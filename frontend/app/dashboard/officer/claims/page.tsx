@@ -3,23 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  ArrowLeft, 
   Shield, 
   Loader2, 
-  Filter, 
   Search,
   Eye,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Clock,
   LogOut,
-  Building,
-  Check,
   TrendingUp,
-  Cpu,
-  RefreshCw,
-  ChevronRight
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
@@ -270,7 +263,7 @@ export default function OfficerClaimsQueue() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-medium text-slate-500 block uppercase">Total Claims Ingested</span>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">Total Claims (Individual)</span>
               <span className="text-2xl font-black font-mono text-slate-900 mt-0.5 block">{stats.total}</span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
@@ -280,7 +273,7 @@ export default function OfficerClaimsQueue() {
 
           <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-medium text-slate-500 block uppercase">Pending Officer Action</span>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">Pending Action (Individual)</span>
               <span className="text-2xl font-black font-mono text-amber-700 mt-0.5 block">{stats.pending}</span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
@@ -290,7 +283,7 @@ export default function OfficerClaimsQueue() {
 
           <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-medium text-slate-500 block uppercase">Verified & Approved</span>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">Approved (Individual)</span>
               <span className="text-2xl font-black font-mono text-emerald-800 mt-0.5 block">{stats.approved}</span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
@@ -300,8 +293,10 @@ export default function OfficerClaimsQueue() {
 
           <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-medium text-slate-500 block uppercase">AFII Payout Triggers</span>
-              <span className="text-2xl font-black font-mono text-blue-900 mt-0.5 block">{afiiPayouts.length}</span>
+              <span className="text-[11px] font-medium text-slate-500 block uppercase">AFII Triggers (Pending Approval)</span>
+              <span className="text-2xl font-black font-mono text-blue-900 mt-0.5 block">
+                {afiiPayouts.filter(p => p.status === "triggered").length}
+              </span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-800 flex items-center justify-center font-bold">
               <TrendingUp className="w-5 h-5" />
@@ -464,9 +459,32 @@ export default function OfficerClaimsQueue() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         {zone.active_payout ? (
-                          <span className="text-xs font-mono text-emerald-700 font-bold">
-                            Payout Disbursed ({zone.active_payout.reference_id})
-                          </span>
+                          <div className="flex items-center justify-end gap-2">
+                            {zone.active_payout.status === "triggered" && (
+                              <>
+                                <span className="text-xs font-mono text-amber-800 font-bold">
+                                  Pending approval (₹{zone.active_payout.total_payout.toLocaleString()})
+                                </span>
+                                <button
+                                  onClick={() => handleApproveAFIIPayout(zone.active_payout!.id)}
+                                  disabled={approvingPayoutId === zone.active_payout.id}
+                                  className="px-2.5 py-1 bg-emerald-700 text-white rounded text-[11px] font-bold hover:bg-emerald-800 transition-all disabled:opacity-50"
+                                >
+                                  {approvingPayoutId === zone.active_payout.id ? "Approving..." : "Approve Payout"}
+                                </button>
+                              </>
+                            )}
+                            {zone.active_payout.status === "approved" && (
+                              <span className="text-xs font-mono text-blue-700 font-bold">
+                                Approved, awaiting disbursement
+                              </span>
+                            )}
+                            {zone.active_payout.status === "paid" && (
+                              <span className="text-xs font-mono text-emerald-700 font-bold">
+                                ₹{zone.active_payout.total_payout.toLocaleString()} (Ref: {zone.active_payout.reference_id})
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-xs text-slate-400">No Action Required</span>
                         )}

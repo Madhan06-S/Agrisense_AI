@@ -13,13 +13,16 @@ export class ApiError extends Error {
 let isRefreshing = false;
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}, isRetry: boolean = false): Promise<Response> {
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
   
   // Format URL cleanly
   let url = endpoint;
   if (!endpoint.startsWith("http")) {
-    const path = endpoint.startsWith("/api/v1") ? endpoint : `/api/v1${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
-    url = `${API_BASE}${path}`;
+    let path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    if (!path.startsWith("/api/v1")) {
+      path = `/api/v1${path}`;
+    }
+    url = `${API_BASE}${path}`.replace(/\/api\/v1\/api\/v1/g, "/api/v1");
   }
 
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;

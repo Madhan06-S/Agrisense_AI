@@ -2,15 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { 
-  ShieldAlert, 
-  CheckCircle, 
   AlertTriangle, 
-  Activity, 
   RefreshCw, 
   Zap, 
-  Landmark, 
-  Users,
-  TrendingDown,
   Sparkles
 } from "lucide-react";
 
@@ -234,14 +228,16 @@ export default function AFIIPastoralInsurance() {
                 </button>
 
                 {/* Demo Test Injection Button */}
-                <button
-                  onClick={() => handleInjectLowVCITest(zone.id)}
-                  disabled={injectingTest}
-                  className="inline-flex items-center gap-1.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-3 py-1.5 rounded-md font-bold transition disabled:opacity-50"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-700" />
-                  Test Inject Low VCI (28.0% Breach)
-                </button>
+                {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+                  <button
+                    onClick={() => handleInjectLowVCITest(zone.id)}
+                    disabled={injectingTest}
+                    className="inline-flex items-center gap-1.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-3 py-1.5 rounded-md font-bold transition disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+                    Test Inject Low VCI (28.0% Breach)
+                  </button>
+                )}
               </div>
             </div>
           );

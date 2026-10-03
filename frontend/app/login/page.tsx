@@ -146,12 +146,15 @@ function LoginContent() {
         return;
       }
 
-      const displayMsg = sendData.otp_code 
+      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+      const displayMsg = (isDemoMode && sendData.otp_code) 
         ? `OTP dispatched! Code: ${sendData.otp_code} (or use master code 123456)`
-        : (sendData.message || 'OTP sent to registered mobile number (use demo code 123456).');
+        : 'OTP sent to your registered mobile number.';
       setInfoMessage(displayMsg);
       setStep('otp');
-      setOtp(sendData.otp_code || '');
+      if (isDemoMode && sendData.otp_code) {
+        setOtp(sendData.otp_code);
+      }
       setTimer(300);
     } catch (err: any) {
       setIsNetworkError(true);

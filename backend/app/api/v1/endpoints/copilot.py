@@ -54,21 +54,28 @@ async def generate_farm_advisory(payload: AdviseRequest, db: AsyncSession = Depe
     """
     start_time = time.time()
     try:
-        from sqlalchemy import text
-        farm_res = await db.execute(text(f"SELECT id, name, crop_type, area_hectares, farmer_id FROM farms WHERE id = {payload.farm_id}"))
-        farm = farm_res.first()
-        if not farm:
-            farm_profile = {"id": payload.farm_id, "name": f"Farm #{payload.farm_id}", "crop_type": "Rice", "area_hectares": 2.5, "farmer_id": 1}
-        else:
-            farm_profile = {"id": farm[0], "name": farm[1], "crop_type": farm[2], "area_hectares": farm[3], "farmer_id": farm[4]}
+        from app.services.telemetry import get_unified_farm_telemetry
+        telemetry = await get_unified_farm_telemetry(payload.farm_id, db)
+        
+        farm_profile = {
+            "id": telemetry["farm_id"],
+            "name": telemetry["farm_name"],
+            "crop_type": telemetry["crop_type"],
+            "area_hectares": telemetry["area_hectares"],
+            "farmer_id": 1
+        }
 
-        try:
-            fused_res = await get_farm_fused_vector(payload.farm_id, db)
-            vector = fused_res["vector"]
-        except Exception:
-            vector = [0.28] + [0.0] * 17 + [38.0]
+        sat_ndvi = telemetry["satellite"]["ndvi"]
+        humidity_val = telemetry["weather"]["humidity"]
 
-        weather = {"precip_probability": 0.82, "temp_c": 31.0, "precip_mm": 12.5}
+        # Construction vector where vector[0] is NDVI and vector[18] is humidity
+        vector = [sat_ndvi] + [0.0] * 17 + [humidity_val]
+
+        weather = {
+            "precip_probability": 0.82,
+            "temp_c": telemetry["weather"]["temperature"],
+            "precip_mm": telemetry["weather"]["rainfall_48h"]
+        }
         historical = [{"date": "2025-07-28", "damage_type": "flood"}]
 
         res = advisor.generate_advisory(

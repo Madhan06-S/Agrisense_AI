@@ -187,3 +187,13 @@ async def delete_farm(
         raise HTTPException(status_code=404, detail="Farm not found")
     await db.delete(farm)
     await db.commit()
+
+
+@router.get("/{farm_id}/telemetry")
+async def get_farm_telemetry_endpoint(
+    farm_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.telemetry import get_unified_farm_telemetry
+    return await get_unified_farm_telemetry(farm_id, db)
+
