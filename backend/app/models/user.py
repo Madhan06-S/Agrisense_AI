@@ -12,6 +12,7 @@ class UserRole(str, enum.Enum):
     officer = "officer"
     collector = "collector"
     admin = "admin"
+    cooperative = "cooperative"   # Cooperative / FPC user who records delivery data
 
 
 class User(Base):

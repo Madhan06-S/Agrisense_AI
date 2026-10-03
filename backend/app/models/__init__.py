@@ -21,6 +21,7 @@ from app.models.copilot_log import CopilotLog
 from app.models.payment import Payment, Wallet, WalletTransaction
 
 from app.models.credit_score import CreditScore
+from app.models.supply_delivery import SupplyDelivery
 
 __all__ = [
     "User", "UserRole",
@@ -51,5 +52,6 @@ __all__ = [
     "Wallet",
     "WalletTransaction",
     "CreditScore",
+    "SupplyDelivery",
 ]
 

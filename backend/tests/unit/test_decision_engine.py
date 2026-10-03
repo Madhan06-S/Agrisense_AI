@@ -3,62 +3,57 @@ from app.decision.engine import evaluate_traffic_light, TrafficLight
 
 
 @pytest.mark.asyncio
-async def test_traffic_light_xgboost_probability_red_boundary():
-    # p_severe = 0.60 exactly -> RED
-    res_60 = await evaluate_traffic_light(
+async def test_traffic_light_multi_signal_red():
+    # All drought signals agree -> RED
+    override_signals = {
+        "optical": {"value": 0.25, "baseline": 0.60, "indicates_damage": True, "provenance": "live"},
+        "thermal_lst": {"value": 42.0, "anomaly": 4.0, "indicates_damage": True, "provenance": "live"},
+        "soil_moisture": {"value": 15.0, "indicates_damage": True, "provenance": "live"},
+        "ground_sensor": {"value": 14.0, "indicates_damage": True, "provenance": "live"},
+    }
+    res = await evaluate_traffic_light(
         claim_id=999,
         db=None,
-        model_probs={"p_no_damage": 0.10, "p_moderate": 0.30, "p_severe": 0.60},
-        model_available=True
+        override_signals=override_signals,
+        claim_type_override="drought"
     )
-    assert res_60["light"] == TrafficLight.RED.value
-    assert res_60["basis"] == "xgboost_probs"
-    assert res_60["p_severe"] == 0.60
-
-    # p_severe = 0.59 -> YELLOW
-    res_59 = await evaluate_traffic_light(
-        claim_id=999,
-        db=None,
-        model_probs={"p_no_damage": 0.10, "p_moderate": 0.31, "p_severe": 0.59},
-        model_available=True
-    )
-    assert res_59["light"] == TrafficLight.YELLOW.value
-    assert res_59["basis"] == "xgboost_probs"
-    assert res_59["p_severe"] == 0.59
+    assert res["light"] == TrafficLight.RED.value
+    assert res["basis"] == "multi_signal_fusion"
 
 
 @pytest.mark.asyncio
-async def test_traffic_light_xgboost_probability_green_boundary():
-    # GREEN: p_severe < 0.15 AND p_moderate < 0.35
-    res_green = await evaluate_traffic_light(
+async def test_traffic_light_multi_signal_disagree_yellow():
+    # Signals disagree -> YELLOW
+    override_signals = {
+        "optical": {"value": 0.25, "baseline": 0.60, "indicates_damage": True, "provenance": "live"},
+        "thermal_lst": {"value": 28.0, "anomaly": 0.5, "indicates_damage": False, "provenance": "live"},
+        "soil_moisture": {"value": 45.0, "indicates_damage": False, "provenance": "live"},
+    }
+    res = await evaluate_traffic_light(
         claim_id=999,
         db=None,
-        model_probs={"p_no_damage": 0.80, "p_moderate": 0.10, "p_severe": 0.10},
-        model_available=True
+        override_signals=override_signals,
+        claim_type_override="drought"
     )
-    assert res_green["light"] == TrafficLight.GREEN.value
-    assert res_green["basis"] == "xgboost_probs"
-
-    # p_moderate >= 0.35 -> YELLOW
-    res_yellow = await evaluate_traffic_light(
-        claim_id=999,
-        db=None,
-        model_probs={"p_no_damage": 0.55, "p_moderate": 0.35, "p_severe": 0.10},
-        model_available=True
-    )
-    assert res_yellow["light"] == TrafficLight.YELLOW.value
+    assert res["light"] == TrafficLight.YELLOW.value
+    assert res["basis"] == "multi_signal_fusion"
 
 
 @pytest.mark.asyncio
-async def test_traffic_light_fallback_when_model_missing():
-    # Model missing / unavailable -> fallback to combined score
-    res_fallback = await evaluate_traffic_light(
+async def test_traffic_light_multi_signal_normal_green():
+    # All signals normal -> GREEN
+    override_signals = {
+        "optical": {"value": 0.65, "baseline": 0.60, "indicates_damage": False, "provenance": "live"},
+        "thermal_lst": {"value": 28.0, "anomaly": 0.2, "indicates_damage": False, "provenance": "live"},
+        "soil_moisture": {"value": 50.0, "indicates_damage": False, "provenance": "live"},
+        "flood_sar": {"value": 0.05, "indicates_damage": False, "provenance": "live"},
+        "weather": {"value": 10.0, "air_temp": 28.0, "indicates_damage": False, "provenance": "live"},
+    }
+    res = await evaluate_traffic_light(
         claim_id=999,
         db=None,
-        model_probs=None,
-        model_available=False
+        override_signals=override_signals,
+        claim_type_override="drought"
     )
-    assert res_fallback["basis"] == "score_fallback"
-    assert "p_no_damage" in res_fallback
-    assert "p_moderate" in res_fallback
-    assert "p_severe" in res_fallback
+    assert res["light"] == TrafficLight.GREEN.value
+    assert res["basis"] == "multi_signal_fusion"
