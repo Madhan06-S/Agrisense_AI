@@ -31,6 +31,7 @@ class AdviseRequest(BaseModel):
     farm_id: int
     prompt: Optional[str] = None
     language: Optional[str] = "en-IN"
+    input_type: Optional[str] = "text"  # "text" | "voice"
 
 
 class LeafDiagnoseRequest(BaseModel):

@@ -33,6 +33,8 @@ import CreditScore3D from "@/components/credit/CreditScore3D";
 import Link from "next/link";
 import { dispatchApiError } from "@/components/ToastProvider";
 
+import USSDFeaturePhoneSimulator from "@/components/USSDFeaturePhoneSimulator";
+
 const queryClient = new QueryClient();
 
 interface ChatMessage {
@@ -43,6 +45,23 @@ interface ChatMessage {
   contextSummary?: string;
   modelUsed?: string;
   isHeuristic?: boolean;
+  actionFirst?: {
+    action: string;
+    reason: string;
+  };
+  healthStatus?: {
+    status: string;
+    color: string;
+    badge: string;
+    speech: string;
+  };
+  marketSummary?: {
+    crop: string;
+    price: number;
+    mandi: string;
+    provenance: string;
+    speech: string;
+  };
 }
 
 function CopilotDashboardContent() {
@@ -265,8 +284,17 @@ function CopilotDashboardContent() {
     enabled: !!selectedFarm,
   });
 
+  const speakText = (text: string) => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const uttr = new SpeechSynthesisUtterance(text);
+      uttr.lang = selectedLang;
+      window.speechSynthesis.speak(uttr);
+    }
+  };
+
   // Send Chat Query Mutation
-  const handleSendMessage = async (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string, isVoiceInput: boolean = false) => {
     const prompt = textToSend || inputText;
     if (!prompt.trim() || !selectedFarm || isSending) return;
 
@@ -288,7 +316,8 @@ function CopilotDashboardContent() {
         body: JSON.stringify({
           farm_id: selectedFarm.id,
           prompt: prompt,
-          language: selectedLang
+          language: selectedLang,
+          input_type: isVoiceInput ? "voice" : "text"
         })
       });
 
@@ -296,6 +325,28 @@ function CopilotDashboardContent() {
       const data = await res.json();
 
       const assistantReply = data.raw_text || data.advisories?.[0]?.english || "Advice processed successfully.";
+      
+      const langSuffix = selectedLang === "hi-IN" ? "hindi" : selectedLang === "ta-IN" ? "tamil" : "english";
+      const actObj = data.action_first ? {
+        action: data.action_first[`action_${langSuffix}`] || data.action_first.action_english,
+        reason: data.action_first[`reason_${langSuffix}`] || data.action_first.reason_english
+      } : undefined;
+
+      const healthObj = data.health_status ? {
+        status: data.health_status.status,
+        color: data.health_status.color,
+        badge: data.health_status.badge,
+        speech: data.health_status[`speech_${langSuffix}`] || data.health_status.speech_english
+      } : undefined;
+
+      const mktObj = data.market_summary ? {
+        crop: data.market_summary.crop,
+        price: data.market_summary.modal_price_inr,
+        mandi: data.market_summary.mandi_name,
+        provenance: data.market_summary.provenance,
+        speech: data.market_summary[`speech_${langSuffix}`] || data.market_summary.speech_english
+      } : undefined;
+
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         sender: "assistant",
@@ -303,10 +354,18 @@ function CopilotDashboardContent() {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         contextSummary: data.context_summary || `📡 Farm #${selectedFarm.id} | ${selectedFarm.crop_type}`,
         modelUsed: data.model_used || (data.is_heuristic ? "Heuristic Rules" : "Gemini 2.5 Flash"),
-        isHeuristic: data.is_heuristic
+        isHeuristic: data.is_heuristic,
+        actionFirst: actObj,
+        healthStatus: healthObj,
+        marketSummary: mktObj
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
+
+      // Automatically speak direct action aloud
+      if (actObj?.action) {
+        speakText(`${actObj.action} ${actObj.reason}`);
+      }
     } catch (err: any) {
       dispatchApiError("Failed to reach AI Copilot server. Falling back to local agronomy advice.");
       const fallbackMsg: ChatMessage = {
@@ -319,6 +378,10 @@ function CopilotDashboardContent() {
         isHeuristic: true
       };
       setMessages((prev) => [...prev, fallbackMsg]);
+    } finally {
+      setIsSending(false);
+    }
+  };
     } finally {
       setIsSending(false);
     }
@@ -451,18 +514,131 @@ function CopilotDashboardContent() {
         {/* LEFT COLUMN: Conversational Chat Interface (8 Cols) */}
         <section className="lg:col-span-8 flex flex-col space-y-6">
           
-          {/* Active Provider Banner */}
-          <div className="bg-white border border-[#E5EBE3] rounded-xl p-3 flex justify-between items-center shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <span className="text-xs font-bold text-[#1B5E20]">Active Engine:</span>
-              <span className="text-xs font-semibold text-slate-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                Gemini 2.5 Flash LLM + Live Farm Data Feed
-              </span>
+          {/* VOICE-FIRST HERO CONTROL PANEL (For farmers who cannot type/read well) */}
+          <div className="bg-gradient-to-br from-[#0c2a15] via-[#103a1e] to-[#05180c] rounded-3xl p-6 text-white shadow-xl space-y-5 border border-emerald-800 relative overflow-hidden">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-700/50 uppercase tracking-wider">
+                  🎙 Voice-First Assistance Mode
+                </span>
+                <h2 className="text-2xl font-extrabold text-white mt-2 tracking-tight">
+                  {selectedLang === "hi-IN" ? "बोलकर सवाल पूछें" : selectedLang === "ta-IN" ? "பேசி கேள்வி கேட்கவும்" : "Speak Your Question"}
+                </h2>
+                <p className="text-xs text-emerald-200/80 mt-1">
+                  Click the large microphone button to ask about your farm. Answers are spoken aloud automatically.
+                </p>
+              </div>
+
+              {/* Traffic Light Status Badge with Speech */}
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const lastMsg = [...messages].reverse().find(m => m.healthStatus);
+                  const status = lastMsg?.healthStatus || {
+                    status: "healthy",
+                    color: "green",
+                    badge: "🟢 Farm Healthy",
+                    speech: selectedLang === "hi-IN" ? "आपकी फसल स्वस्थ है।" : selectedLang === "ta-IN" ? "உங்கள் நிலம் ஆரோக்கியமாக உள்ளது." : "Your farm is healthy."
+                  };
+                  return (
+                    <button
+                      onClick={() => speakText(status.speech)}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-xs font-bold text-emerald-300 hover:bg-emerald-900 transition flex items-center gap-2 cursor-pointer shadow"
+                    >
+                      <span>{status.badge}</span>
+                      <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
-              Language: <span className="font-bold text-[#1B5E20]">{selectedLang === "hi-IN" ? "Hindi" : selectedLang === "ta-IN" ? "Tamil" : "English"}</span>
-            </span>
+
+            {/* Prominent Large Microphone Button */}
+            <div className="flex flex-col items-center justify-center py-4 space-y-3">
+              <button
+                onClick={toggleVoiceInput}
+                className={`w-24 h-24 rounded-full flex flex-col items-center justify-center transition-all shadow-2xl cursor-pointer ${
+                  isListening
+                    ? "bg-red-600 text-white animate-bounce ring-8 ring-red-400/40"
+                    : "bg-emerald-500 hover:bg-emerald-400 text-white ring-4 ring-emerald-300/30 hover:scale-105"
+                }`}
+                title="Click to speak"
+              >
+                {isListening ? (
+                  <MicOff className="w-10 h-10 animate-pulse" />
+                ) : (
+                  <Mic className="w-10 h-10" />
+                )}
+                <span className="text-[10px] font-extrabold uppercase mt-1">
+                  {isListening ? "Listening..." : "Tap to Speak"}
+                </span>
+              </button>
+              <p className="text-xs text-emerald-200 font-semibold font-mono text-center">
+                {isListening
+                  ? "🎤 Listening now... Speak your question in " + (selectedLang === "hi-IN" ? "Hindi" : selectedLang === "ta-IN" ? "Tamil" : "English")
+                  : "Tap mic or type prompt below. Instant action + spoken voice answer."}
+              </p>
+            </div>
+
+            {/* ACTION-FIRST HERO DISPLAY CARD (Direct Action Shown First) */}
+            {(() => {
+              const lastAssistant = [...messages].reverse().find(m => m.actionFirst);
+              const actionObj = lastAssistant?.actionFirst || {
+                action: selectedLang === "hi-IN" ? "कल सुबह अपने धान के खेत में सिंचाई करें।" : selectedLang === "ta-IN" ? "நாளை காலை உங்கள் நிலத்திற்கு நீர் பாய்ச்சவும்." : `Irrigate your ${selectedFarm?.crop_type || "Rice"} field tomorrow morning.`,
+                reason: selectedLang === "hi-IN" ? "मिट्टी में नमी 35% है और आज रात 12.5mm बारिश का अनुमान है।" : selectedLang === "ta-IN" ? "மண் ஈரப்பதம் 35% ஆக உள்ளது." : "Soil moisture is at 35.0% and ET0 evaporation is 3.5mm/day with 12.5mm rain forecast."
+              };
+
+              const mandiObj = lastAssistant?.marketSummary || {
+                crop: selectedFarm?.crop_type || "Rice",
+                price: 2420,
+                mandi: "Punjab Mandi",
+                provenance: "sample price",
+                speech: `Mandi price for ${selectedFarm?.crop_type || "Rice"} is ₹2,420 per quintal in Punjab Mandi (sample price). Hold stock for higher price.`
+              };
+
+              return (
+                <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-5 space-y-4">
+                  <div className="flex justify-between items-start gap-4">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-950/80 px-2.5 py-0.5 rounded border border-amber-500/30">
+                        ⚡ Priority Action First
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-extrabold text-white mt-1.5 leading-snug">
+                        {actionObj.action}
+                      </h3>
+                      <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                        <strong className="text-emerald-400">Why:</strong> {actionObj.reason}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => speakText(`${actionObj.action} ${actionObj.reason}`)}
+                      className="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center gap-1.5 text-xs font-bold shrink-0 transition cursor-pointer shadow"
+                    >
+                      <Volume2 className="w-5 h-5" />
+                      <span className="hidden sm:inline">Listen Action</span>
+                    </button>
+                  </div>
+
+                  {/* Mandi Price Strip inside Action Hero */}
+                  <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-emerald-400" />
+                      <span className="font-bold text-white">Mandi Rate ({mandiObj.crop}):</span>
+                      <span className="text-emerald-300 font-extrabold text-sm">₹{mandiObj.price}/quintal</span>
+                      <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-600/40">
+                        [{mandiObj.provenance}]
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => speakText(mandiObj.speech)}
+                      className="text-emerald-400 hover:text-emerald-300 text-[11px] font-bold underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" /> Listen Market
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Voice Error Notification Banner */}
@@ -643,8 +819,11 @@ function CopilotDashboardContent() {
           </div>
         </section>
 
-        {/* RIGHT COLUMN: 5 ML Insights & Diagnostics (4 Cols) */}
+        {/* RIGHT COLUMN: Feature Phone Simulator & 5 ML Insights (4 Cols) */}
         <section className="lg:col-span-4 flex flex-col space-y-6">
+
+          {/* FEATURE PHONE USSD & SMS SIMULATOR */}
+          <USSDFeaturePhoneSimulator />
 
           {/* 3D Robot Farmer Avatar */}
           <CopilotAvatar3D 

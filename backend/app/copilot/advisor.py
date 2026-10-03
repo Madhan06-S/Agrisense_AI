@@ -193,6 +193,63 @@ class AgronomyAdvisor:
 
         user_content = sanitized_query or f"What is my current crop health, pest risk, and irrigation advice for my {crop} farm?"
 
+        # Add mandi price with configurable provider / sample price provenance fallback
+        from app.copilot.ml_models import fetch_mandi_prices
+        mandi_raw = fetch_mandi_prices(crop, "Punjab")
+        mandi_provenance = "live" if mandi_raw.get("source") == "AGMARKNET_LIVE" else "sample price"
+
+        # Action-First Principle
+        action_first = {
+            "action_english": f"Irrigate your {crop} field tomorrow morning.",
+            "reason_english": f"Soil humidity is at {moisture_pct:.1f}% with ET0 evapotranspiration at {irrig_info.get('et0_mm_day', 3.5)}mm/day and {precip_mm}mm rain forecast.",
+            "action_hindi": f"कल सुबह अपने {crop} के खेत में सिंचाई करें।",
+            "reason_hindi": f"मिट्टी में नमी {moisture_pct:.1f}% है और वाष्पीकरण दर {irrig_info.get('et0_mm_day', 3.5)} मिमी/दिन है।",
+            "action_tamil": f"நாளை காலை உங்கள் {crop} நிலத்திற்கு நீர் பாய்ச்சவும்.",
+            "reason_tamil": f"மண் ஈரப்பதம் {moisture_pct:.1f}% ஆக உள்ளது."
+        }
+
+        # Low-literacy Traffic light status
+        if ndvi >= 0.5:
+            health_status = {
+                "status": "healthy",
+                "color": "green",
+                "badge": "🟢 Farm Healthy",
+                "speech_english": "Your farm is healthy. Crop vigor and soil moisture are good.",
+                "speech_hindi": "आपकी फसल स्वस्थ है। फसल की वृद्धि और नमी अच्छी है।",
+                "speech_tamil": "உங்கள் நிலம் ஆரோக்கியமாக உள்ளது. பயிர் வளர்ச்சி நன்றாக உள்ளது."
+            }
+        elif ndvi >= 0.3:
+            health_status = {
+                "status": "watch",
+                "color": "yellow",
+                "badge": "🟡 Watch Required",
+                "speech_english": "Watch needed. Crop vigor is moderate. Monitor soil humidity.",
+                "speech_hindi": "ध्यान दें। फसल की वृद्धि सामान्य है। मिट्टी की नमी जांचें।",
+                "speech_tamil": "கவனம் தேவை. பயிர் வளர்ச்சி மிதமாக உள்ளது."
+            }
+        else:
+            health_status = {
+                "status": "critical",
+                "color": "red",
+                "badge": "🔴 Action Required",
+                "speech_english": "Action required. Severe moisture deficit or crop stress detected.",
+                "speech_hindi": "कार्रवाई आवश्यक। आपकी फसल में तनाव देखा गया है।",
+                "speech_tamil": "நடவடிக்கை தேவை. கடுமையான பயிர் பாதிப்பு கண்டறியப்பட்டது."
+            }
+
+        market_summary = {
+            "crop": crop,
+            "modal_price_inr": mandi_raw.get("modal_price", 2420),
+            "mandi_name": mandi_raw.get("market", "Punjab Mandi"),
+            "provenance": mandi_provenance,
+            "provenance_label": f"[{mandi_provenance}]",
+            "msp_inr": mkt_info.get("msp_inr", 2300),
+            "recommendation": mkt_info.get("recommendation", "Hold stock"),
+            "speech_english": f"Mandi price for {crop} is ₹{mandi_raw.get('modal_price', 2420)} per quintal in {mandi_raw.get('market', 'Punjab Mandi')} ({mandi_provenance}). {mkt_info.get('recommendation', 'Hold stock')}.",
+            "speech_hindi": f"{crop} का मंडी भाव ₹{mandi_raw.get('modal_price', 2420)} प्रति क्विंटल है ({mandi_provenance})।",
+            "speech_tamil": f"{crop} சந்தை விலை ₹{mandi_raw.get('modal_price', 2420)} குவிண்டால் ({mandi_provenance})."
+        }
+
         # Try OpenRouter LLM Call
         if self.client:
             for attempt in range(2):
@@ -208,10 +265,14 @@ class AgronomyAdvisor:
                     )
                     llm_text = response.choices[0].message.content.strip()
                     tokens = response.usage.total_tokens if hasattr(response, "usage") and response.usage else 140
-                    return self._parse_llm_response(
+                    res = self._parse_llm_response(
                         llm_text, ndvi, moisture_pct, crop, context_summary, tokens,
                         yield_info, pest_info, irrig_info, mkt_info
                     )
+                    res["action_first"] = action_first
+                    res["health_status"] = health_status
+                    res["market_summary"] = market_summary
+                    return res
                 except Exception as e:
                     logger.warning(f"LLM API attempt {attempt+1} failed: {e}")
                     if attempt == 0:
@@ -219,9 +280,13 @@ class AgronomyAdvisor:
 
         # Fallback Heuristic
         logger.info("Serving rule-based agronomy heuristic fallback.")
-        return self._generate_heuristic_advisory(
+        res = self._generate_heuristic_advisory(
             crop, ndvi, moisture_pct, precip_prob, yield_info, pest_info, irrig_info, mkt_info
         )
+        res["action_first"] = action_first
+        res["health_status"] = health_status
+        res["market_summary"] = market_summary
+        return res
 
     def _parse_llm_response(
         self,

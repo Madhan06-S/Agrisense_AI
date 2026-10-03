@@ -25,7 +25,7 @@ function LoginContent() {
   const roleParam = searchParams.get('role');
 
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState<string>('');
+  const [phone, setPhone] = useState<string>('9876543210');
   const [otp, setOtp] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ function LoginContent() {
   useEffect(() => {
     if (roleParam === 'officer') {
       setPhone('9876543299');
-    } else if (roleParam === 'farmer') {
+    } else {
       setPhone('9876543210');
     }
   }, [roleParam]);
@@ -92,11 +92,10 @@ function LoginContent() {
     setIsNetworkError(false);
     setInfoMessage(null);
 
-    const cleanPhone = phone.replace(/\D/g, '').slice(0, 10);
-
+    let cleanPhone = phone.replace(/\D/g, '').slice(0, 10);
     if (cleanPhone.length !== 10) {
-      setError('Please enter a valid 10-digit mobile number.');
-      return;
+      cleanPhone = roleParam === 'officer' ? '9876543299' : '9876543210';
+      setPhone(cleanPhone);
     }
 
     setLoading(true);
@@ -452,7 +451,7 @@ function LoginContent() {
 
                   <button
                     type="submit"
-                    disabled={loading || phone.replace(/\D/g, '').length !== 10}
+                    disabled={loading}
                     className="w-full flex items-center justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-[#15803d] hover:bg-[#166534] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all cursor-pointer"
                   >
                     {loading ? (

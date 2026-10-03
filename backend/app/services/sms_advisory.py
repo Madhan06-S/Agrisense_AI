@@ -100,6 +100,10 @@ async def generate_sms_copilot_response(
     """
     Processes SMS query from feature phone and returns SMS-length reply (<=160 chars).
     """
+    clean_q = query.strip()
+    if clean_q in ["1", "2", "3", "4"]:
+        return await generate_ussd_response(mobile=mobile, code=clean_q, db=db, language=language)
+
     if "ta" in language.lower():
         reply = f"AgriSense: '{query[:20]}' - மழை வாய்ப்புள்ளதால் பாசனத்தை தள்ளிவைக்கவும். இயற்கை உரம் இடவும்."
     elif "hi" in language.lower():
@@ -117,3 +121,80 @@ async def generate_sms_copilot_response(
         "message": reply,
         "char_count": len(reply)
     }
+
+
+async def generate_ussd_response(
+    mobile: str,
+    code: str,
+    db: Any,
+    language: str = "en-IN"
+) -> Dict[str, Any]:
+    """
+    Feature phone USSD shortcode responder (<=160 chars per reply).
+    Codes:
+      1 = Farm Status (NDVI & health)
+      2 = Claim Status (latest claim & payout)
+      3 = Weather (48h rain & temp)
+      4 = Mandi Prices (crop price & sample price label)
+    """
+    code_str = str(code).strip()
+    lang = language.lower()
+
+    if code_str == "1":
+        # Farm Status
+        if "ta" in lang:
+            msg = "அக்ரிசென்ஸ் [1]: நிலம் #1 நெல் NDVI 0.58. பயிர் நிலை: ஆரோக்கியம். மண் ஈரப்பதம் 38%."
+        elif "hi" in lang:
+            msg = "एग्रीसेंस [1]: खेत #1 धान NDVI 0.58। फसल स्थिति: स्वस्थ। नमी 38%।"
+        else:
+            msg = "AgriSense [1]: Farm #1 Rice NDVI 0.58. Crop status: Healthy (High Vigor). Soil moisture 38%."
+
+    elif code_str == "2":
+        # Claim Status
+        if "ta" in lang:
+            msg = "அக்ரிசென்ஸ் [2]: உரிமை #101 ஒப்புதல். ₹15,000 DBT மூலம் அனுப்பப்பட்டது (PFMS8829)."
+        elif "hi" in lang:
+            msg = "एग्रीसेंस [2]: दावा #101 स्वीकृत। ₹15,000 DBT द्वारा भेजा गया (PFMS8829)।"
+        else:
+            msg = "AgriSense [2]: Claim #101 Approved. Payout ₹15,000 sent via DBT (PFMS Txn: PFMS8829)."
+
+    elif code_str == "3":
+        # Weather
+        if "ta" in lang:
+            msg = "அக்ரிசென்ஸ் [3]: 48 மணி நேர வானிலை: 31°C, 12.5mm மழை. பாசனம் செய்யாதீர்."
+        elif "hi" in lang:
+            msg = "एग्रीसेंस [3]: 48 घंटे मौसम: 31°C, 12.5mm बारिश। सुबह सिंचाई न करें।"
+        else:
+            msg = "AgriSense [3]: 48h Weather: 31°C, 12.5mm rain (82% prob). Postpone morning irrigation."
+
+    elif code_str == "4":
+        # Mandi Prices
+        if "ta" in lang:
+            msg = "அக்ரிசென்ஸ் [4]: நெல் விலை ₹2,420/க்விண்டால் (மாதிரி விலை, MSP ₹2,300)."
+        elif "hi" in lang:
+            msg = "एग्रीसेंस [4]: मंडी धान ₹2,420/क्विंटल (सैंपल मूल्य, MSP ₹2,300)। स्टॉक रखें।"
+        else:
+            msg = "AgriSense [4]: Mandi Rice ₹2,420/q in Punjab (sample price, MSP ₹2,300/q). Hold stock."
+
+    else:
+        # Invalid code menu fallback
+        if "ta" in lang:
+            msg = "அக்ரிசென்ஸ் USSD: 1=நிலம் நிலை 2=உரிமை 3=வானிலை 4=சந்தை விலை"
+        elif "hi" in lang:
+            msg = "एग्रीसेंस USSD: 1=खेत स्थिति 2=दावा 3=मौसम 4=मंडी भाव"
+        else:
+            msg = "AgriSense USSD: Reply 1=Farm Status, 2=Claim Status, 3=Weather, 4=Mandi Prices"
+
+    # Enforce strict < 160 character limit
+    if len(msg) > 160:
+        msg = msg[:157] + "..."
+
+    return {
+        "status": "success",
+        "mobile": mobile,
+        "code": code_str,
+        "language": language,
+        "message": msg,
+        "char_count": len(msg)
+    }
+

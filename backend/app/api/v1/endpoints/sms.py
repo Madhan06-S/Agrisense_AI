@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.services.sms_advisory import generate_sms_risk_advisory, generate_sms_copilot_response
+from app.services.sms_advisory import generate_sms_risk_advisory, generate_sms_copilot_response, generate_ussd_response
 
 router = APIRouter()
 
@@ -16,6 +16,11 @@ class SMSAdvisoryRequest(BaseModel):
 class SMSCopilotRequest(BaseModel):
     mobile: str = "+919876543210"
     query: str
+    language: Optional[str] = "en-IN"
+
+class USSDRequest(BaseModel):
+    mobile: str = "+919876543210"
+    code: str = "1"
     language: Optional[str] = "en-IN"
 
 @router.post("/advisory")
@@ -49,6 +54,26 @@ async def send_sms_copilot_endpoint(
         res = await generate_sms_copilot_response(
             mobile=payload.mobile,
             query=payload.query,
+            db=db,
+            language=payload.language or "en-IN"
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/ussd")
+async def send_ussd_endpoint(
+    payload: USSDRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Processes USSD shortcode request from feature phone simulator (code 1, 2, 3, or 4).
+    Returns concise SMS reply (<= 160 characters).
+    """
+    try:
+        res = await generate_ussd_response(
+            mobile=payload.mobile,
+            code=payload.code,
             db=db,
             language=payload.language or "en-IN"
         )
