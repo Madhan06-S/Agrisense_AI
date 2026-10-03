@@ -382,10 +382,6 @@ function CopilotDashboardContent() {
       setIsSending(false);
     }
   };
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   // Handle Leaf Image Upload & Diagnosis
   const handleLeafUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
